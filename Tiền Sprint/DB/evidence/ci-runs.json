@@ -1,0 +1,28 @@
+{
+  "captured_at_utc": "2026-11-07T12:52:50.349Z",
+  "scope": "GitHub Actions snapshots tied to exact commits. Historical runs are not September approvals or remote deployments. New pre-sprint workflow evidence is recorded after its run.",
+  "runs": [
+    {
+      "id": 42340988364,
+      "name": "Sprint1 PostgreSQL16 upgrade and inventory validation",
+      "head_sha": "d28c95afe03be36e00ca73a245f0e18ee0cb09ce",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-07T05:02:14Z",
+      "updated_at": "2026-11-07T05:02:51Z",
+      "url": "https://github.com/Kain2608/software-project-management/actions/runs/42340988364"
+    },
+    {
+      "id": 42340988289,
+      "name": "PostgreSQL16 database validation",
+      "head_sha": "d28c95afe03be36e00ca73a245f0e18ee0cb09ce",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-07T05:02:14Z",
+      "updated_at": "2026-11-07T05:02:52Z",
+      "url": "https://github.com/Kain2608/software-project-management/actions/runs/42340988289"
+    }
+  ]
+}

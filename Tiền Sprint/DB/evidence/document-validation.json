@@ -1,0 +1,19 @@
+{
+  "scope": "Mermaid syntax only; no remote deployment claim",
+  "result": "PASS",
+  "parser": "mermaid",
+  "version": "12.3.0",
+  "sources": [
+    {
+      "artifact": "Tiền Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md",
+      "sha256": "eff6f7d764248f31d5a11eecd10e04b27eae7143e95af72b9b76daa35a7d7a21"
+    }
+  ],
+  "diagrams": [
+    {
+      "diagram": 1,
+      "result": "PASS",
+      "diagram_type": "flowchart-v2"
+    }
+  ]
+}
