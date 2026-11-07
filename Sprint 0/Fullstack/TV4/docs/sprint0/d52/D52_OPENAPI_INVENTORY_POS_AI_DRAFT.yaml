@@ -1,0 +1,399 @@
+openapi: 3.0.3
+info:
+  title: SASMS Sprint 0 - Inventory, POS and AI API Contract (D52 - DRAFT)
+  version: 0.1.0-draft
+  description: |
+    Design contract for Sprint 0 review ONLY. No endpoint is asserted implemented.
+    Paths, resource names, runtime roles and device-state translations are proposed
+    pending BA/Architect approval and alignment with the PostgreSQL 37-table design.
+    Never treat an HTTP success body or client button as proof of payment.
+servers:
+  - url: http://localhost:8080
+    description: Local development only; do not treat as deployed or implemented
+security:
+  - bearerAuth: []
+tags:
+  - name: Inventory
+    description: Warehouse-scoped stock lookup and atomic goods receiving contracts
+  - name: QR
+    description: Read-only QR decoding and device lookup contracts
+  - name: POS
+    description: Device reservation, order, payment status and receipt printing contracts
+  - name: AI
+    description: Cross-sell recommendation contract with validated fallback results
+paths:
+  /api/v1/inventory/stock:
+    get:
+      tags: [Inventory]
+      operationId: listStock
+      summary: FR07 - read warehouse-filtered stock, scoped by authorization
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: sku
+          in: query
+          schema: {type: string}
+        - name: status
+          in: query
+          schema: {type: string, description: 'PENDING mapping: AVAILABLE/RESERVED versus IN_STOCK in D51'}
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Inventory as of snapshot time, never silently reusing stale results
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockListResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/inventory/receipts:
+    post:
+      tags: [Inventory]
+      operationId: confirmReceiving
+      summary: FR03 - confirm atomic stock receiving; proposal pending part/whole decision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReceiveRequest'}
+      responses:
+        '201':
+          description: Newly confirmed receipt; stock update is atomic
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReceiptResult'}}}
+        '200':
+          description: Same idempotency key and same payload returns original result
+          content: {application/json: {schema: {$ref: '#/components/schemas/ReceiptResult'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/inventory/receipts/{receiptId}:
+    get:
+      tags: [Inventory]
+      operationId: getReceipt
+      summary: Look up result after an uncertain receiving request; no write
+      parameters: [{ $ref: '#/components/parameters/ReceiptId' }]
+      responses:
+        '200': {description: Recorded receiving result, content: {application/json: {schema: {$ref: '#/components/schemas/ReceiptResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/devices/qr-lookup:
+    post:
+      tags: [QR]
+      operationId: lookupQr
+      summary: FR04 - decode/validate and look up a device without stock mutation
+      description: Payload structure and token model are PENDING BA/Architect. Never automatically visit a URL embedded in a QR.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/QrLookupRequest'}}}
+      responses:
+        '200': {description: Scope-filtered device, content: {application/json: {schema: {$ref: '#/components/schemas/QrLookupResult'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/pos/reservations:
+    post:
+      tags: [POS]
+      operationId: reserveDevices
+      summary: FR05 - atomically reserve available devices for one POS sale
+      description: POS hold duration 10 minutes in D34; D51's expiry implementation remains PENDING architectural reconciliation.
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ReserveRequest'}}}
+      responses:
+        '201': {description: New active reservation, content: {application/json: {schema: {$ref: '#/components/schemas/ReservationResult'}}}}
+        '200': {description: Existing idempotent result, content: {application/json: {schema: {$ref: '#/components/schemas/ReservationResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/pos/orders:
+    post:
+      tags: [POS]
+      operationId: createPosOrder
+      summary: Create POS order from confirmed reservation, calculate server-side prices
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CreatePosOrderRequest'}}}
+      responses:
+        '201': {description: New order; NOT evidence of payment, content: {application/json: {schema: {$ref: '#/components/schemas/OrderResult'}}}}
+        '200': {description: Idempotent prior result, content: {application/json: {schema: {$ref: '#/components/schemas/OrderResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/pos/orders/{orderId}:
+    get:
+      tags: [POS]
+      operationId: getPosOrder
+      summary: Query authoritative current order/payment status
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200': {description: Current order including distinct payment and fulfillment states, content: {application/json: {schema: {$ref: '#/components/schemas/OrderResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/pos/orders/{orderId}/payments:
+    post:
+      tags: [POS]
+      operationId: initiatePayment
+      summary: Initiate cashier-approved cash or sandbox payment; never self-assert PAID
+      description: Provider/cash/sandbox policy PENDING D56. Payment callback validation and reconciliation belong to backend adapter, not browser.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PaymentInitiation'}}}
+      responses:
+        '202': {description: 'Initiation accepted, status may be PENDING', content: {application/json: {schema: {$ref: '#/components/schemas/PaymentResult'}}}}
+        '200': {description: Previous idempotent payment result, content: {application/json: {schema: {$ref: '#/components/schemas/PaymentResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/pos/payments/{paymentRef}:
+    get:
+      tags: [POS]
+      operationId: reconcilePayment
+      summary: Read the verified payment state after PENDING/UNKNOWN
+      parameters: [{ $ref: '#/components/parameters/PaymentRef' }]
+      responses:
+        '200': {description: Server-confirmed payment status, content: {application/json: {schema: {$ref: '#/components/schemas/PaymentResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/pos/orders/{orderId}/receipt:
+    get:
+      tags: [POS]
+      operationId: getPosReceipt
+      summary: FR06 - read POS receipt data, only for PAID order
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200': {description: Read-only receipt; not an electronic invoice, content: {application/json: {schema: {$ref: '#/components/schemas/ReceiptPrintData'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /api/v1/pos/orders/{orderId}/print-jobs:
+    post:
+      tags: [POS]
+      operationId: printReceipt
+      summary: FR06 - enqueue print/reprint; does not alter payment or inventory
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PrintRequest'}}}
+      responses:
+        '202': {description: Print job accepted; not proof that paper was printed, content: {application/json: {schema: {$ref: '#/components/schemas/PrintResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /api/v1/ai/cross-sell:
+    post:
+      tags: [AI]
+      operationId: crossSell
+      summary: FR08 - request SKU-only AI recommendations with deterministic fallback
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CrossSellRequest'}}}
+      responses:
+        '200': {description: Validated suggestions; catalog and prices are authoritative, content: {application/json: {schema: {$ref: '#/components/schemas/CrossSellResult'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    WarehouseId: {name: warehouse_id, in: query, required: false, schema: {type: string}, description: Must be authorized against caller scopes}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+    Cursor: {name: cursor, in: query, schema: {type: string}}
+    OrderId: {name: orderId, in: path, required: true, schema: {type: string}}
+    ReceiptId: {name: receiptId, in: path, required: true, schema: {type: string}}
+    PaymentRef: {name: paymentRef, in: path, required: true, schema: {type: string}}
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 128}, description: Same operation and payload returns prior result; changed payload with reused key must conflict}
+  responses:
+    BadRequest: {description: Malformed request, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+    Unauthorized: {description: Authentication required, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+    Forbidden: {description: Resource/action outside caller scope, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+    NotFound: {description: Not found or intentionally concealed by scope policy, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+    Conflict: {description: 'Duplicate, concurrent reservation or idempotency mismatch', content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+    ValidationError: {description: Invalid Serial/IMEI/stock/payment input, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+    Unavailable: {description: Dependency temporarily unavailable, content: {application/json: {schema: {$ref: '#/components/schemas/ApiError'}}}}
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message, correlation_id]
+      properties:
+        code: {type: string, example: SERIAL_DUPLICATE}
+        message: {type: string}
+        field: {type: string, nullable: true}
+        correlation_id: {type: string}
+        retryable: {type: boolean}
+    StockRow:
+      type: object
+      required: [sku_id, warehouse_id, accounting_stock, sellable_count, reserved_count, updated_at]
+      properties:
+        sku_id: {type: string}
+        warehouse_id: {type: string}
+        accounting_stock: {type: integer, minimum: 0, description: D34 AVAILABLE + RESERVED; name/status mapping pending D51}
+        sellable_count: {type: integer, minimum: 0}
+        reserved_count: {type: integer, minimum: 0}
+        updated_at: {type: string, format: date-time}
+    StockListResponse:
+      type: object
+      required: [items, snapshot_at]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/StockRow'}}
+        snapshot_at: {type: string, format: date-time}
+        next_cursor: {type: string, nullable: true}
+    DeviceIdentifier:
+      type: object
+      required: [serial]
+      properties:
+        serial: {type: string, minLength: 1, maxLength: 128, description: Preserve case and internal spaces per D35; requires BA reconciliation with D51}
+        imei1: {type: string, nullable: true, description: Validate length 15 and Luhn when required; dual IMEI mapping pending}
+        imei2: {type: string, nullable: true, description: D35 dual IMEI support; D51 physical mapping pending}
+    ReceiveLine:
+      type: object
+      required: [sku_id, identifiers]
+      properties:
+        sku_id: {type: string}
+        identifiers: {$ref: '#/components/schemas/DeviceIdentifier'}
+    ReceiveRequest:
+      type: object
+      required: [warehouse_id, source_ref, items]
+      properties:
+        warehouse_id: {type: string}
+        source_ref: {type: string, description: PO/reference contract pending BA}
+        items: {type: array, minItems: 1, items: {$ref: '#/components/schemas/ReceiveLine'}}
+    ReceiptResult:
+      type: object
+      required: [receipt_id, status, received_count]
+      properties:
+        receipt_id: {type: string}
+        status: {type: string, enum: [CONFIRMED]}
+        received_count: {type: integer, minimum: 0}
+        confirmed_at: {type: string, format: date-time}
+    QrLookupRequest:
+      type: object
+      required: [payload]
+      properties:
+        payload: {type: string, maxLength: 2048, description: Do not interpret external URLs; payload format pending}
+    QrLookupResult:
+      type: object
+      required: [device_id, sku_id, warehouse_id, status]
+      properties:
+        device_id: {type: string}
+        sku_id: {type: string}
+        warehouse_id: {type: string}
+        status: {type: string, description: Pending canonical lifecycle mapping with D51}
+        serial_masked: {type: string, nullable: true}
+    ReserveRequest:
+      type: object
+      required: [warehouse_id, device_ids]
+      properties:
+        warehouse_id: {type: string}
+        device_ids: {type: array, minItems: 1, uniqueItems: true, items: {type: string}}
+    ReservationResult:
+      type: object
+      required: [reservation_id, status, device_ids, expires_at]
+      properties:
+        reservation_id: {type: string}
+        status: {type: string, enum: [ACTIVE, PAYMENT_PENDING, RELEASED, EXPIRED]}
+        device_ids: {type: array, items: {type: string}}
+        expires_at: {type: string, format: date-time}
+    CreatePosOrderRequest:
+      type: object
+      required: [reservation_id]
+      properties:
+        reservation_id: {type: string}
+        discount_code: {type: string, nullable: true, description: Policy pending}
+    OrderResult:
+      type: object
+      required: [order_id, order_status, payment_status, currency, total_minor]
+      properties:
+        order_id: {type: string}
+        order_status: {type: string, description: Pending implementation mapping}
+        payment_status: {type: string, enum: [UNPAID, PENDING, PAID, FAILED, UNKNOWN]}
+        currency: {type: string, example: VND}
+        total_minor: {type: integer, format: int64, description: Integer minor units; tax/rounding pending}
+        device_ids: {type: array, items: {type: string}}
+    PaymentInitiation:
+      type: object
+      required: [method]
+      properties:
+        method: {type: string, enum: [CASH, SANDBOX], description: Provider/approval policy pending}
+    PaymentResult:
+      type: object
+      required: [payment_ref, order_id, status]
+      properties:
+        payment_ref: {type: string}
+        order_id: {type: string}
+        status: {type: string, enum: [PENDING, PAID, FAILED, UNKNOWN]}
+        verified_at: {type: string, format: date-time, nullable: true}
+        source: {type: string, description: 'CASH_VERIFIED, SANDBOX_CALLBACK etc; pending D56'}
+    ReceiptPrintData:
+      type: object
+      required: [order_id, items, currency, total_minor, paid_at]
+      properties:
+        order_id: {type: string}
+        currency: {type: string, example: VND}
+        total_minor: {type: integer, format: int64}
+        paid_at: {type: string, format: date-time}
+        items: {type: array, items: {$ref: '#/components/schemas/ReceiptItem'}}
+        lookup_qr_token: {type: string, description: Payload format pending}
+    ReceiptItem:
+      type: object
+      required: [sku_id, device_id, price_minor]
+      properties:
+        sku_id: {type: string}
+        device_id: {type: string}
+        serial_masked: {type: string}
+        price_minor: {type: integer, format: int64}
+    PrintRequest:
+      type: object
+      required: [copy_type]
+      properties:
+        copy_type: {type: string, enum: [ORIGINAL, REPRINT]}
+    PrintResult:
+      type: object
+      required: [print_job_id, status]
+      properties:
+        print_job_id: {type: string}
+        status: {type: string, enum: [QUEUED, SENT, FAILED, UNKNOWN]}
+        reprint: {type: boolean}
+    CrossSellRequest:
+      type: object
+      required: [sku_ids]
+      properties:
+        sku_ids: {type: array, minItems: 1, items: {type: string}}
+        store_id: {type: string, description: Must be in caller scope}
+    CrossSellResult:
+      type: object
+      required: [suggestions, source]
+      properties:
+        suggestions: {type: array, items: {$ref: '#/components/schemas/CrossSellItem'}}
+        source: {type: string, enum: [AI, CACHE, RULE_FALLBACK]}
+        took_ms: {type: integer, minimum: 0}
+    CrossSellItem:
+      type: object
+      required: [sku_id, reason]
+      properties:
+        sku_id: {type: string}
+        reason: {type: string}

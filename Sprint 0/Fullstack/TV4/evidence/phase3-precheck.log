@@ -1,0 +1,47 @@
+=== 1. Docker Compose & Host Precheck (docker-compose.yml) ===
+File: docker-compose.yml (SHA-256: 31092c806dcbd4290af8d7924ec53fa5efcdcae09ad67fba03af4ccb687bbc3c)
+- Explicit container_name set: False (defaults to <project>-db-1)
+- Explicit top-level project name set: False (defaults to directory name 'software-project-management-an' unless -p <project> is passed)
+- Explicit custom networks block: False (defaults to <project>_default)
+- Host port mapping: ['127.0.0.1:5432:5432'] (hardcoded host loopback 127.0.0.1:5432 -> container 5432)
+- Volumes: named volume 'sasms_pgdata:/var/lib/postgresql/data' (<project>_sasms_pgdata) + bind mount './database:/work/database:ro'
+- Root .env file exists: False
+- Host TCP 127.0.0.1:5432 currently listening (Get-NetTCPConnection -LocalPort 5432): False (no listener)
+- Collision risk assessment: Running without '-p tv4_s0_check' shares default project volume/container; even with '-p tv4_s0_check', host port 127.0.0.1:5432 is shared if another PostgreSQL instance is running.
+
+=== 2. Runtime Role & Login Inspection (database/runtime-roles.sql & database/tests/runtime_acl.sql) ===
+runtime-roles.sql SHA-256: c119d150d6a6b93166258d85b125df52a765acb9c9558db9f0a3e2942ac86c85
+runtime_acl.sql SHA-256: bcbacf0f12fb194aaa9df58ade1cad029d53a5455ddd75ad8ca4cf2597866d08
+- Group roles created with NOLOGIN: ['sasms_app', 'sasms_reader']
+- Roles created with LOGIN attribute in SQL: [] (NONE)
+- Guardrail in runtime-roles.sql lines 13-16: Raises exception if sasms_app or sasms_reader has rolcanlogin=true
+- Grants to sasms_app: USAGE ON SCHEMA sasms; SELECT ON ALL TABLES IN SCHEMA sasms (covers all 37 base tables + stock_availability view); scoped INSERT/UPDATE/DELETE on order/payment tables; EXECUTE on 4 transactional functions
+- How runtime_acl.sql tests sasms_app: connects as owner and executes SET LOCAL ROLE ['sasms_app', 'sasms_reader']
+- Conclusion on runtime login: NO runtime LOGIN role inheriting sasms_app is provisioned yet -> STATUS: PENDING DBA APPROVAL (Trần Trung Kiên).
+
+=== 3. JDBC Smoke Test Preconditions (PostgreSqlConnectionSmokeTest.java) ===
+PostgreSqlConnectionSmokeTest.java SHA-256: 0e5b5e6a9ee980684f2d6006e081609f61f5a7dadaa07a52c61fa7bf28d06e48
+application-postgresql.properties SHA-256: 0b39943ce2b84228eb0e94eff5ccd3ac35fd80e1d3a5af394fbdd9dd9d14e6f4
+- Required env vars when enabled:
+  1. SASMS_PG_SMOKE_ENABLED=true (otherwise JUnit assumeTrue skips test cleanly)
+  2. SASMS_DB_URL=jdbc:postgresql://127.0.0.1:5432/sasms (restricted to loopback host, port 5432, path /sasms)
+  3. SASMS_DB_USERNAME=<runtime_login_in_sasms_app> (must NOT be sasms_owner per Decision C2 / D54 section 4)
+  4. SASMS_DB_PASSWORD=<secret> (never hardcoded)
+- Compatibility of a login inheriting sasms_app with smoke test queries:
+  * connection.setReadOnly(true) & SHOW transaction_read_only -> 'on' (SUPPORTED)
+  * SHOW server_version -> '16.x' (SUPPORTED)
+  * SELECT current_database() -> 'sasms' (SUPPORTED)
+  * SELECT count(*) FROM information_schema.tables WHERE table_schema='sasms' AND table_type='BASE TABLE' -> 37 (SUPPORTED because sasms_app has SELECT ON ALL TABLES IN SCHEMA sasms)
+  * SELECT count(*) FROM sasms.roles -> 9 (SUPPORTED)
+  * SELECT count(*) FROM sasms.products -> 2 (SUPPORTED)
+  * connection.rollback() -> clean read-only rollback (SUPPORTED)
+
+=== 4. Surefire Test Summary at Target Repo ===
+-------------------------------------------------------------------------------
+Test set: com.smartelectronicsupermarket.PostgreSqlConnectionSmokeTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.063 s -- in com.smartelectronicsupermarket.PostgreSqlConnectionSmokeTest
+-------------------------------------------------------------------------------
+Test set: com.smartelectronicsupermarket.SmartElectronicSupermarketApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.122 s -- in com.smartelectronicsupermarket.SmartElectronicSupermarketApplicationTests
