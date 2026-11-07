@@ -1,0 +1,253 @@
+{
+  "started_at_utc": "2026-11-07T04:27:13.643705+00:00",
+  "status": "passed",
+  "checks": {
+    "PostgreSQL16 version": {
+      "passed": true,
+      "seconds": 0.2584
+    },
+    "schema presence": {
+      "passed": true,
+      "seconds": 0.1251
+    },
+    "schema apply": {
+      "passed": true,
+      "seconds": 0.927
+    },
+    "seed first apply": {
+      "passed": true,
+      "seconds": 0.2038
+    },
+    "table names": {
+      "passed": true,
+      "seconds": 0.1651
+    },
+    "seed snapshot": {
+      "passed": true,
+      "seconds": 0.6351
+    },
+    "seed second apply": {
+      "passed": true,
+      "seconds": 0.1427
+    },
+    "constraint and lifecycle assertions": {
+      "passed": true,
+      "seconds": 0.4311
+    },
+    "runtime role provisioning": {
+      "passed": true,
+      "seconds": 0.1399
+    },
+    "runtime ACL assertions": {
+      "passed": true,
+      "seconds": 0.2985
+    },
+    "race receive fixture": {
+      "passed": true,
+      "seconds": 0.1744
+    },
+    "race cart fixtures": {
+      "passed": true,
+      "seconds": 0.1765
+    },
+    "race stock ownership": {
+      "passed": true,
+      "seconds": 0.1497
+    },
+    "race winner checkout rollback": {
+      "passed": true,
+      "seconds": 0.1562
+    },
+    "race exact fixture cleanup": {
+      "passed": true,
+      "seconds": 0.2235
+    },
+    "100000-device lookup benchmark rollback": {
+      "passed": true,
+      "seconds": 11.4213
+    }
+  },
+  "source_sha256": {
+    "database/schema.sql": "66aacda1101c20ed0cc6c80062d93ef917660b4f6e825fa124f536dc2a1fcd96",
+    "database/seed.sql": "8ed00da989ccb6700867636d7d5616f0e90f2422086205bddfbe79fcd783d385",
+    "database/runtime-roles.sql": "c119d150d6a6b93166258d85b125df52a765acb9c9558db9f0a3e2942ac86c85",
+    "scripts/validate_db.py": "79d28cbd7859615551eae68f80c4c781449f35064737d038b7ea3c9f391b3841",
+    "database/tests/benchmark.sql": "0eaa38f390c44ffc08612535434ed732ef8a3fbfebfbcdcf9fcd8bc6991d80bc",
+    "database/tests/constraints.sql": "9c40c7285ea48c206158e1db7ba4909261e52eac4ee57548c9dbe241719dcd7e",
+    "database/tests/runtime_acl.sql": "bcbacf0f12fb194aaa9df58ade1cad029d53a5455ddd75ad8ca4cf2597866d08"
+  },
+  "postgresql": {
+    "version": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+    "version_num": 160015
+  },
+  "seed_idempotency": {
+    "passed": true,
+    "compared_tables": 37
+  },
+  "constraint_assertions": 56,
+  "runtime_acl_assertions": 7,
+  "concurrency": {
+    "sessions": 2,
+    "successful_reservations": 1,
+    "expected_23514_rejections": 1,
+    "stock_ownership": {
+      "reserved_devices": 1,
+      "reserved_orders": 1,
+      "draft_orders": 1,
+      "reserve_movements": 1
+    },
+    "checkout_counts_inside_rollback_transaction": {
+      "sold_devices": 1,
+      "paid_orders": 1,
+      "sale_movements": 1,
+      "invoices": 1
+    }
+  },
+  "lookup_benchmark": {
+    "synthetic_device_count": 100000,
+    "transaction_rolled_back": true,
+    "scope": "database lookups only; no end-to-end SLA claim",
+    "plans": [
+      {
+        "Plan": {
+          "Node Type": "Index Scan",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Scan Direction": "Forward",
+          "Index Name": "devices_serial_key",
+          "Relation Name": "devices",
+          "Alias": "devices",
+          "Startup Cost": 0.42,
+          "Total Cost": 8.44,
+          "Plan Rows": 1,
+          "Plan Width": 41,
+          "Actual Startup Time": 0.023,
+          "Actual Total Time": 0.024,
+          "Actual Rows": 1,
+          "Actual Loops": 1,
+          "Index Cond": "(serial = 'S0-BENCH-050000'::text)",
+          "Rows Removed by Index Recheck": 0,
+          "Shared Hit Blocks": 4,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning": {
+          "Shared Hit Blocks": 17,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.226,
+        "Triggers": [],
+        "Execution Time": 0.044
+      },
+      {
+        "Plan": {
+          "Node Type": "Index Scan",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Scan Direction": "Forward",
+          "Index Name": "devices_imei_key",
+          "Relation Name": "devices",
+          "Alias": "devices",
+          "Startup Cost": 0.42,
+          "Total Cost": 8.44,
+          "Plan Rows": 1,
+          "Plan Width": 41,
+          "Actual Startup Time": 0.014,
+          "Actual Total Time": 0.016,
+          "Actual Rows": 1,
+          "Actual Loops": 1,
+          "Index Cond": "(imei = '990000000050000'::text)",
+          "Rows Removed by Index Recheck": 0,
+          "Shared Hit Blocks": 4,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning": {
+          "Shared Hit Blocks": 3,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.172,
+        "Triggers": [],
+        "Execution Time": 0.032
+      },
+      {
+        "Plan": {
+          "Node Type": "Index Scan",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Scan Direction": "Forward",
+          "Index Name": "devices_qr_token_key",
+          "Relation Name": "devices",
+          "Alias": "devices",
+          "Startup Cost": 0.42,
+          "Total Cost": 8.44,
+          "Plan Rows": 1,
+          "Plan Width": 41,
+          "Actual Startup Time": 0.011,
+          "Actual Total Time": 0.012,
+          "Actual Rows": 1,
+          "Actual Loops": 1,
+          "Index Cond": "(qr_token = '8719e03f-2c7f-4a17-121f-151077565d80'::uuid)",
+          "Rows Removed by Index Recheck": 0,
+          "Shared Hit Blocks": 4,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning": {
+          "Shared Hit Blocks": 6,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.202,
+        "Triggers": [],
+        "Execution Time": 0.024
+      }
+    ]
+  },
+  "fixtures_cleaned": true,
+  "finished_at_utc": "2026-11-07T04:27:30.937672+00:00"
+}
