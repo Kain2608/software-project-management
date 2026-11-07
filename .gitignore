@@ -1,7 +1,13 @@
-# Windows desktop ini
+# Windows desktop metadata
 desktop.ini
 Thumbs.db
-
 # Office temporary files
 ~$*
+
+.env
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+database/.local/
 

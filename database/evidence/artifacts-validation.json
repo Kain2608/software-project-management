@@ -1,0 +1,98 @@
+{
+  "scope": "DBML syntax and model counts; Mermaid syntax only. Does not establish rendered layout, SQL behavior, performance or approval.",
+  "result": "PASS",
+  "packages": {
+    "@dbml/core": "11.1.0",
+    "mermaid": "12.3.0",
+    "jsdom": "31.0.0"
+  },
+  "reproduction": {
+    "tool_directory": "C:/Users/co/Documents/sprint0/.artifact-parsers",
+    "install": "npm.cmd install --prefix C:/Users/co/Documents/sprint0/.artifact-parsers --no-audit --no-fund --ignore-scripts @dbml/core@11.1.0 mermaid@12.3.0 jsdom@31.0.0",
+    "command": "node C:/Users/co/Documents/sprint0/.artifact-parsers/check-evidence.mjs",
+    "api_calls": [
+      "new Parser().parse(source, 'dbmlv2')",
+      "new Parser().parse(source, 'dbml')",
+      "await mermaid.parse(source)"
+    ]
+  },
+  "sources": [
+    {
+      "artifact": "database/schema.dbml",
+      "sha256": "6e57ad0b19d828bd13503209a4f557afa8d68d5bfd47eb34a9ad197c672b4725"
+    },
+    {
+      "artifact": "database/erd.mmd",
+      "sha256": "aac52c26921203e03c062a6a96f7311e9dc5690eba8cf5cad1c59b4fe3446b0b"
+    },
+    {
+      "artifact": "Sprint 0/DB/D50-kien-truc-he-thong.md",
+      "sha256": "50186491ce65fd39a74ac96926b754ca143a5a4e88061c41a0d01e85a59d0955"
+    },
+    {
+      "artifact": "Sprint 0/DB/D51-thiet-ke-co-so-du-lieu.md",
+      "sha256": "cfb6a2f9e64bb71ba07c3e6fc1aa188e7052c315606aedbbc421a9eb947e798a"
+    },
+    {
+      "artifact": "Sprint 0/DB/D54-bao-mat-phan-quyen.md",
+      "sha256": "67b53cb0f3e24824a8d3f997719882fa41f517066234cf3f0d892604d2fed8e9"
+    }
+  ],
+  "checks": [
+    {
+      "artifact": "database/schema.dbml",
+      "parser": "@dbml/core:dbmlv2",
+      "result": "PASS",
+      "tables": 37,
+      "refs": 63
+    },
+    {
+      "artifact": "database/schema.dbml",
+      "parser": "@dbml/core:dbml",
+      "result": "PASS",
+      "tables": 37,
+      "refs": 63
+    },
+    {
+      "artifact": "database/erd.mmd",
+      "diagram": 1,
+      "parser": "mermaid",
+      "result": "PASS",
+      "diagramType": "er"
+    },
+    {
+      "artifact": "Sprint 0/DB/D50-kien-truc-he-thong.md",
+      "diagram": 1,
+      "parser": "mermaid",
+      "result": "PASS",
+      "diagramType": "flowchart-v2"
+    },
+    {
+      "artifact": "Sprint 0/DB/D50-kien-truc-he-thong.md",
+      "diagram": 2,
+      "parser": "mermaid",
+      "result": "PASS",
+      "diagramType": "flowchart-v2"
+    },
+    {
+      "artifact": "Sprint 0/DB/D50-kien-truc-he-thong.md",
+      "diagram": 3,
+      "parser": "mermaid",
+      "result": "PASS",
+      "diagramType": "sequence"
+    },
+    {
+      "artifact": "Sprint 0/DB/D51-thiet-ke-co-so-du-lieu.md",
+      "diagram": 1,
+      "parser": "mermaid",
+      "result": "PASS",
+      "diagramType": "er"
+    },
+    {
+      "artifact": "Sprint 0/DB/D54-bao-mat-phan-quyen.md",
+      "parser": "mermaid",
+      "result": "NO_DIAGRAMS",
+      "diagrams": 0
+    }
+  ]
+}

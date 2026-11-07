@@ -1,0 +1,49 @@
+name: PostgreSQL16 database validation
+
+on:
+  push:
+    paths: ['database/**', 'scripts/**', '.github/workflows/database.yml']
+  pull_request:
+    paths: ['database/**', 'scripts/**', '.github/workflows/database.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sprint0_test
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: sasms_validation
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sprint0_test -d sasms_validation"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: sprint0_test
+      PGPASSWORD: isolated-ci-only
+      PGDATABASE: sasms_validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply baseline and validate actual PostgreSQL16 behavior
+        run: python scripts/validate_db.py --apply --benchmark --evidence-dir /tmp/sasms-evidence
+      - name: Check generated DBML, ERD and catalog artifacts
+        run: python scripts/generate_db_artifacts.py --dsn "dbname=sasms_validation" --check
+      - name: Preserve actual run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql16-validation
+          path: /tmp/sasms-evidence

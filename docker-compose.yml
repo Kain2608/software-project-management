@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sasms
+      POSTGRES_USER: sasms_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - sasms_pgdata:/var/lib/postgresql/data
+      - ./database:/work/database:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sasms_owner -d sasms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  sasms_pgdata:

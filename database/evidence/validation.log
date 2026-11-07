@@ -1,0 +1,399 @@
+
+=== PostgreSQL16 version ===
+{"version" : "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit", "version_num" : 160015}
+
+=== schema presence ===
+f
+
+=== schema apply ===
+
+=== seed first apply ===
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "82b037823b93a090e07ee358f12fd88c", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "37a6259cc0c1dae299a7866489dff0bd", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "2f67c0e51bb8eee7b891661bdfc365f7", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "37a6259cc0c1dae299a7866489dff0bd", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "37a6259cc0c1dae299a7866489dff0bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "553869bcd47345b9a34a43842af9b7dd", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "c15f8d806a7841d9b6d0514835548abc", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "238c48b5f679602b8f70e5108dd4f1fe", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "37a6259cc0c1dae299a7866489dff0bd", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== seed second apply ===
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "82b037823b93a090e07ee358f12fd88c", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "37a6259cc0c1dae299a7866489dff0bd", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "2f67c0e51bb8eee7b891661bdfc365f7", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "37a6259cc0c1dae299a7866489dff0bd", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "37a6259cc0c1dae299a7866489dff0bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "553869bcd47345b9a34a43842af9b7dd", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "c15f8d806a7841d9b6d0514835548abc", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "238c48b5f679602b8f70e5108dd4f1fe", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "37a6259cc0c1dae299a7866489dff0bd", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== constraint and lifecycle assertions ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+0ce4f57d-f1ac-46d9-9436-0d901b3719f5
+a538d2af-3de5-40fb-a3c4-a23f245db968
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1cbfb963-416e-442e-b492-7b428b47d1df
+1cbfb963-416e-442e-b492-7b428b47d1df
+
+
+
+
+100.00
+
+
+
+
+
+
+
+56
+psql:database/tests/constraints.sql:40: NOTICE:  00000: PASS: 37 baseline tables
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:41: NOTICE:  00000: PASS: nine seeded business roles
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:42: NOTICE:  00000: PASS: seventeen seeded permissions
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:47: NOTICE:  00000: PASS: PUBLIC cannot execute SASMS functions
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:54: NOTICE:  00000: PASS: duplicate primary key rejected [23505]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:57: NOTICE:  00000: PASS: primary key cannot be null [23502]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:60: NOTICE:  00000: PASS: unknown role foreign key rejected [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:89: NOTICE:  00000: PASS: receipt normalizes serial and derives warehouse
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:91: NOTICE:  00000: PASS: normalized serial globally unique [23505]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:94: NOTICE:  00000: PASS: serial unique across products [23505]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:96: NOTICE:  00000: PASS: IMEI must contain fifteen digits [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:98: NOTICE:  00000: PASS: IMEI rejects nonnumeric characters [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:100: NOTICE:  00000: PASS: IMEI unique [23505]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:102: NOTICE:  00000: PASS: serial rejects embedded whitespace [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:105: NOTICE:  00000: PASS: direct inserts must use canonical serial [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:108: NOTICE:  00000: PASS: receipt device product composite FK [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:111: NOTICE:  00000: PASS: receipt warehouse must match purchase order [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:113: NOTICE:  00000: PASS: purchase quantity positive [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:115: NOTICE:  00000: PASS: product price nonnegative [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:117: NOTICE:  00000: PASS: at most three image positions [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:119: NOTICE:  00000: PASS: image size at most two MiB [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:122: NOTICE:  00000: PASS: stocktake approval separates duties [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:126: NOTICE:  00000: PASS: receive rejects missing actor [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:128: NOTICE:  00000: PASS: failed receive rolls back inserted device
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:131: NOTICE:  00000: PASS: closed receipt cannot receive devices [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:134: NOTICE:  00000: PASS: unapproved purchase order cannot receive devices [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:138: NOTICE:  00000: PASS: receiving cannot exceed declared quantity [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:145: NOTICE:  00000: PASS: sales warehouse belongs to store [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:157: NOTICE:  00000: PASS: allocated device must match order line product [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:160: NOTICE:  00000: PASS: line total applies discount then tax with numeric rounding
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:163: NOTICE:  00000: PASS: discount cannot exceed gross line amount [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:165: NOTICE:  00000: PASS: tax rate bounded [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:167: NOTICE:  00000: PASS: empty cart cannot reserve [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:169: NOTICE:  00000: PASS: allocation count equals quantity [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:171: NOTICE:  00000: PASS: reserve actor failure occurs after stock update [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:175: NOTICE:  00000: PASS: failed reserve rolls back stock movement and outbox
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:176: NOTICE:  00000: PASS: reserve calculates authoritative total
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:180: NOTICE:  00000: PASS: reserve retry produces one audit and one outbox event
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:182: NOTICE:  00000: PASS: reserved cart line frozen [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:184: NOTICE:  00000: PASS: reserved device selections frozen [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:186: NOTICE:  00000: PASS: rows cannot move between orders [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:188: NOTICE:  00000: PASS: checkout requires confirmed payment [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:192: NOTICE:  00000: PASS: underpayment rejected [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:196: NOTICE:  00000: PASS: overpayment rejected pending reconciliation [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:200: NOTICE:  00000: PASS: captured funds cannot be rewritten [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:202: NOTICE:  00000: PASS: checkout actor failure rolls back sale [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:205: NOTICE:  00000: PASS: failed checkout keeps reservation and creates no invoice
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:213: NOTICE:  00000: PASS: checkout retry sells once and retains internal invoice draft
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:215: NOTICE:  00000: PASS: late payment callback cannot mutate paid order [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:217: NOTICE:  00000: PASS: completed sale cannot cancel [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:219: NOTICE:  00000: PASS: quantity mismatch remains rejected [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:225: NOTICE:  00000: PASS: captured funds prevent cancellation [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:227: NOTICE:  00000: PASS: cancel actor failure rolls back release [23503]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:229: NOTICE:  00000: PASS: failed cancellation retains reservation
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:236: NOTICE:  00000: PASS: cancellation retry releases once
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/constraints.sql:238: NOTICE:  00000: PASS: cancelled order cannot reserve [23514]
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+=== runtime role provisioning ===
+
+=== runtime ACL assertions ===
+psql:database/tests/runtime_acl.sql:14: NOTICE:  00000: PASS: runtime ACL protects order status total stock and audit
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/runtime_acl.sql:57: NOTICE:  00000: PASS: sasms_app can receive create reserve confirm and complete through allowed paths
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/runtime_acl.sql:57: NOTICE:  00000: PASS: actual sasms_app UPDATE stock rejected
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/runtime_acl.sql:57: NOTICE:  00000: PASS: actual sasms_app UPDATE total rejected
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/runtime_acl.sql:57: NOTICE:  00000: PASS: actual sasms_app INSERT status rejected
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/runtime_acl.sql:57: NOTICE:  00000: PASS: actual sasms_app INSERT audit rejected
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/runtime_acl.sql:68: NOTICE:  00000: PASS: reader can query catalog and stock aggregates but cannot query customer data
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+=== race receive fixture ===
+cbc10798-46b1-4797-9bb9-57616c85af0f
+
+=== race cart fixtures ===
+
+=== race session 1: exit 1, seconds 0.7896 ===
+ERROR:  23514: Device unavailable or in another warehouse: cbc10798-46b1-4797-9bb9-57616c85af0f
+CONTEXT:  PL/pgSQL function reserve_order(uuid,uuid) line 21 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+=== race session 2: exit 0, seconds 0.7829 ===
+100.00
+
+=== race stock ownership ===
+{"reserved_devices" : 1, "reserved_orders" : 1, "draft_orders" : 1, "reserve_movements" : 1}
+
+=== race winner checkout rollback ===
+1a5e3525-fc4c-4d87-8cde-cf6d81b78c80
+{"sold_devices" : 1, "paid_orders" : 1, "sale_movements" : 1, "invoices" : 1}
+
+=== race exact fixture cleanup ===
+
+=== 100000-device lookup benchmark rollback ===
+[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Scan Direction": "Forward",
+      "Index Name": "devices_serial_key",
+      "Relation Name": "devices",
+      "Alias": "devices",
+      "Startup Cost": 0.42,
+      "Total Cost": 8.44,
+      "Plan Rows": 1,
+      "Plan Width": 41,
+      "Actual Startup Time": 0.023,
+      "Actual Total Time": 0.024,
+      "Actual Rows": 1,
+      "Actual Loops": 1,
+      "Index Cond": "(serial = 'S0-BENCH-050000'::text)",
+      "Rows Removed by Index Recheck": 0,
+      "Shared Hit Blocks": 4,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning": {
+      "Shared Hit Blocks": 17,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning Time": 0.226,
+    "Triggers": [
+    ],
+    "Execution Time": 0.044
+  }
+]
+[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Scan Direction": "Forward",
+      "Index Name": "devices_imei_key",
+      "Relation Name": "devices",
+      "Alias": "devices",
+      "Startup Cost": 0.42,
+      "Total Cost": 8.44,
+      "Plan Rows": 1,
+      "Plan Width": 41,
+      "Actual Startup Time": 0.014,
+      "Actual Total Time": 0.016,
+      "Actual Rows": 1,
+      "Actual Loops": 1,
+      "Index Cond": "(imei = '990000000050000'::text)",
+      "Rows Removed by Index Recheck": 0,
+      "Shared Hit Blocks": 4,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning": {
+      "Shared Hit Blocks": 3,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning Time": 0.172,
+    "Triggers": [
+    ],
+    "Execution Time": 0.032
+  }
+]
+[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Scan Direction": "Forward",
+      "Index Name": "devices_qr_token_key",
+      "Relation Name": "devices",
+      "Alias": "devices",
+      "Startup Cost": 0.42,
+      "Total Cost": 8.44,
+      "Plan Rows": 1,
+      "Plan Width": 41,
+      "Actual Startup Time": 0.011,
+      "Actual Total Time": 0.012,
+      "Actual Rows": 1,
+      "Actual Loops": 1,
+      "Index Cond": "(qr_token = '8719e03f-2c7f-4a17-121f-151077565d80'::uuid)",
+      "Rows Removed by Index Recheck": 0,
+      "Shared Hit Blocks": 4,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning": {
+      "Shared Hit Blocks": 6,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0
+    },
+    "Planning Time": 0.202,
+    "Triggers": [
+    ],
+    "Execution Time": 0.024
+  }
+]
+psql:database/tests/benchmark.sql:17: NOTICE:  00000: PASS: 100000 synthetic devices loaded inside rollback transaction
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "82b037823b93a090e07ee358f12fd88c", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "37a6259cc0c1dae299a7866489dff0bd", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "2f67c0e51bb8eee7b891661bdfc365f7", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "37a6259cc0c1dae299a7866489dff0bd", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "37a6259cc0c1dae299a7866489dff0bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "553869bcd47345b9a34a43842af9b7dd", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "c15f8d806a7841d9b6d0514835548abc", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "238c48b5f679602b8f70e5108dd4f1fe", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "37a6259cc0c1dae299a7866489dff0bd", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd"}

@@ -1,0 +1,11 @@
+* text=auto
+*.sql text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.mmd text eol=lf
+*.dbml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.log text eol=lf
+*.docx binary
+*.xlsx binary

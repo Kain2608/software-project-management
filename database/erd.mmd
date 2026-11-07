@@ -1,0 +1,268 @@
+%% Generated from PostgreSQL catalogs; full 37-table physical model.
+erDiagram
+  ai_recommendations {
+    uuid id PK
+    uuid source_product_id FK
+    uuid recommended_product_id FK
+  }
+  products ||--o{ ai_recommendations : "recommended_product_id"
+  products ||--o{ ai_recommendations : "source_product_id"
+  audit_logs {
+    uuid id PK
+    uuid actor_id FK
+  }
+  users ||--o{ audit_logs : "actor_id"
+  brands {
+    uuid id PK
+  }
+  categories {
+    uuid id PK
+    uuid parent_id FK
+  }
+  categories |o--o{ categories : "parent_id"
+  customers {
+    uuid id PK
+    text code
+  }
+  deliveries {
+    uuid id PK
+    uuid order_id FK
+    text status
+  }
+  sales_orders ||--o{ deliveries : "order_id"
+  delivery_items {
+    uuid delivery_id PK,FK
+    uuid order_id FK
+    uuid device_id PK,FK
+  }
+  deliveries ||--o{ delivery_items : "delivery_id,order_id"
+  order_devices ||--o{ delivery_items : "order_id,device_id"
+  devices {
+    uuid id PK
+    uuid product_id FK
+    uuid receipt_item_id FK
+    uuid warehouse_id FK
+    text serial
+    text imei
+    text status
+    uuid reserved_order_id FK
+    uuid sold_order_id FK
+  }
+  products ||--o{ devices : "product_id"
+  goods_receipt_items ||--o{ devices : "receipt_item_id,product_id"
+  sales_orders |o--o{ devices : "reserved_order_id"
+  sales_orders |o--o{ devices : "sold_order_id"
+  warehouses ||--o{ devices : "warehouse_id"
+  goods_receipt_items {
+    uuid id PK
+    uuid receipt_id FK
+    uuid purchase_order_id FK
+    uuid purchase_order_item_id FK
+    uuid product_id FK
+  }
+  purchase_order_items ||--o{ goods_receipt_items : "purchase_order_item_id,product_id,purchase_order_id"
+  goods_receipts ||--o{ goods_receipt_items : "receipt_id,purchase_order_id"
+  goods_receipts {
+    uuid id PK
+    text code
+    uuid purchase_order_id FK
+    uuid warehouse_id FK
+    text status
+    uuid received_by FK
+  }
+  purchase_orders ||--o{ goods_receipts : "purchase_order_id,warehouse_id"
+  users ||--o{ goods_receipts : "received_by"
+  inventory_movements {
+    uuid id PK
+    uuid device_id FK
+    uuid warehouse_id FK
+    uuid order_id FK
+    uuid actor_id FK
+  }
+  users ||--o{ inventory_movements : "actor_id"
+  devices ||--o{ inventory_movements : "device_id"
+  sales_orders |o--o{ inventory_movements : "order_id"
+  warehouses ||--o{ inventory_movements : "warehouse_id"
+  invoices {
+    uuid id PK
+    uuid order_id FK
+    text status
+  }
+  sales_orders ||--o| invoices : "order_id"
+  order_devices {
+    uuid id PK
+    uuid order_item_id FK
+    uuid order_id FK
+    uuid product_id FK
+    uuid device_id FK
+  }
+  devices ||--o{ order_devices : "device_id,product_id"
+  sales_order_items ||--o{ order_devices : "order_item_id,order_id,product_id"
+  outbox_events {
+    uuid id PK
+  }
+  payments {
+    uuid id PK
+    uuid order_id FK
+    text status
+    uuid confirmed_by FK
+  }
+  users |o--o{ payments : "confirmed_by"
+  sales_orders ||--o{ payments : "order_id"
+  permissions {
+    text code PK
+  }
+  product_images {
+    uuid id PK
+    uuid product_id FK
+  }
+  products ||--o{ product_images : "product_id"
+  products {
+    uuid id PK
+    text sku
+    uuid brand_id FK
+    uuid category_id FK
+  }
+  brands ||--o{ products : "brand_id"
+  categories ||--o{ products : "category_id"
+  purchase_order_items {
+    uuid id PK
+    uuid purchase_order_id FK
+    uuid product_id FK
+  }
+  products ||--o{ purchase_order_items : "product_id"
+  purchase_orders ||--o{ purchase_order_items : "purchase_order_id"
+  purchase_orders {
+    uuid id PK
+    text code
+    uuid supplier_id FK
+    uuid warehouse_id FK
+    text status
+    uuid created_by FK
+  }
+  users ||--o{ purchase_orders : "created_by"
+  suppliers ||--o{ purchase_orders : "supplier_id"
+  warehouses ||--o{ purchase_orders : "warehouse_id"
+  return_items {
+    uuid return_id PK,FK
+    uuid order_id FK
+    uuid device_id PK,FK
+  }
+  order_devices ||--o{ return_items : "order_id,device_id"
+  returns ||--o{ return_items : "return_id,order_id"
+  returns {
+    uuid id PK
+    uuid order_id FK
+    text code
+    text status
+    uuid requested_by FK
+    uuid approved_by FK
+  }
+  users |o--o{ returns : "approved_by"
+  sales_orders ||--o{ returns : "order_id"
+  users ||--o{ returns : "requested_by"
+  role_permissions {
+    text role_code PK,FK
+    text permission_code PK,FK
+  }
+  permissions ||--o{ role_permissions : "permission_code"
+  roles ||--o{ role_permissions : "role_code"
+  roles {
+    text code PK
+  }
+  sales_order_items {
+    uuid id PK
+    uuid order_id FK
+    uuid product_id FK
+  }
+  sales_orders ||--o{ sales_order_items : "order_id"
+  products ||--o{ sales_order_items : "product_id"
+  sales_orders {
+    uuid id PK
+    text code
+    uuid store_id FK
+    uuid warehouse_id FK
+    uuid customer_id FK
+    text status
+    uuid created_by FK
+  }
+  users ||--o{ sales_orders : "created_by"
+  customers |o--o{ sales_orders : "customer_id"
+  stores ||--o{ sales_orders : "store_id"
+  warehouses ||--o{ sales_orders : "warehouse_id,store_id"
+  stocktake_items {
+    uuid stocktake_id PK,FK
+    uuid device_id PK,FK
+  }
+  devices ||--o{ stocktake_items : "device_id"
+  stocktakes ||--o{ stocktake_items : "stocktake_id"
+  stocktakes {
+    uuid id PK
+    text code
+    uuid warehouse_id FK
+    text status
+    uuid counted_by FK
+    uuid approved_by FK
+  }
+  users |o--o{ stocktakes : "approved_by"
+  users ||--o{ stocktakes : "counted_by"
+  warehouses ||--o{ stocktakes : "warehouse_id"
+  stores {
+    uuid id PK
+    text code
+  }
+  suppliers {
+    uuid id PK
+    text code
+  }
+  technician_assignments {
+    uuid id PK
+    uuid delivery_id FK
+    uuid technician_id FK
+    uuid assigned_by FK
+    text status
+  }
+  users ||--o{ technician_assignments : "assigned_by"
+  deliveries ||--o{ technician_assignments : "delivery_id"
+  users ||--o{ technician_assignments : "technician_id"
+  user_roles {
+    uuid id PK
+    uuid user_id FK
+    text role_code FK
+    uuid store_id FK
+  }
+  roles ||--o{ user_roles : "role_code"
+  stores |o--o{ user_roles : "store_id"
+  users ||--o{ user_roles : "user_id"
+  users {
+    uuid id PK
+  }
+  warehouses {
+    uuid id PK
+    uuid store_id FK
+    text code
+  }
+  stores ||--o{ warehouses : "store_id"
+  warranties {
+    uuid id PK
+    uuid device_id FK
+    uuid policy_id FK
+    uuid customer_id FK
+    text status
+  }
+  customers ||--o{ warranties : "customer_id"
+  devices ||--o{ warranties : "device_id"
+  warranty_policies ||--o{ warranties : "policy_id"
+  warranty_claims {
+    uuid id PK
+    uuid warranty_id FK
+    text code
+    text status
+    uuid opened_by FK
+  }
+  users ||--o{ warranty_claims : "opened_by"
+  warranties ||--o{ warranty_claims : "warranty_id"
+  warranty_policies {
+    uuid id PK
+    text code
+  }
