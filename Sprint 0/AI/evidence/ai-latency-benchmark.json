@@ -1,0 +1,29 @@
+{
+  "benchmark_metadata": {
+    "title": "D55 AI Performance & Latency Benchmark Evidence",
+    "author": "Nguyen Tien Vu (Data / AI Lead)",
+    "reviewer": "Tran Trung Kien (Architect / DBA)",
+    "target_sla": {
+      "nfr_03": "< 3000ms at p95 under 50 concurrent requests",
+      "br_09": "LLM timeout hard limit 2500ms -> fallback to rule"
+    },
+    "timestamp": "2026-11-07T16:47:50.165859+00:00",
+    "total_requests": 100,
+    "concurrency": 50
+  },
+  "metrics": {
+    "min_ms": 2.53,
+    "avg_ms": 674.47,
+    "p50_ms": 646.28,
+    "p90_ms": 2509.34,
+    "p95_ms": 2510.79,
+    "p99_ms": 2514.88,
+    "max_ms": 2514.88,
+    "sla_compliance_p95_under_3s": true
+  },
+  "source_distribution": {
+    "cache_hits": 50,
+    "llm_inferences": 40,
+    "rule_fallbacks": 10
+  }
+}
