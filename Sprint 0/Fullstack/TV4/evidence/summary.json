@@ -1,0 +1,70 @@
+{
+  "phase": "Phase 3 - Database Smoke Test Preparation",
+  "started_at_utc": "2026-11-07T16:56:45.537384+00:00",
+  "finished_at_utc": "2026-11-07T16:56:45.541822+00:00",
+  "workspace": "D:/software-project-management-an",
+  "branch": "feat/tv4-sprint0-handoff",
+  "decision_status": {
+    "PM_Trinh_Quoc_An": "APPROVED (A1, B1, C2 per user confirmation)",
+    "Architect_DBA_Tran_Trung_Kien": "PENDING DBA APPROVAL"
+  },
+  "docker_compose_inspection": {
+    "container_name_hardcoded": false,
+    "project_name_hardcoded": false,
+    "custom_networks_defined": false,
+    "host_port_binding": [
+      "127.0.0.1:5432:5432"
+    ],
+    "named_volume": "sasms_pgdata",
+    "bind_mount": "./database:/work/database:ro",
+    "root_dotenv_exists": false,
+    "port_5432_currently_listening": false,
+    "recommended_isolated_project": "tv4_s0_check"
+  },
+  "sasms_app_inspection": {
+    "group_role_defined": true,
+    "group_role_attributes": "NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS",
+    "runtime_login_provisioned_in_sql": false,
+    "can_connect_directly_as_sasms_app": false,
+    "has_schema_usage_and_select_all_37_tables": true,
+    "satisfies_smoke_test_queries_once_login_granted": true,
+    "status": "PENDING DBA APPROVAL"
+  },
+  "checks": {
+    "D52_openapi_redocly_lint": {
+      "status": "PASS",
+      "command": "npx.cmd --offline -y @redocly/cli lint \"Sprint 0/Fullstack/TV4/docs/sprint0/d52/D52_OPENAPI_INVENTORY_POS_AI_DRAFT.yaml\"",
+      "evidence_file": "Sprint 0/Fullstack/TV4/evidence/d52-openapi-lint.log"
+    },
+    "frontend_npm_ci_and_build": {
+      "status": "PASS",
+      "command": "npm.cmd run build",
+      "evidence_file": "Sprint 0/Fullstack/TV4/evidence/frontend-build.log"
+    },
+    "backend_context_unit_test": {
+      "status": "PASS",
+      "command": ".\\mvnw.cmd -o test",
+      "evidence_file": "Sprint 0/Fullstack/TV4/evidence/surefire-summary.txt"
+    },
+    "postgresql_jdbc_smoke_test_without_dba_login": {
+      "status": "SKIPPED",
+      "command": ".\\mvnw.cmd -o \"-Dtest=PostgreSqlConnectionSmokeTest\" test",
+      "reason": "SASMS_PG_SMOKE_ENABLED not enabled because runtime login inheriting sasms_app is not provisioned yet (PENDING DBA APPROVAL); sasms_owner is forbidden as runtime user per C2.",
+      "evidence_file": "Sprint 0/Fullstack/TV4/evidence/backend-smoke-test-skipped.log"
+    },
+    "postgresql_live_db_smoke_test_with_sasms_app_login": {
+      "status": "NOT RUN (PENDING DBA APPROVAL)",
+      "reason": "database/runtime-roles.sql creates sasms_app with NOLOGIN; awaiting DBA Trần Trung Kiên to provision/approve runtime login before starting Docker/PostgreSQL."
+    }
+  },
+  "source_sha256": {
+    "docker-compose.yml": "31092c806dcbd4290af8d7924ec53fa5efcdcae09ad67fba03af4ccb687bbc3c",
+    "database/schema.sql": "66aacda1101c20ed0cc6c80062d93ef917660b4f6e825fa124f536dc2a1fcd96",
+    "database/seed.sql": "8ed00da989ccb6700867636d7d5616f0e90f2422086205bddfbe79fcd783d385",
+    "database/runtime-roles.sql": "c119d150d6a6b93166258d85b125df52a765acb9c9558db9f0a3e2942ac86c85",
+    "database/tests/runtime_acl.sql": "bcbacf0f12fb194aaa9df58ade1cad029d53a5455ddd75ad8ca4cf2597866d08",
+    "backend/pom.xml": "1845e1d37fc16ad0f3afd810ddfbe8ed42bd0f88282e8b19deb15a4bb0b377a4",
+    "backend/src/main/resources/application-postgresql.properties": "0b39943ce2b84228eb0e94eff5ccd3ac35fd80e1d3a5af394fbdd9dd9d14e6f4",
+    "backend/src/test/java/com/smartelectronicsupermarket/PostgreSqlConnectionSmokeTest.java": "0e5b5e6a9ee980684f2d6006e081609f61f5a7dadaa07a52c61fa7bf28d06e48"
+  }
+}

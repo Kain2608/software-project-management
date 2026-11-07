@@ -1,0 +1,12 @@
+# Maven build output
+target/
+*.log
+
+# IDE metadata
+.idea/
+.vscode/
+*.iml
+
+# Local environment secrets
+.env
+.env.*
