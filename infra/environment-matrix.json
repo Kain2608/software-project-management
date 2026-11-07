@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "status": "proposed operational baseline; remote Staging and Production are not provisioned by this repository",
+  "owner": "Tran Trung Kien (Architect / DBA)",
+  "implemented_toolchain": {
+    "database_major": 16,
+    "python_minimum": "3.10",
+    "clients": ["psql", "pg_dump", "pg_restore"],
+    "application_backend": "pending Dev Lead choice; no deployed application in current repository"
+  },
+  "environments": {
+    "dev": {
+      "source": "feature branches including Kien",
+      "database": "isolated developer database, PostgreSQL 16",
+      "network": "127.0.0.1 only",
+      "data": "synthetic fixtures",
+      "credentials": "separate owner and sasms_app/sasms_reader NOLOGIN groups; real credentials outside Git",
+      "migration": "reviewed baseline then checksum-tracked migrations",
+      "backup": "logical custom dump and manifest before schema changes"
+    },
+    "staging": {
+      "source": "reviewed commit on main, same artifact as intended Production",
+      "database": "separate PostgreSQL 16 instance/database and role credentials",
+      "network": "private DB network, controlled operator access",
+      "data": "synthetic or approved anonymized data",
+      "credentials": "secret manager or protected environment secrets; no shared Production credentials",
+      "migration": "manual approved release, backup, apply, smoke test, retain evidence",
+      "provisioned": false
+    },
+    "prod": {
+      "source": "exact reviewed commit validated on Staging",
+      "database": "dedicated PostgreSQL 16, private network",
+      "network": "application/operator allowlist, TLS across networks",
+      "data": "business data under approved access/retention policy",
+      "credentials": "rotated secrets, separate owner/runtime/backup identities",
+      "migration": "release approval plus compatibility and restore plan; no automatic deploy in current repo",
+      "provisioned": false
+    }
+  },
+  "proposed_recovery_objectives": {
+    "production_rpo_minutes": 15,
+    "production_rto_hours": 4,
+    "approval": "pending PM/system owner",
+    "logical_dump_satisfies_rpo": false,
+    "required_for_rpo": "continuous WAL archiving plus base backup/PITR or a reviewed managed equivalent"
+  }
+}

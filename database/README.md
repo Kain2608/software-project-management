@@ -2,6 +2,8 @@
 
 Đây là DB baseline Sprint 0 của Kiên: 37 bảng, dữ liệu mô phỏng, 4 giao dịch DB, bộ kiểm tra và artifacts ERD. Xem [D51](../Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md) và [D57](../Sprint%200/DB/D57-luoc-do-va-kiem-thu.md) trước khi tích hợp.
 
+Để làm việc với **Sprint 1**, xem [hướng dẫn nâng cấp](sprint1/README.md). Không nạp lại `schema.sql`, chạy lại seed quyền baseline hoặc dùng validator Sprint 0 trên DB đã nâng cấp; dùng migration runner và `validate_sprint1.py` theo hướng dẫn mới.
+
 ## 1. Chuẩn bị
 
 Cần PostgreSQL **16** server, client `psql` và Python 3.10+. Dùng database thử riêng do tài khoản owner sở hữu. Schema không cài extension, không có mật khẩu mặc định và không tự DROP dữ liệu. `gen_random_uuid()` có sẵn trong PostgreSQL 16.

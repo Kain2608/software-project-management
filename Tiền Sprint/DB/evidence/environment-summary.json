@@ -1,0 +1,188 @@
+{
+  "started_at_utc": "2026-11-07T12:49:43.052058+00:00",
+  "status": "passed",
+  "checks": {
+    "connection string preservation and credential redaction": {
+      "passed": true,
+      "assertions": 4
+    },
+    "psql version": {
+      "passed": true
+    },
+    "pg_dump version": {
+      "passed": true
+    },
+    "pg_restore version": {
+      "passed": true
+    },
+    "PostgreSQL source version": {
+      "passed": true
+    },
+    "source schema preflight": {
+      "passed": true
+    },
+    "bootstrap database/schema.sql": {
+      "passed": true
+    },
+    "bootstrap database/seed.sql": {
+      "passed": true
+    },
+    "bootstrap database/runtime-roles.sql": {
+      "passed": true
+    },
+    "upgrade dedicated source": {
+      "passed": true
+    },
+    "provision Sprint1 runtime": {
+      "passed": true
+    },
+    "upgraded source shape": {
+      "passed": true
+    },
+    "source before synthetic fixtures tables": {
+      "passed": true
+    },
+    "source before synthetic fixtures data": {
+      "passed": true
+    },
+    "source schema before drill": {
+      "passed": true
+    },
+    "create two synthetic imported devices": {
+      "passed": true
+    },
+    "quiescent source before backup tables": {
+      "passed": true
+    },
+    "quiescent source before backup data": {
+      "passed": true
+    },
+    "source schema and ACL before backup": {
+      "passed": true
+    },
+    "logical backup of quiescent source": {
+      "passed": true
+    },
+    "refuse existing archive or manifest": {
+      "passed": true,
+      "expected_refusal": true
+    },
+    "restore only into a new private database": {
+      "passed": true
+    },
+    "restored target tables": {
+      "passed": true
+    },
+    "restored target data": {
+      "passed": true
+    },
+    "restored constraints routines and runtime ACL": {
+      "passed": true
+    },
+    "verify PUBLIC cannot connect to restored target": {
+      "passed": true
+    },
+    "retry restored batch as actual sasms_app": {
+      "passed": true
+    },
+    "restored target after retry tables": {
+      "passed": true
+    },
+    "restored target after retry data": {
+      "passed": true
+    },
+    "refuse an already existing restore target": {
+      "passed": true,
+      "expected_refusal": true
+    },
+    "existing target after refused restore tables": {
+      "passed": true
+    },
+    "existing target after refused restore data": {
+      "passed": true
+    },
+    "refuse archive checksum tampering before CREATE DATABASE": {
+      "passed": true,
+      "expected_refusal": true
+    },
+    "tampered archive created no target": {
+      "passed": true
+    },
+    "original source after backup restore and refusal probes tables": {
+      "passed": true
+    },
+    "original source after backup restore and refusal probes data": {
+      "passed": true
+    },
+    "exact source fixture cleanup": {
+      "passed": true
+    },
+    "source after exact fixture cleanup tables": {
+      "passed": true
+    },
+    "source after exact fixture cleanup data": {
+      "passed": true
+    },
+    "source schema after cleanup": {
+      "passed": true
+    }
+  },
+  "scope": "isolated logical-backup drill only; no remote Staging/Prod, PITR, SLA or approval claim",
+  "source_sha256": {
+    "scripts/validate_environment.py": "82be9c81511722807d89dcfe1d46906e35e0b0e58f6302b59918ef58a1bdcf56",
+    "scripts/db_ops.py": "030ee4a7250169252fe4dee6f798774e7f7e643aefb71bc60456930bb7588fcb",
+    "scripts/migrate_db.py": "d2ef36d3ff7ada3fffcaea725626c316887d4ca7a5bd495a6ff2d0ee959b908a",
+    "database/schema.sql": "66aacda1101c20ed0cc6c80062d93ef917660b4f6e825fa124f536dc2a1fcd96",
+    "database/seed.sql": "8ed00da989ccb6700867636d7d5616f0e90f2422086205bddfbe79fcd783d385",
+    "database/runtime-roles.sql": "c119d150d6a6b93166258d85b125df52a765acb9c9558db9f0a3e2942ac86c85",
+    "database/sprint1/runtime-roles.sql": "8377c1829c177fd84eeb75d31716fa695a1fbcea2e065086b14d1ba409345335",
+    "database/migrations/V001__catalog_and_iam.sql": "4ebbb59ad4b8bee50c16e26becabe1ec2fab5d69e44ad5a613a049f6583d3f71",
+    "database/migrations/V002__inventory_batches_and_identifiers.sql": "48038d23eaaf418d49e8a840a71faed2f59b4f8350089dee2f9f3566524a020e"
+  },
+  "connection_helper_assertions": 4,
+  "client_versions": {
+    "psql": "psql (PostgreSQL) 16.15",
+    "pg_dump": "pg_dump (PostgreSQL) 16.15",
+    "pg_restore": "pg_restore (PostgreSQL) 16.15"
+  },
+  "postgresql": {
+    "version": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+    "version_num": 160015,
+    "database": "pre_sprint_environment_final_5344126c"
+  },
+  "source_shape": {
+    "tables": 39,
+    "migrations": 2
+  },
+  "catalog_objects": {
+    "columns": 255,
+    "constraints": 229,
+    "indexes": 106,
+    "routines": 14,
+    "triggers": 6,
+    "views": 1,
+    "acl": 63
+  },
+  "restore_drill": {
+    "business_tables": 39,
+    "migration_ledger_compared": true,
+    "data_and_schema_match": true,
+    "schema_catalog_sha256": "708389e7c2cb7417213951c1cdd898bd36e4af8cf82e178523ec4c11d307617b",
+    "runtime_retry_same_device_ids": true,
+    "runtime_retry_no_extra_effects": true,
+    "public_connect_disabled": true,
+    "source_unchanged_by_backup_restore": true,
+    "restored_database": "sasms_restore_drill_1d84f2f836114769",
+    "restored_database_retained_for_inspection": true,
+    "archive_sha256": "cc7c2d106eafb78aa0dba17b62a00c706d1e4674deaa71ea73b0358a317eb9fe",
+    "archive_retained": true,
+    "refusal_probes": [
+      "existing_backup_output",
+      "existing_restore_target",
+      "tampered_archive_before_create"
+    ]
+  },
+  "source_fixtures_cleaned": true,
+  "finished_at_utc": "2026-11-07T12:49:49.709775+00:00",
+  "check_count": 40
+}

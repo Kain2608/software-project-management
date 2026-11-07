@@ -1,0 +1,199 @@
+{
+  "reviewed_at_utc": "2026-11-07T13:34:47.015963+00:00",
+  "branch": "DB",
+  "review_start_commit": "eb63fd8489230b394cba133d4c8d2d6e485492ce",
+  "scope": {
+    "owner": "Tran Trung Kien / Architect-DBA",
+    "primary_tasks": [
+      "S0-17",
+      "S0-18",
+      "S0-21"
+    ],
+    "support_tasks": [
+      "S0-24",
+      "S0-14",
+      "S0-15",
+      "S0-22",
+      "S0-19",
+      "S0-23",
+      "S0-27"
+    ]
+  },
+  "policy": {
+    "complete": "preserve",
+    "partial_found": "reuse existing artifact and supplement missing handoff/review details",
+    "partial_not_found": "reconstruct only within assigned DB scope",
+    "missing": "create missing DB contribution; do not fabricate another owner approval"
+  },
+  "workbook": {
+    "artifact": "Sprint 0/DB/inputs/phan-cong-sprint-0.xlsx",
+    "sha256": "327d95b1e160948d65d0b448c2e8cb0edeb678a0f41f0491f2923f327473df7a",
+    "unmodified_copy": true
+  },
+  "decisions": [
+    {
+      "document": "D50",
+      "workbook_status": "CHUA CO",
+      "existing_artifact_found": true,
+      "action": "preserve complete architecture; supplement now-available D22 references"
+    },
+    {
+      "document": "D51",
+      "workbook_status": "MOT PHAN",
+      "existing_artifact_found": true,
+      "action": "reuse 37-table design and dictionary; add source-to-constraint-to-test traceability and review details"
+    },
+    {
+      "document": "D57",
+      "workbook_status": "DA CO",
+      "existing_artifact_found": true,
+      "action": "preserve SQL/DBML/ERD/seed/tests/evidence; no DB code change or duplicate rebuild"
+    },
+    {
+      "document": "D54",
+      "workbook_status": "CHUA CO",
+      "existing_artifact_found": true,
+      "action": "preserve complete role matrix/security design; supplement implementation boundaries"
+    }
+  ],
+  "preserved_artifacts": [
+    {
+      "artifact": "Sprint 0/DB/D50-kien-truc-he-thong.md",
+      "sha256": "50186491ce65fd39a74ac96926b754ca143a5a4e88061c41a0d01e85a59d0955",
+      "action": "preserve"
+    },
+    {
+      "artifact": "Sprint 0/DB/D51-thiet-ke-co-so-du-lieu.md",
+      "sha256": "cfb6a2f9e64bb71ba07c3e6fc1aa188e7052c315606aedbbc421a9eb947e798a",
+      "action": "preserve"
+    },
+    {
+      "artifact": "Sprint 0/DB/D51-tu-dien-du-lieu.md",
+      "sha256": "12684ab9e54e96b55dc5982475bcbe0724aee9e55e3ae1a811406bf5090dd2af",
+      "action": "preserve"
+    },
+    {
+      "artifact": "Sprint 0/DB/D54-bao-mat-phan-quyen.md",
+      "sha256": "67b53cb0f3e24824a8d3f997719882fa41f517066234cf3f0d892604d2fed8e9",
+      "action": "preserve"
+    },
+    {
+      "artifact": "Sprint 0/DB/D57-luoc-do-va-kiem-thu.md",
+      "sha256": "c7ba21a660353979ad37f98b39ffe5e917ce1bcb641ca27968658e5387f72dfa",
+      "action": "preserve"
+    },
+    {
+      "artifact": "Sprint 0/DB/D126-ho-so-review-M1.md",
+      "sha256": "1c88df80ff0482f1d82655eb4aad78afa2b2d25b7a301d85c36dfcdf7a2fca25",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/schema.sql",
+      "sha256": "66aacda1101c20ed0cc6c80062d93ef917660b4f6e825fa124f536dc2a1fcd96",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/seed.sql",
+      "sha256": "8ed00da989ccb6700867636d7d5616f0e90f2422086205bddfbe79fcd783d385",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/runtime-roles.sql",
+      "sha256": "c119d150d6a6b93166258d85b125df52a765acb9c9558db9f0a3e2942ac86c85",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/schema.dbml",
+      "sha256": "6e57ad0b19d828bd13503209a4f557afa8d68d5bfd47eb34a9ad197c672b4725",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/erd.mmd",
+      "sha256": "aac52c26921203e03c062a6a96f7311e9dc5690eba8cf5cad1c59b4fe3446b0b",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/checks.sql",
+      "sha256": "984495c17b4580cbfeca419deb5dddc614bdcf46fab4b8060a40786c329b41da",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/tests/constraints.sql",
+      "sha256": "9c40c7285ea48c206158e1db7ba4909261e52eac4ee57548c9dbe241719dcd7e",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/tests/runtime_acl.sql",
+      "sha256": "bcbacf0f12fb194aaa9df58ade1cad029d53a5455ddd75ad8ca4cf2597866d08",
+      "action": "preserve"
+    },
+    {
+      "artifact": "database/tests/benchmark.sql",
+      "sha256": "0eaa38f390c44ffc08612535434ed732ef8a3fbfebfbcdcf9fcd8bc6991d80bc",
+      "action": "preserve"
+    },
+    {
+      "artifact": "scripts/validate_db.py",
+      "sha256": "79d28cbd7859615551eae68f80c4c781449f35064737d038b7ea3c9f391b3841",
+      "action": "preserve"
+    }
+  ],
+  "existing_evidence_verified": {
+    "baseline_source_hashes_match": 7,
+    "parser_input_hashes_match": 5,
+    "baseline_report_status": "passed",
+    "baseline_constraint_assertions": 56,
+    "baseline_runtime_acl_assertions": 7,
+    "database_tests_rerun": false,
+    "reason": "baseline SQL/test sources unchanged; prior evidence retained and hashes verified"
+  },
+  "supplements": [
+    {
+      "artifact": "Sprint 0/DB/bo-sung/README.md",
+      "sha256": "64a1b9f1c47449a5500f4264b47741fbfb4604179b0b77505dae0c065ca90ce7"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/D50-D54-bo-sung-can-cu-va-kiem-soat.md",
+      "sha256": "bf4dbff3e10057dfc6b2ee066f4c98c15daf5079955cdb00d092db12c2cf14d1"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/D51-bo-sung-ra-soat-thiet-ke.md",
+      "sha256": "9ae1c3296ead791d5db089cb2f4638a3ec2254c35217477e7e40d0fe05c8dd82"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/D51-truy-vet-yeu-cau-DB.csv",
+      "sha256": "c710d40d9da1d4eec7ab3895b4babf9406acee2fc7b17287cfbbaf449f7340ba"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/S0-14-15-ban-giao-yeu-cau-va-luong-du-lieu.md",
+      "sha256": "6b168e41f77c6727646d592547bdaafc31fbdab735ab5b1910fb8b0148a9c20c"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/S0-19-22-23-hop-dong-API-AI-tich-hop.md",
+      "sha256": "2f3722bbc52564fd4c3a986a580b93a62bc2915a075c1eb0fabeb9edb874e453"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/D63-D65-huong-dan-DB-cho-Dev.md",
+      "sha256": "523f4a4cac1b188b0fd2127542f489a43966ba188935267be53b00fea55326eb"
+    },
+    {
+      "artifact": "Sprint 0/DB/bo-sung/D126-bo-sung-bang-chung-va-diem-mo.md",
+      "sha256": "8252c1ddd18e0a94ca4b70c53eebe101284041a02b94ea1d6dae2f6e52a5f164"
+    }
+  ],
+  "remaining_owner_inputs": [
+    "D34 approved FRS",
+    "manufacturer identifier rules with source confirmation",
+    "official business role approval",
+    "actual M1 review/signatures",
+    "application/provider/Staging evidence owned by corresponding leads"
+  ],
+  "supplement_validation": {
+    "local_markdown_links": "passed",
+    "traceability_rows": 21,
+    "actual_test_label_references_verified": 41,
+    "preserved_artifacts_verified": 16,
+    "database_code_changed": false,
+    "database_tests_rerun": false
+  }
+}

@@ -1,0 +1,54 @@
+name: Pre-sprint PostgreSQL16 backup and restore
+
+on:
+  push:
+    paths: ['scripts/db_ops.py', 'scripts/validate_environment.py', 'infra/**', 'Tiền Sprint/DB/**', '.github/workflows/pre-sprint-environments.yml']
+  pull_request:
+    paths: ['scripts/db_ops.py', 'scripts/validate_environment.py', 'infra/**', 'Tiền Sprint/DB/**', '.github/workflows/pre-sprint-environments.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  environment-drill:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pre_sprint_test
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: pre_sprint_environment
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pre_sprint_test -d pre_sprint_environment"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: pre_sprint_test
+      PGPASSWORD: isolated-ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install matching PostgreSQL16 clients
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+      - name: Verify backup, private restore and no-overwrite guards
+        run: >-
+          python scripts/validate_environment.py --apply
+          --source-dsn "dbname=pre_sprint_environment"
+          --maintenance-dsn "dbname=postgres"
+          --psql /usr/lib/postgresql/16/bin/psql
+          --pg-dump /usr/lib/postgresql/16/bin/pg_dump
+          --pg-restore /usr/lib/postgresql/16/bin/pg_restore
+          --work-dir /tmp/pre-sprint-backups
+          --evidence-dir /tmp/pre-sprint-evidence
+      - name: Retain drill evidence without database archives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-sprint-environment-evidence
+          path: /tmp/pre-sprint-evidence

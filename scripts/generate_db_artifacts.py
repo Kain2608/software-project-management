@@ -57,15 +57,21 @@ def typestr(value: str) -> str:
             'character varying': 'varchar'}.get(value, value).replace('character varying(', 'varchar(')
 
 
-def render(tables: list[dict]) -> dict[Path, str]:
+def render(tables: list[dict], output_dir: Path | None = None) -> dict[Path, str]:
+    count = len(tables)
+    model_note = ('D57 rebuilt 37-table Sprint 0 proposal.' if output_dir is None
+                  else f'Sprint 1 upgraded schema, {count} business tables; migration history excluded.')
     dbml = ["// Generated from PostgreSQL catalogs; do not edit by hand.",
             "Project SASMS {", "  database_type: 'PostgreSQL'",
-            "  Note: 'D57 rebuilt 37-table Sprint 0 proposal. SQL controls CHECKs, partial indexes, NULLS NOT DISTINCT, generated columns, triggers and routines.'", "}", ""]
-    erd = ["%% Generated from PostgreSQL catalogs; full 37-table physical model.", "erDiagram"]
+            "  Note: '" + model_note + " SQL controls CHECKs, partial indexes, NULLS NOT DISTINCT, generated columns, triggers and routines.'", "}", ""]
+    erd = [f"%% Generated from PostgreSQL catalogs; full {count}-table physical model.", "erDiagram"]
     dictionary = ["# D51 — Từ điển dữ liệu vật lý", "",
                   "Sinh từ catalog PostgreSQL bằng `scripts/generate_db_artifacts.py`. `schema.sql` là nguồn thực thi. "
                   "Mọi khóa ngoại dùng NO ACTION mặc định; không xóa dây chuyền chứng từ. "
                   "Các CHECK, index và cột sinh được ghi dưới từng bảng.", ""]
+    if output_dir is not None:
+        dictionary[0] = '# Sprint 1 — Từ điển dữ liệu sau migration'
+        dictionary[2] = dictionary[2].replace('`schema.sql`', '`schema.sql` + `database/migrations/*.sql`')
     relationships = []
     for table in tables:
         name = table['name']
@@ -126,9 +132,9 @@ def render(tables: list[dict]) -> dict[Path, str]:
             erd.append(f'  {target} ' + ('|o' if nullable else '||') + ('--o|' if unique_child else '--o{') +
                        f' {name} : "' + ','.join(con['columns']) + '"')
     dbml += relationships
-    return {ROOT / 'database/schema.dbml': '\n'.join(dbml) + '\n',
-            ROOT / 'database/erd.mmd': '\n'.join(erd) + '\n',
-            ROOT / 'Sprint 0/DB/D51-tu-dien-du-lieu.md': '\n'.join(dictionary).rstrip() + '\n'}
+    return {(output_dir/'schema.dbml' if output_dir else ROOT/'database/schema.dbml'): '\n'.join(dbml) + '\n',
+            (output_dir/'erd.mmd' if output_dir else ROOT/'database/erd.mmd'): '\n'.join(erd) + '\n',
+            (output_dir/'data-dictionary.md' if output_dir else ROOT/'Sprint 0/DB/D51-tu-dien-du-lieu.md'): '\n'.join(dictionary).rstrip() + '\n'}
 
 
 def main() -> int:
@@ -136,18 +142,23 @@ def main() -> int:
     parser.add_argument('--psql', default='psql')
     parser.add_argument('--dsn', default=os.environ.get('DATABASE_URL'), required=not os.environ.get('DATABASE_URL'))
     parser.add_argument('--check', action='store_true', help='Fail if committed artifacts differ from live schema')
+    parser.add_argument('--expected-tables', type=int, default=37)
+    parser.add_argument('--output-dir', type=Path, help='Separate artifacts directory for upgraded schemas; baseline defaults remain unchanged')
     args = parser.parse_args()
+    if args.expected_tables != 37 and args.output_dir is None:
+        parser.error('--output-dir is required for upgraded schemas to preserve Sprint 0 artifacts')
     result = subprocess.run([args.psql, '-X', '--dbname', args.dsn, '-v', 'ON_ERROR_STOP=1', '-At', '-c', QUERY],
                             capture_output=True, text=True, encoding='utf-8')
     if result.returncode:
         print('Could not inspect PostgreSQL schema (check connection and permissions).', file=sys.stderr)
         return 1
     tables = json.loads(result.stdout)['tables'] or []
-    if len(tables) != 37:
-        print(f'Expected 37 SASMS tables, got {len(tables)}.', file=sys.stderr)
+    if len(tables) != args.expected_tables:
+        print(f'Expected {args.expected_tables} SASMS tables, got {len(tables)}.', file=sys.stderr)
         return 1
     mismatches = []
-    for path, content in render(tables).items():
+    output_dir = (ROOT/args.output_dir).resolve() if args.output_dir is not None else None
+    for path, content in render(tables, output_dir).items():
         if args.check:
             if not path.exists() or path.read_text(encoding='utf-8') != content:
                 mismatches.append(str(path.relative_to(ROOT)))
@@ -157,7 +168,8 @@ def main() -> int:
     if mismatches:
         print('Outdated artifacts: ' + ', '.join(mismatches), file=sys.stderr)
         return 1
-    print('D57 artifacts match 37 PostgreSQL tables.' if args.check else 'Generated DBML, Mermaid ERD and D51 data dictionary (37 tables).')
+    print(f'D57 artifacts match {len(tables)} PostgreSQL tables.' if args.check else
+          f'Generated DBML, Mermaid ERD and D51 data dictionary ({len(tables)} tables).')
     return 0
 
 

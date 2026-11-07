@@ -1,6 +1,8 @@
 # Sprint 0 — Hồ sơ Kiến trúc / Cơ sở dữ liệu của Trần Trung Kiên
 
-Nhánh thực hiện: `Kien`. Phạm vi: làm lại toàn bộ đầu ra Kiên phụ trách trong Sprint 0, gồm S0-17 (D50), S0-18 (D51, D57), S0-21 (D54), và phần bàn giao DB hỗ trợ các đầu việc liên quan. Hồ sơ được dựng lại từ nguồn có trong repo và bảng phân công do người dùng cung cấp; trạng thái “đã có”, “một phần” hoặc “đã phê duyệt” trong nguồn cũ không đồng nghĩa phiên bản mới đã được duyệt.
+Nhánh hiện hành: **`DB`**. Bản gốc được tạo trên `Kien`; lần tiếp tục này giữ các đầu ra đã hoàn chỉnh, bổ sung phần còn thiếu trên bản tìm thấy và chỉ tạo mới nội dung chưa có. Phạm vi Kiên gồm S0-17 (D50), S0-18 (D51, D57), S0-21 (D54) và phần DB hỗ trợ bảy đầu việc liên quan. Trạng thái trong workbook là dữ liệu kế hoạch cũ, không tự thay thế việc đối chiếu artifact hiện tại hoặc phê duyệt của người có thẩm quyền.
+
+**Lượt bổ sung theo yêu cầu mới:** xem [bảng giữ/bổ sung/tạo mới và danh mục phần còn lại](bo-sung/README.md). SQL/DBML D57 được đánh dấu “ĐÃ CÓ” và được giữ nguyên. D51 tìm thấy trong repo nên được tái sử dụng cùng phần rà soát/truy vết bổ sung; D50/D54 đã hoàn chỉnh được giữ nguyên để bảo toàn bằng chứng.
 
 [Bảng phân công đầu vào](inputs/phan-cong-sprint-0.xlsx) là bản sao nguyên vẹn file Excel người dùng cung cấp; SHA-256 `327d95b1e160948d65d0b448c2e8cb0edeb678a0f41f0491f2923f327473df7a`. Không sửa trạng thái hoặc chữ ký trong nguồn gốc để mô phỏng nghiệm thu.
 
@@ -17,12 +19,13 @@ Sprint theo bảng phân công: **12/09–25/09/2026**; mốc M1: **25/09/2026**
 | S0-24 — Môi trường DB | Bộ cài và hướng dẫn | [database/README.md](../../database/README.md), [seed.sql](../../database/seed.sql) |
 | S0-18 — Kiểm chứng | Bộ kiểm tra và kết quả chạy | [constraints.sql](../../database/tests/constraints.sql), [validate_db.py](../../scripts/validate_db.py), [validation.log](../../database/evidence/validation.log) |
 | S0-27 — Đóng góp review M1 | Hồ sơ review của Kiên | [D126-ho-so-review-M1.md](D126-ho-so-review-M1.md) |
+| Đối chiếu phần còn thiếu | Phụ lục tiếp tục trên nhánh DB | [Bộ bổ sung Sprint 0](bo-sung/README.md), [biên mục hash](bo-sung/doi-chieu-sprint-0.json) |
 
 Tên mã tài liệu D50/D51/D54/D57 là đầu ra của bảng phân công. SQL là nguồn triển khai; DBML và ERD phải phản ánh cùng một phiên bản SQL. Chỉ coi kiểm tra là đạt khi có log chạy thực tế tương ứng; đường dẫn tới bộ kiểm tra không tự nó chứng minh rằng kiểm tra đã chạy thành công.
 
 ## 2. Truy vết nguồn và phạm vi được xác định
 
-Nguồn phân công: `02 - Sprint 0 (12-09 đến 25-09) - Phân chia công việc.xlsx` do người dùng cung cấp, không nằm trong repo.
+Nguồn phân công: `02 - Sprint 0 (12-09 đến 25-09) - Phân chia công việc.xlsx` do người dùng cung cấp; bản sao nguyên vẹn được giữ tại [inputs/phan-cong-sprint-0.xlsx](inputs/phan-cong-sprint-0.xlsx).
 
 | Nguồn | Nội dung dùng để xây dựng đầu ra |
 |---|---|
@@ -45,7 +48,7 @@ Số đoạn Word tính theo thứ tự phần tử đoạn trong `word/document
 
 | Mã | Điểm cần làm rõ | Cách xử lý trong bản dựng lại |
 |---|---|---|
-| OPEN-01 | Repo không có D34/FRS_V2, D22, thiết kế DB cũ hoặc SQL/DBML cũ | Thiết kế mới là baseline đề xuất; cần Huy/PM đối chiếu FRS khi có |
+| OPEN-01 | Vẫn thiếu D34/FRS_V2 và bản nháp DB gốc được workbook nhắc đến; D22 hiện đã có trong hồ sơ tiền Sprint | Dùng [D22](../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) làm đầu vào; giữ thiết kế 37 bảng đã dựng và bổ sung truy vết, cần Huy/PM đối chiếu FRS khi có |
 | OPEN-02 | Workbook ghi bản nháp 37 bảng nhưng không đính kèm cấu trúc | Baseline 37 bảng được **dựng lại**, không phải khôi phục bản nháp cũ; số bảng không chứng minh yêu cầu đã đủ |
 | OPEN-03 | Nguồn chỉ yêu cầu 9 vai trò, chưa liệt kê tên/quyền/phạm vi dữ liệu | Vai trò và quyền trong D54/seed là phương án đề xuất; cần Huy/PM xác nhận trước triển khai thật |
 | OPEN-04 | D05/D11 mô tả 6 module, D19/D20 mô tả demo thu hẹp | Giữ thiết kế dữ liệu đủ hướng mở rộng; các chức năng chưa làm được đánh dấu rõ. Xuất kho ngoài bán, đổi trả và các luồng nâng cao chỉ có khung schema |
