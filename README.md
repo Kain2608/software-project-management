@@ -1,6 +1,15 @@
 # SASMS — Quản lý siêu thị điện máy thông minh
 
-Nhánh **`Kien`** bổ sung phần Architect / DBA của Sprint 0: kiến trúc D50, thiết kế DB D51, bảo mật D54, SQL/DBML D57 và hồ sơ bàn giao review M1. Thiết kế được dựng lại từ tài liệu hiện có; các giả định nghiệp vụ và chữ ký còn chờ được ghi rõ.
+Nhánh **`Kien`** chứa phần DB của Kiên cho Sprint 0 và Sprint 1. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
+
+**Sprint 1:** migration danh mục/SKU, Serial/IMEI, nhập kho theo lô có chống xử lý lặp và kiểm quyền user/role theo cửa hàng.
+
+- [Bộ bàn giao DB Sprint 1](Sprint%201/DB/README.md)
+- [Nâng cấp DB, kiểm thử và demo SQL](database/sprint1/README.md)
+- [Migration có phiên bản](database/migrations) · [DBML sau nâng cấp](database/sprint1/schema.dbml) · [ERD](database/sprint1/erd.mmd)
+- [Log kiểm chứng Sprint 1](database/evidence/sprint1/validation.log)
+
+**Sprint 0:** kiến trúc D50, thiết kế DB D51, bảo mật D54, SQL/DBML D57 và hồ sơ review M1. Baseline 37 bảng và bằng chứng cũ được giữ để đối chiếu.
 
 - [Bộ bàn giao Sprint 0 của Kiên](Sprint%200/DB/README.md)
 - [Thiết kế cơ sở dữ liệu và ERD](Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md)

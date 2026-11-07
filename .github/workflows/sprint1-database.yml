@@ -1,0 +1,49 @@
+name: Sprint1 PostgreSQL16 upgrade and inventory validation
+
+on:
+  push:
+    paths: ['database/**', 'scripts/**', '.github/workflows/sprint1-database.yml']
+  pull_request:
+    paths: ['database/**', 'scripts/**', '.github/workflows/sprint1-database.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-upgrade:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sprint0_test
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: sasms_sprint1_validation
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sprint0_test -d sasms_sprint1_validation"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: sprint0_test
+      PGPASSWORD: isolated-ci-only
+      PGDATABASE: sasms_sprint1_validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Preserve baseline then apply and verify Sprint1 upgrade
+        run: python scripts/validate_sprint1.py --apply --evidence-dir /tmp/sasms-sprint1-evidence
+      - name: Check Sprint1 DBML ERD and catalog artifacts against the upgraded database
+        run: python scripts/generate_db_artifacts.py --dsn "dbname=sasms_sprint1_validation" --expected-tables 39 --output-dir database/sprint1 --check
+      - name: Preserve actual run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint1-postgresql16-validation
+          path: /tmp/sasms-sprint1-evidence

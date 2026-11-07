@@ -1,0 +1,101 @@
+{
+  "scope": "Sprint 1 DBML syntax/model counts and Mermaid syntax. Does not establish rendered layout, SQL behavior, performance or approval.",
+  "result": "PASS",
+  "packages": {
+    "@dbml/core": "11.1.0",
+    "mermaid": "12.3.0",
+    "jsdom": "31.0.0"
+  },
+  "reproduction": {
+    "tool_directory": "C:/Users/co/Documents/sprint0/.artifact-parsers",
+    "command": "node C:/Users/co/Documents/sprint0/.artifact-parsers/check-s1-evidence.mjs",
+    "api_calls": [
+      "new Parser().parse(source, 'dbmlv2')",
+      "new Parser().parse(source, 'dbml')",
+      "await mermaid.parse(source)"
+    ]
+  },
+  "sources": [
+    {
+      "artifact": "database/sprint1/schema.dbml",
+      "sha256": "73bf4fd6c8831c58369d02282788387a3ae6b38672588a8e91591a45bf6216a7"
+    },
+    {
+      "artifact": "database/sprint1/erd.mmd",
+      "sha256": "c87cae501e41328a4225d281ae500629fa33ff7a24046678ed28549054ff640b"
+    },
+    {
+      "artifact": "Sprint 1/DB/D127-ho-so-review-DB-M2.md",
+      "sha256": "d49d48e75e001a8256074f0b44ab364e7a78c23fa281e072abb4d89f3d4674c3"
+    },
+    {
+      "artifact": "Sprint 1/DB/D35-hop-dong-quy-tac-dinh-danh.md",
+      "sha256": "25a1052d801216d9ed8ef3bd26b3a8747c09778e8f581be8e0a93b6287068baf"
+    },
+    {
+      "artifact": "Sprint 1/DB/DS1-thiet-ke-va-ban-giao-DB.md",
+      "sha256": "a768cbbaacb53a44c70137ad968e830e72cf21565930c2e1146efc671ee65299"
+    },
+    {
+      "artifact": "Sprint 1/DB/README.md",
+      "sha256": "6e40bb7214272cb0cde79776f917214a3726059c586827b2ef243c4f24f868d8"
+    },
+    {
+      "artifact": "database/sprint1/README.md",
+      "sha256": "6dc2ba8241dd7b7670470e63f8ad2472890c9f2a6e49f13c2735fa37c4cb3758"
+    }
+  ],
+  "checks": [
+    {
+      "artifact": "database/sprint1/schema.dbml",
+      "parser": "@dbml/core:dbmlv2",
+      "result": "PASS",
+      "tables": 39,
+      "refs": 67
+    },
+    {
+      "artifact": "database/sprint1/schema.dbml",
+      "parser": "@dbml/core:dbml",
+      "result": "PASS",
+      "tables": 39,
+      "refs": 67
+    },
+    {
+      "artifact": "database/sprint1/erd.mmd",
+      "diagram": 1,
+      "parser": "mermaid",
+      "result": "PASS",
+      "diagramType": "er"
+    },
+    {
+      "artifact": "Sprint 1/DB/D127-ho-so-review-DB-M2.md",
+      "parser": "mermaid",
+      "result": "NO_DIAGRAMS",
+      "diagrams": 0
+    },
+    {
+      "artifact": "Sprint 1/DB/D35-hop-dong-quy-tac-dinh-danh.md",
+      "parser": "mermaid",
+      "result": "NO_DIAGRAMS",
+      "diagrams": 0
+    },
+    {
+      "artifact": "Sprint 1/DB/DS1-thiet-ke-va-ban-giao-DB.md",
+      "parser": "mermaid",
+      "result": "NO_DIAGRAMS",
+      "diagrams": 0
+    },
+    {
+      "artifact": "Sprint 1/DB/README.md",
+      "parser": "mermaid",
+      "result": "NO_DIAGRAMS",
+      "diagrams": 0
+    },
+    {
+      "artifact": "database/sprint1/README.md",
+      "parser": "mermaid",
+      "result": "NO_DIAGRAMS",
+      "diagrams": 0
+    }
+  ]
+}
