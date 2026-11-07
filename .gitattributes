@@ -5,6 +5,7 @@
 *.mmd text eol=lf
 *.dbml text eol=lf
 *.yml text eol=lf
+*.csv text eol=lf
 *.json text eol=lf
 *.log text eol=lf
 *.docx binary

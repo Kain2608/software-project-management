@@ -1,6 +1,6 @@
 # SASMS — Quản lý siêu thị điện máy thông minh
 
-Nhánh **`Kien`** chứa phần Architect / DBA của Kiên cho tiền Sprint, Sprint 0 và Sprint 1. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
+Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Kiên cho tiền Sprint, Sprint 0 và Sprint 1. Nhãn `Kien` trong các hồ sơ trước là provenance của lần tạo bản gốc. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
 
 **Tiền Sprint:** KD-10 — kế hoạch thiết bị D21, môi trường và CI/CD D22; đóng góp kỹ thuật cho KD-02/04/09.
 
@@ -19,6 +19,7 @@ Nhánh **`Kien`** chứa phần Architect / DBA của Kiên cho tiền Sprint, S
 **Sprint 0:** kiến trúc D50, thiết kế DB D51, bảo mật D54, SQL/DBML D57 và hồ sơ review M1. Baseline 37 bảng và bằng chứng cũ được giữ để đối chiếu.
 
 - [Bộ bàn giao Sprint 0 của Kiên](Sprint%200/DB/README.md)
+- [Đối chiếu và bổ sung phần còn thiếu Sprint 0](Sprint%200/DB/bo-sung/README.md)
 - [Thiết kế cơ sở dữ liệu và ERD](Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md)
 - [Chạy PostgreSQL và kiểm tra DB](database/README.md)
 - [SQL schema 37 bảng](database/schema.sql) · [DBML](database/schema.dbml) · [ERD Mermaid](database/erd.mmd)
