@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:qr": "node --test src/features/qr/qrPayload.test.js src/features/qr/qrApi.test.js"
   },
   "dependencies": {
+    "@zxing/browser": "0.1.5",
     "axios": "^1.7.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
