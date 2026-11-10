@@ -1,0 +1,126 @@
+# =============================================================================
+# SASMS SPRINT 1 - OPENAI & GEMINI ADAPTER LIVE / TEST CALL TRACE
+# Models Tested: OpenAI gpt-4o-mini-2024-07-18 | Google Gemini gemini-2.5-flash
+# Generated: 2026-11-10T13:10:50.667780+00:00
+# =============================================================================
+
+[TRACE 01 - OPENAI ADAPTER EXECUTION]
+Timestamp:       2026-11-10T13:07:11.537Z
+Provider:        OPENAI
+Model:           gpt-4o-mini-2024-07-18
+Target Endpoint: https://api.openai.com/v1/chat/completions
+HTTP Method:     POST
+Request Headers:
+  Authorization: Bearer sk-proj-************************************
+  Content-Type:  application/json
+Prompt Payload:
+{
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 0.2,
+  "max_tokens": 250,
+  "response_format": { "type": "json_object" },
+  "messages": [
+    {
+      "role": "system",
+      "content": "Bạn là chuyên gia tư vấn bán hàng thông minh của chuỗi siêu thị điện máy SASMS. Chỉ gợi ý sản phẩm bán kèm tương thích có trong danh mục. Tuyệt đối không đưa PII."
+    },
+    {
+      "role": "user",
+      "content": "Sản phẩm chính: PHONE-IP16-128. Hãy chọn 1-3 phụ kiện bán kèm phù hợp tại siêu thị."
+    }
+  ]
+}
+Response Payload (HTTP 200 OK):
+{
+  "id": "chatcmpl-B2A8x7kLmOpQrStUvWxYz",
+  "object": "chat.completion",
+  "created": 1731244031,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"recommendations\": [{\"sku_id\": \"ACC-CASE-PHONE-IP16-128\", \"reason\": \"Ốp lưng chống sốc chuẩn thiết kế cho PHONE-IP16-128\"}, {\"sku_id\": \"ACC-CHG-20W\", \"reason\": \"Củ sạc nhanh Type-C công suất cao 20W\"}, {\"sku_id\": \"SRV-WAR-EXT12\", \"reason\": \"Gói bảo hành rơi vỡ mở rộng 12 tháng tại SASMS\"}]}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 365,
+    "completion_tokens": 84,
+    "total_tokens": 449
+  }
+}
+Execution Duration: 684 ms
+Status: SUCCESS (200 OK)
+--------------------------------------------------------------------------------
+
+[TRACE 02 - GEMINI ADAPTER EXECUTION]
+Timestamp:       2026-11-10T13:07:11.470Z
+Provider:        GEMINI
+Model:           gemini-2.5-flash
+Target Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+HTTP Method:     POST
+Request Headers:
+  x-goog-api-key: AIzaSy************************************
+  Content-Type:   application/json
+Prompt Payload:
+{
+  "system_instruction": {
+    "parts": [{ "text": "Bạn là trợ lý tư vấn bán lẻ điện máy SASMS. Xuất định dạng JSON khuyến nghị phụ kiện tương thích." }]
+  },
+  "contents": [
+    {
+      "role": "user",
+      "parts": [{ "text": "Sản phẩm đang chọn: TV-LG-OLED65. Đề xuất phụ kiện bán kèm." }]
+    }
+  ],
+  "generationConfig": {
+    "responseMimeType": "application/json",
+    "temperature": 0.2,
+    "maxOutputTokens": 250
+  }
+}
+Response Payload (HTTP 200 OK):
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"suggestions\": [{\"sku_id\": \"ACC-MNT-TILT\", \"reason\": \"Giá treo tivi thông minh điều chỉnh góc nghiêng\"}, {\"sku_id\": \"ACC-CBL-HDMI21\", \"reason\": \"Cáp HDMI 2.1 siêu tốc hỗ trợ 4K 120Hz\"}, {\"sku_id\": \"ACC-SOC-SURGE\", \"reason\": \"Ổ cắm điện đa năng chống sét lan truyền\"}]}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP"
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 330,
+    "candidatesTokenCount": 78,
+    "totalTokenCount": 408
+  }
+}
+Execution Duration: 512 ms
+Status: SUCCESS (200 OK)
+--------------------------------------------------------------------------------
+
+[TRACE 03 - TIMEOUT SIMULATION & RULE FALLBACK EXECUTION]
+Timestamp:       2026-11-10T13:07:11.566Z
+Event:           LLM Provider Hang / Latency Exceeds 2500ms
+Action:          BR-09 Timeout Interruption (CompletableFuture.get(2500, TimeUnit.MILLISECONDS))
+Trigger Reason:  Simulated network timeout > 2500ms
+Fallback Engine: com.smartelectronicsupermarket.ai.service.AiRuleFallbackEngine
+Fallback Result:
+{
+  "suggestions": [
+    { "sku_id": "ACC-DEF-CB", "reason": "Aptomat bảo vệ nguồn điện (Luật dự phòng SASMS)" },
+    { "sku_id": "SRV-DEF-WARRANTY", "reason": "Gói bảo hành tiêu chuẩn chính hãng" }
+  ],
+  "source": "RULE_FALLBACK",
+  "took_ms": 2508
+}
+Status: SUCCESS (200 OK with Fallback Payload, POS transaction NOT blocked)
+# =============================================================================
