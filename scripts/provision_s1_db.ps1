@@ -226,4 +226,3 @@ if ($verification -notmatch '^sasms\|16\.[0-9]+(?:\.[0-9]+)?\|READY$') {
 }
 
 Write-Host "Verified isolated PostgreSQL 16 container '$ContainerName', volume '$VolumeName', loopback port $HostPort, database sasms, required Sprint 1 schema artifacts and migrations V001/V002."
-

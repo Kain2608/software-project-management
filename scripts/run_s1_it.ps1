@@ -73,4 +73,3 @@ if ($testExitCode -ne 0) {
 }
 
 Write-Host 'Sprint 1 PostgreSQL integration test completed successfully; ephemeral logins were removed.'
-
