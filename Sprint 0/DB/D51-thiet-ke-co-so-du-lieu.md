@@ -12,23 +12,23 @@
 
 Nguồn: [D05](../PM/D05.docx) mục 1 và tiêu chí Serial unique/100.000 thiết bị; [D06](../PM/D06.docx) mục 2–3; [D20](../PM/D20.docx) mục 8.1 về nhập kho → chọn Serial → checkout → SOLD. Bảng phân công người dùng cung cấp, sheet “Theo người” dòng 19–21 và “Tài liệu và minh chứng” dòng 20/26, yêu cầu ERD, SQL/DBML, log PostgreSQL 16 và test ràng buộc.
 
-Repo chưa có D34 FRS_V2 hoặc bản nháp 37 bảng mà Excel nhắc đến. Bộ **37 bảng dưới đây được thiết kế lại**, không khẳng định đã khôi phục bản nháp đó. D33 là bộ câu hỏi chưa có câu trả lời khảo sát. Các lựa chọn nghiệp vụ dưới đây là đề xuất chờ xác nhận. Xung đột phạm vi được ghi tại [hồ sơ review M1](D126-ho-so-review-M1.md).
+Tài liệu [D34 FRS_V2](../BA/D34_FRS_V2_SASMS.docx) và [D35 Quy tắc Serial/IMEI](../BA/D35_Quy_tac_Serial_IMEI_SASMS.docx) của BA Nguyễn Quang Huy đã có mặt chính thức trong repo. Bộ **37 bảng dưới đây đã được đối chiếu và đáp ứng 13 nhóm thực thể tối thiểu của D34**. Các điểm mở và xung đột thuật ngữ đã được thống nhất tại [D53 Sổ đăng ký quyết định](../Fullstack/TV4/docs/sprint0/d53/D53_DECISION_REGISTER.md) và [hồ sơ review M1](D126-ho-so-review-M1.md).
 
 Phần thực thi Sprint 0 tập trung dữ liệu kho theo từng thiết bị và POS. Giao/lắp đặt, bảo hành, đổi trả, kiểm kê và AI có cấu trúc dữ liệu nền; chưa có đầy đủ API, state machine hay nghiệp vụ hậu bán. Không coi có bảng là đã hoàn thành module.
 
-## 2. Các giả định thiết kế
+## 2. Các giả định thiết kế và phương án chốt
 
-| Mã | Lựa chọn đang dùng | Cần xác nhận |
-|---|---|---|
-| DB-A01 | Mỗi đơn vị hàng có một `devices` record và Serial duy nhất toàn chuỗi | Huy xác nhận phụ kiện theo số lượng; nếu áp dụng phải bổ sung mô hình tồn số lượng |
-| DB-A02 | Serial bỏ khoảng trắng hai đầu, chuyển chữ hoa; không chứa khoảng trắng bên trong; dài 1–100 | Quy tắc riêng từng hãng thuộc D35; không tự đoán regex hãng |
-| DB-A03 | IMEI có thể NULL, nếu có phải đúng 15 chữ số và duy nhất | Chưa kiểm checksum Luhn hoặc nhiều IMEI trên máy; cần BA xác nhận |
-| DB-A04 | QR chứa token thiết bị: `SASMS:DEVICE:<qr_token>`; không chứa khách hàng/giá trị nhạy cảm | Đối chiếu tem QR nhà cung cấp và KS41 của D33 |
-| DB-A05 | Một đơn bán từ một kho thuộc một cửa hàng; tiền VND, hai chữ số thập phân | Tách đơn nhiều kho/ngoại tệ cần CR/migration |
-| DB-A06 | Giá, chiết khấu, thuế chốt theo dòng đơn; tổng tiền bằng tổng `line_total` làm tròn từng dòng | Cách tính thuế, giá đã gồm thuế hay chưa, làm tròn và quyền giảm giá |
-| DB-A07 | Chỉ chốt khi tổng tiền CAPTURED bằng đúng tổng đơn; QR hiện ra chưa chứng minh đã nhận tiền | Hợp đồng provider, ký webhook, đối soát, tiền thừa/thiếu và hoàn tiền |
-| DB-A08 | Đơn RESERVED không tự hết hạn ở Sprint 0; hủy đơn có điều kiện trả tồn | BA chốt TTL; worker tương lai không được hủy đơn đã có tiền CAPTURED |
-| DB-A09 | Không xóa cứng chứng từ nghiệp vụ; khóa ngoại mặc định NO ACTION | Chính sách lưu giữ/ẩn danh và quy trình sửa sai |
+| Mã | Lựa chọn CSDL đang dùng | Phương án chốt với BA (D34/D35/D53) | Trạng thái |
+|---|---|---|---|
+| DB-A01 | Mỗi đơn vị hàng có một `devices` record và Serial duy nhất toàn chuỗi | Chuẩn hóa theo thiết bị có Serial/IMEI cho hàng điện tử/gia dụng; phụ kiện không Serial quản lý tồn SKU ở Sprint sau | **ĐÃ CHỐT** (D34 BR-01) |
+| DB-A02 | Serial bỏ khoảng trắng hai đầu, chuyển chữ hoa; không chứa khoảng trắng bên trong; dài 1–100 | CSDL lưu canonical `upper(btrim(serial))` chống trùng tuyệt đối; raw payload lưu trong import batch (DEC-03) | **ĐÃ CHỐT** (DEC-03) |
+| DB-A03 | IMEI có thể NULL, nếu có phải đúng 15 chữ số và duy nhất | Sprint 0/1 chuẩn hóa 1 IMEI chính (15 số), kiểm tra regex trong DB và kiểm tra Luhn ở Backend (DEC-04) | **ĐÃ CHỐT** (DEC-04) |
+| DB-A04 | QR chứa token thiết bị: `SASMS:DEVICE:<qr_token>`; không chứa khách hàng/giá trị nhạy cảm | Thống nhất chuẩn format `SASMS:DEVICE:<uuid>` theo D35 và TV4 scanner (DEC-07) | **ĐÃ CHỐT** (DEC-07) |
+| DB-A05 | Một đơn bán từ một kho thuộc một cửa hàng; tiền VND, hai chữ số thập phân | Đơn hàng gắn chặt với `store_id` và `warehouse_id` phục vụ kiểm tra phân quyền chi nhánh | **ĐÃ CHỐT** (D34 BR-11) |
+| DB-A06 | Giá, chiết khấu, thuế chốt theo dòng đơn; tổng tiền bằng tổng `line_total` làm tròn từng dòng | Snapshot giá tại thời điểm mua vào `sales_order_items.unit_price`, tính toán authoritative | **ĐÃ CHỐT** (DEC-09) |
+| DB-A07 | Chỉ chốt khi tổng tiền CAPTURED bằng đúng tổng đơn; QR hiện ra chưa chứng minh đã nhận tiền | Hàm `sasms.complete_sale` kiểm tra đơn đã có payment hợp lệ trước khi chuyển sang `PAID` | **ĐÃ CHỐT** (DEC-08) |
+| DB-A08 | Đơn RESERVED không tự hết hạn ở Sprint 0; hủy đơn có điều kiện trả tồn | DB cung cấp mốc `created_at` và hàm `cancel_order`; Backend worker quét giải phóng sau 10/30 phút (DEC-05) | **ĐÃ CHỐT** (DEC-05) |
+| DB-A09 | Không xóa cứng chứng từ nghiệp vụ; khóa ngoại mặc định NO ACTION | Nghiêm cấm xóa cứng; ghi vết `inventory_movements`, `audit_logs` trong cùng transaction | **ĐÃ CHỐT** (D34 BR-07) |
 
 ## 3. Ranh giới và danh mục 37 bảng
 

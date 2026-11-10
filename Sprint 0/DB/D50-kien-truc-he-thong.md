@@ -4,10 +4,10 @@
 | --- | --- |
 | Công việc | S0-17 — Thiết kế kiến trúc hệ thống |
 | Phụ trách | Trần Trung Kiên — Architect / DBA |
-| Phiên bản | 1.0 — hồ sơ làm lại Sprint 0 |
-| Ngày lập thực tế | 07/11/2026 |
+| Phiên bản | 1.1 — Bổ sung môi trường FE/BE và phân tách tài khoản DB runtime (Kiên xác nhận) |
+| Ngày lập thực tế | 07/11/2026 (Cập nhật: 11/11/2026) |
 | Kỳ Sprint theo phân công | 12–25/09/2026; không dùng ngày này làm ngày ký giả định |
-| Trạng thái | Đề xuất kỹ thuật để review; chưa có biên bản phê duyệt |
+| Trạng thái | Đã cập nhật & xác nhận: vị trí root FE/BE, baseline Java 26 + Spring Boot 4.1.1 và quyền DB runtime sasms_app |
 
 ## 1. Cơ sở và giới hạn thiết kế
 
@@ -143,7 +143,53 @@ Worker xử lý sự kiện theo cơ chế ít nhất một lần; consumer ph�
 | Staging | Cùng major PG16 và cấu hình migration với Prod; ứng dụng và DB tách mạng | Dữ liệu giả hoặc đã ẩn danh; provider sandbox; log không chứa secret |
 | Prod | Ứng dụng sau reverse proxy HTTPS; DB private network; pool kết nối; lưu trữ và backup tách biệt | Secret manager; tài khoản runtime ít quyền; chỉ DBA/bastion được bảo trì |
 
-Backend/framework, cloud, object storage, nhà cung cấp và chi phí chờ D22/Dev Lead chốt; không chọn đồng thời các phương án Java/Node trong D08. Ngày giờ lưu `timestamptz`, xử lý nhất quán UTC và hiển thị `Asia/Ho_Chi_Minh` theo cửa hàng đề xuất. Tiền dùng kiểu decimal chính xác theo D51, không dùng số thực.
+### 5.1 Cấu trúc mã nguồn tại root repository (`TV4-S0-ARCH-01` — Phương án A1)
+
+Đồng thuận đặt toàn bộ mã nguồn ứng dụng và hạ tầng tại thư mục gốc repository để đảm bảo tính liên tục của lịch sử git (`git log`, `git blame`) qua các Sprint:
+- `backend/`: Mã nguồn dịch vụ backend Spring Boot (POS, Catalog, Inventory, IAM integration), kèm `backend/.gitignore` riêng.
+- `frontend/`: Mã nguồn ứng dụng frontend React / Vite (Web POS, Mobile Scanner), kèm `frontend/.gitignore` riêng.
+- `database/`: Schema, DBML, migrations, seed, tests và role provisioning của PostgreSQL.
+- `infra/`: Ma trận môi trường, kịch bản triển khai và tài liệu vận hành.
+- `scripts/`: Bộ công cụ tự động hóa kiểm tra, migration (`migrate_db.py`, `validate_sprint1.py`, `provision_s1_db.ps1`).
+
+Việc đặt tại root tránh phân mảnh mã nguồn theo từng thư mục Sprint con (`Sprint 0/Fullstack/`), triệt tiêu rủi ro lỗi công cụ build do khoảng trắng đường dẫn Windows và thống nhất với cấu trúc phân phối của nhóm.
+
+### 5.2 Môi trường thực thi của Frontend và Backend (`TV4-S0-ARCH-02` — Phương án B1)
+
+Chốt baseline công nghệ chính thức theo hiện trạng mã nguồn đã được kiểm chứng bằng thực nghiệm:
+
+- **Backend (BE):**
+  - **Runtime & SDK:** **Java 26** (OpenJDK / Oracle JDK 26, bytecode level 70.0). Giữ nguyên theo source hiện có để bảo toàn tính toàn vẹn của bằng chứng kiểm thử tự động Sprint 0 và Sprint 1.
+  - **Framework:** **Spring Boot 4.1.1** (sử dụng các starter: `spring-boot-starter-webmvc`, `spring-boot-starter-jdbc`, `spring-boot-starter-security`, `spring-boot-starter-oauth2-resource-server`).
+  - **Công cụ build:** Apache Maven 3.9+ thông qua Maven Wrapper (`./mvnw` trên Linux/macOS, `mvnw.cmd` trên Windows).
+  - **Quản lý cấu hình & CSDL:** PostgreSQL JDBC Driver (`org.postgresql:postgresql`). Biến môi trường Datasource gồm `SASMS_DB_URL`, `SASMS_DB_USERNAME`, `SASMS_DB_PASSWORD`. Thiết lập `spring.sql.init.mode=never` (không để Spring Boot tự ý DDL/khởi tạo CSDL).
+  - **Bảo mật ứng dụng:** OAuth2 / JWT Resource Server với cơ chế fail-closed (chỉ mở các status endpoint công khai khi chưa cấu hình JWT, mọi route nghiệp vụ đều yêu cầu Bearer token hợp lệ).
+
+- **Frontend (FE):**
+  - **Runtime:** **Node.js 18+ / 22** và trình quản lý gói `npm`.
+  - **Framework & Bundler:** **React** với công cụ xây dựng **Vite** (`vite.config.js`).
+  - **Thư viện chuyên dụng:** Quét mã vạch/QR qua camera HTML5 bằng `@zxing/browser` (khóa version `0.1.5` tương thích Node 22) và `@zxing/library` (`0.21.3`).
+  - **Kết nối API:** HTTP client dùng chung (`httpClient.js`) kết nối đến backend thông qua biến môi trường `VITE_API_BASE_URL` (mặc định `http://127.0.0.1:8080/api`).
+
+### 5.3 Phân tách tài khoản CSDL: Phân quyền `sasms_app` cho Backend Runtime (`TV4-S0-ARCH-03` — Phương án C2)
+
+Tuân thủ nghiêm ngặt nguyên tắc đặc quyền tối thiểu (Least Privilege) đã đề ra tại [D54](D54-bao-mat-phan-quyen.md) và [database/runtime-roles.sql](../../database/runtime-roles.sql):
+
+- **Tài khoản Quản trị / DDL (`sasms_owner`):**
+  - Chỉ dùng riêng cho DBA và các script/pipeline hạ tầng thực thi DDL, nạp schema (`schema.sql`), chạy migrations (`sasms_meta.schema_migrations`) và nạp seed dữ liệu khởi tạo.
+  - **TUYỆT ĐỐI CẤM:** Không sử dụng `sasms_owner` làm tài khoản chạy ứng dụng Backend hoặc chạy các bài test nghiệp vụ hàng ngày.
+- **Tài khoản Chạy ứng dụng Backend (`sasms_app`):**
+  - Backend khi khởi chạy (`spring-boot:run`) và các bài kiểm thử JDBC (`PostgreSqlConnectionSmokeTest`, `Sprint1PostgreSqlIntegrationTest`) **bắt buộc sử dụng tài khoản LOGIN kế thừa nhóm quyền `sasms_app`**.
+  - `sasms_app` là một group role bảo mật (`NOLOGIN`, `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOREPLICATION`, `NOBYPASSRLS`).
+  - Quyền hạn được cấp cho `sasms_app`:
+    - `USAGE` trên schema `sasms`.
+    - `SELECT` trên toàn bộ bảng và view nghiệp vụ (phục vụ truy vấn dữ liệu và kiểm tra metadata schema).
+    - Quyền ghi hạn chế: `INSERT` trên `sasms.sales_orders` (chỉ các cột được phép: `id`, `code`, `idempotency_key`, `store_id`, `warehouse_id`, `customer_id`, `channel`, `created_by`; chặn client tự set `status` hay `total_amount`); `INSERT, UPDATE, DELETE` trên `sales_order_items`, `order_devices`, `payments`.
+    - Gọi hàm giao dịch lõi: `EXECUTE` trên `sasms.receive_device`, `sasms.reserve_order`, `sasms.complete_sale`, `sasms.cancel_order` (Sprint 0) và `sasms.has_permission`, `sasms.assert_permission`, `sasms.create_product`, `sasms.update_product`, `sasms.receive_device_batch` (Sprint 1).
+    - **Cơ chế phòng vệ:** Bất kỳ truy vấn nào cố ghi trực tiếp vào `devices`, `inventory_movements`, `audit_logs`, `outbox_events` hoặc sửa các cột bảo vệ đều bị PostgreSQL chặn đứng ngay ở tầng CSDL (`insufficient_privilege`).
+  - **Cấp phát đăng nhập an toàn:** Tài khoản đăng nhập thực tế (ví dụ: `sasms_app_dev` hoặc `tv4_s1_app_login`) được tạo động/cục bộ và gắn vào role qua lệnh `GRANT sasms_app TO <login_user>`. Mật khẩu được sinh ngẫu nhiên hoặc lấy từ Secret Manager/biến môi trường, tuyệt đối không hardcode trong mã nguồn hoặc kho lưu trữ Git.
+
+Ngày giờ lưu `timestamptz`, xử lý nhất quán UTC và hiển thị `Asia/Ho_Chi_Minh` theo cửa hàng đề xuất. Tiền dùng kiểu decimal chính xác theo D51, không dùng số thực.
 
 Migration được đánh phiên bản, review cùng SQL/DBML/tài liệu; chạy trên DB mới và DB nâng cấp thử trước Prod. Không sửa một migration đã áp dụng; thêm migration tiến tới. Mỗi phát hành có backup, kế hoạch tương thích và rollback ứng dụng. DDL đảo ngược có mất dữ liệu phải qua quy trình riêng; không tự động drop schema sản xuất.
 
@@ -166,13 +212,13 @@ Theo dõi độ trễ query/checkout, số kết nối, transaction chờ khóa/
 | ARC-03 | Máy in nhiệt 80 mm trong D33 và HTML/PDF theo D08 | Huy, Thái, PM | Quyết định phạm vi + model/giao tiếp thử nếu dùng máy in |
 | ARC-04 | Chín vai trò, phạm vi cửa hàng, phê duyệt giao dịch | Huy, PM | Ma trận D54 được xác nhận |
 | ARC-05 | QR/Serial theo hãng, giữ hàng, thanh toán, kiểm kê | Huy, trưởng kho, thu ngân | Trả lời KS41–KS46 và D35; cập nhật ràng buộc |
-| ARC-06 | Backend, cloud, backup, RPO/RTO và SLA | Thái, PM | D22, dự toán và thử khôi phục được review |
+| ARC-06 | Backend/Frontend baseline, tài khoản runtime DB sasms_app, cloud, backup, RPO/RTO và SLA | Thái, Kiên, PM | **ĐÃ CHỐT:** Đặt `backend/` và `frontend/` tại root; BE dùng Java 26 + Spring Boot 4.1.1; FE dùng React + Vite; kết nối backend dùng login thuộc quyền `sasms_app` (không dùng owner). Cloud/PITR chờ hoàn thiện Staging |
 | ARC-07 | Mâu thuẫn mã tài liệu: workbook gọi D05 Charter, repo D05 là Scope, D06 là Charter | PM | Danh mục tài liệu thống nhất, không đổi tên mất dấu nguồn |
 
 Review cần kiểm tra: các miền có chủ sở hữu; kho/POS có transaction atomic và chống lặp; thiết bị không bán trùng; provider lỗi không chặn bán hàng; security mặc định từ chối; SQL/DBML/D51 khớp nhau; log chạy thử có thật; các giả định còn mở được ghi nhận. D50 không thay thế biên bản Quality Gate M1.
 
 | Người review / ký | Phạm vi | Trạng thái | Ngày / bằng chứng |
 | --- | --- | --- | --- |
-| Trần Trung Kiên | Kiến trúc và dữ liệu | Chờ review/ký | Chưa có |
-| Vũ Duy Thái — Dev Lead | Khả năng hiện thực, triển khai | Chờ review/ký | Chưa có |
-| Trịnh Quốc An — PM | Phạm vi, vận hành, mốc M1 | Chờ review/ký | Chưa có |
+| Trần Trung Kiên | Kiến trúc, dữ liệu, baseline FE/BE & quyền DB runtime | ĐÃ XÁC NHẬN | 11/11/2026 (Chấp thuận A1 root repo, B1 Java 26/Spring Boot 4.1.1, C2 sasms_app login) |
+| Vũ Duy Thái — Dev Lead | Khả năng hiện thực, triển khai | Chờ review/ký | Đã đề xuất và kiểm chứng kỹ thuật tại bàn giao TV4 |
+| Trịnh Quốc An — PM | Phạm vi, vận hành, mốc M1 | Chờ review/ký | Đã chấp thuận A1, B1, C2 ngày 07/11/2026 |

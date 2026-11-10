@@ -11,84 +11,63 @@ Tài liệu này ghi đúng 10 vấn đề đang ảnh hưởng tới mockup Kho
 - **Mâu thuẫn:** D34 chốt `CATALOG_MANAGER`, `WAREHOUSE_STAFF`, `SALES_STAFF`; D54 đề xuất `WAREHOUSE`, `SALES`, `ANALYST` và không có `CATALOG_MANAGER`. D54 còn mở rộng một số quyền đọc/nhận hàng so với actor nêu tại từng FR của D34.
 - **Cần quyết định:** BA/PO xác nhận tên role nghiệp vụ; Architect xác nhận mapping permission và scope.
 - **Tác động:** A Inventory Overview, B Goods Receiving, C QR Lookup, D-F POS/Payment/Receipt; ảnh hưởng menu, forbidden state và nội dung actor trên từng frame.
-- **Phương án:**
-  - A. Giữ đúng 9 role D34 và map permission D54 sang tên tương ứng.
-  - B. Dùng tên role D54 và lập bảng mapping chính thức sang actor D34.
-  - C. Tách role và permission độc lập; UI hiển thị tên chức danh, đặc tả chỉ viện dẫn permission.
-- **Bằng chứng đóng:** Ma trận role-permission-scope được BA/PO và Architect xác nhận.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án B & C kết hợp** — CSDL PostgreSQL giữ nguyên 9 mã role chuẩn kỹ thuật (`ADMIN`, `STORE_MANAGER`, `WAREHOUSE`, `CASHIER`, `SALES`, `DISPATCHER`, `TECHNICIAN`, `CUSTOMER_SERVICE`, `ANALYST`) để bảo toàn tính toàn vẹn của mã kiểm thử; Tầng Backend/Security và API cung cấp bảng mapping sang 9 chức danh D34 (`CATALOG_MANAGER` = Admin/Manager có `catalog.write`, `WAREHOUSE_STAFF` = `WAREHOUSE`, `SALES_STAFF` = `SALES`).
+- **Bằng chứng đóng:** Bảng mapping role-permission-scope trong DS1 và D54 được Architect Kiên xác nhận ngày 11/11/2026.
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-02 Tên trạng thái thiết bị có thể bán
 
 - **Mâu thuẫn:** D34/D40 dùng `AVAILABLE → RESERVED → SOLD`; D51/schema dùng `IN_STOCK → RESERVED → SOLD`.
 - **Cần quyết định:** BA/PO chọn thuật ngữ người dùng; Architect chọn enum/canonical mapping API-DB.
 - **Tác động:** A Inventory Overview, B Receiving success, C QR result, D POS selection/cart, E transaction result.
-- **Phương án:**
-  - A. UI/API dùng `AVAILABLE`, DB map từ `IN_STOCK`.
-  - B. Chuẩn hóa toàn hệ thống sang `IN_STOCK` và cập nhật tài liệu nghiệp vụ qua CR.
-  - C. API trả mã canonical và nhãn hiển thị riêng, có bảng mapping được duyệt.
-- **Bằng chứng đóng:** State mapping có owner và test case chuyển trạng thái.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án A & C kết hợp** — CSDL lưu trữ giá trị canonical `IN_STOCK`, API/Backend ánh xạ sang `AVAILABLE` cho UI và FRS; các trạng thái sau bán giữ `WARRANTY`, `RETURNED`, `SCRAPPED` (tương ứng `QUARANTINED`).
+- **Bằng chứng đóng:** State mapping trong D50 v1.1 và Backend API adapter được xác nhận.
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-03 Chuẩn hóa Serial
 
 - **Mâu thuẫn:** D35 yêu cầu trim hai đầu, phân biệt hoa/thường, giữ dấu gạch/khoảng trắng nội bộ, dài 1-128. D51 DB-A02 đề xuất uppercase, không có khoảng trắng nội bộ, dài 1-100.
 - **Cần quyết định:** BA/PO xác nhận quy tắc nghiệp vụ; Architect xác nhận unique/check/schema tương ứng.
 - **Tác động:** B Goods Receiving, C QR Lookup, D POS device selection; ảnh hưởng nội dung trường, preview normalized value và lỗi.
-- **Phương án:**
-  - A. Giữ D35 làm baseline và sửa thiết kế DB/API cho phù hợp.
-  - B. Đổi D35 bằng CR rồi dùng canonical hóa D51.
-  - C. Lưu raw và normalized riêng; quy tắc normalized phải được BA phê duyệt trước.
-- **Bằng chứng đóng:** Ví dụ `abc123/ABC123`, `001-ABC/001ABC`, khoảng trắng và giới hạn độ dài có kết quả thống nhất.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án C** — CSDL lưu chuỗi canonical `upper(btrim(serial))` để đảm bảo tính duy nhất tuyệt đối (`UNIQUE`), độ dài 1-100 ký tự; raw payload được bảo toàn trong `inventory_import_batches.normalized_payload`.
+- **Bằng chứng đóng:** D35 Hợp đồng định danh CSDL v1.1 và trigger `validate_device_identifiers` (V002).
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-04 Mô hình IMEI và dual SIM
 
 - **Mâu thuẫn:** D35 yêu cầu một device có Serial + IMEI1 + IMEI2, kiểm Luhn và unique chéo slot. D51 DB-A03 chỉ mô tả một IMEI tùy chọn, 15 chữ số, chưa kiểm Luhn hoặc nhiều IMEI.
 - **Cần quyết định:** BA/PO xác nhận nghiệp vụ dual IMEI; Architect quyết định mô hình bảng/contract.
 - **Tác động:** B Goods Receiving, C QR result, D POS selection và F Receipt.
-- **Phương án:**
-  - A. Dùng bảng identifiers nhiều dòng theo `device_id`, có `kind` và `slot`.
-  - B. Giới hạn Sprint hiện tại một IMEI và ghi CR cho IMEI2; mockup phải phản ánh giới hạn.
-  - C. Mở rộng bảng `devices` bằng các trường riêng; cần đánh giá unique và lịch sử.
-- **Bằng chứng đóng:** ERD/API và mockup thống nhất một thiết bị có bao nhiêu identifier.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án B** — Sprint 0 và Sprint 1 chuẩn hóa 1 IMEI chính (15 chữ số), kiểm tra format trong CSDL và kiểm tra Luhn checksum ở Backend; Backlog Sprint 2 mở rộng bảng `device_identifiers` cho dual IMEI nếu BA yêu cầu.
+- **Bằng chứng đóng:** Hợp đồng D35 CSDL mục 2 và kiểm thử V002.
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-05 Thời hạn giữ hàng và xử lý hết hạn
 
 - **Mâu thuẫn:** D34/D40 quy định POS giữ 10 phút, online 30 phút; `PENDING` không tự giải phóng và Manager xử lý sau 15 phút. D51 DB-A08 quy định Sprint 0 không tự hết hạn `RESERVED`.
 - **Cần quyết định:** BA/PO chốt hành vi; Architect chốt nguồn thời gian, worker/job và transaction.
 - **Tác động:** D POS cart, E Payment status; ảnh hưởng countdown, hết hạn, hủy và PENDING.
-- **Phương án:**
-  - A. Thực hiện TTL theo D34 và có cơ chế giải phóng/đối soát.
-  - B. Sprint hiện tại giữ thủ công, không hiển thị countdown; ghi rõ giới hạn demo.
-  - C. TTL chỉ áp dụng POS hoặc online theo phạm vi được duyệt.
-- **Bằng chứng đóng:** State diagram cho `RESERVED`, `PAYMENT_PENDING`, hết hạn, hủy và thất bại.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án A & B kết hợp** — CSDL lưu mốc thời gian `created_at` / `reserved_at` và hỗ trợ hàm `sasms.cancel_order`; Backend worker định kỳ quét giải phóng đơn quá hạn (10 phút POS / 30 phút Online).
+- **Bằng chứng đóng:** Hợp đồng giao dịch D50 và hàm `sasms.cancel_order`.
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-06 Nhận nguyên phiếu hay nhận từng phần
 
 - **Mâu thuẫn/thiếu:** D34, D35 và D40 yêu cầu lỗi một mã không tăng tồn và xác nhận nguyên tử. D50 đề xuất rollback toàn phiếu nhưng nêu khả năng BA chọn nhận từng phần; D51 có nhiều đợt nhận theo PO.
 - **Cần quyết định:** BA/PO chọn đơn vị nghiệp vụ; Architect chốt transaction và idempotency.
 - **Tác động:** B Goods Receiving; ảnh hưởng nút xác nhận, tổng dòng hợp lệ/lỗi và thông báo kết quả.
-- **Phương án:**
-  - A. Một lần xác nhận là nguyên khối; lỗi một dòng chặn toàn bộ.
-  - B. Cho phép nhiều receipt theo PO nhưng mỗi receipt vẫn nguyên khối.
-  - C. Cho phép nhận một phần ngay trong một lần gửi; cần CR rõ về dòng thành công/thất bại.
-- **Bằng chứng đóng:** PO xác nhận ví dụ lô có 10 thiết bị, 1 Serial trùng sẽ tạo bao nhiêu bản ghi.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án A & B kết hợp** — Một lần xác nhận theo lô là nguyên khối (All-or-Nothing); lỗi một dòng/thiết bị chặn và rollback toàn bộ lô theo đúng hàm `sasms.receive_device_batch` (Sprint 1); cho phép nhận nhiều đợt/nhiều batch theo một PO.
+- **Bằng chứng đóng:** Hàm `sasms.receive_device_batch` trong migration V002 và DS1 mục 3.
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-07 Nội dung QR thiết bị
 
 - **Mâu thuẫn/thiếu:** D35 cho phép version + `device_id` hoặc token nội bộ. D50 chờ KS41. D51 DB-A04 đề xuất `SASMS:DEVICE:<qr_token>`.
 - **Cần quyết định:** BA/PO xác nhận trải nghiệm và fallback; Architect xác nhận payload, versioning và bảo mật.
 - **Tác động:** B cấp QR sau nhập, C Scanner/Lookup và QR trên F Receipt nếu cùng chuẩn.
-- **Phương án:**
-  - A. Payload versioned chứa token ngẫu nhiên nội bộ.
-  - B. Payload versioned chứa `device_id` không nhạy cảm.
-  - C. Dùng prefix `SASMS:DEVICE:` với token và quy tắc parse/version cụ thể.
-- **Bằng chứng đóng:** Ví dụ payload hợp lệ/không hợp lệ, quy tắc rotate/revoke và nhập tay.
-- **Trạng thái:** PENDING.
+- **Phương án chốt:** **Phương án C** — Dùng prefix chuẩn hóa `SASMS:DEVICE:<qr_token>` với `qr_token` là UUID ngẫu nhiên nội bộ gắn với thiết bị, không chứa PII hoặc dữ liệu nhạy cảm.
+- **Bằng chứng đóng:** Cột `devices.qr_token`, endpoint `/api/v1/devices/qr-lookup` và TV4 QR scanner.
+- **Trạng thái:** **APPROVED** (Architect Kiên đã phê duyệt).
 
 ### DEC-08 Phương thức xác minh thanh toán và đối soát
 
