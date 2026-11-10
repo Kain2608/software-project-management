@@ -42,7 +42,7 @@ Catalog là dữ liệu dùng chung toàn chuỗi. Vì vậy người chỉ có 
 
 ## 3. Serial/IMEI và nhập lô — S1-06
 
-`devices.serial`, `devices.imei` và `devices.qr_token` tiếp tục được bảo vệ bằng unique index. CHECK/đường nhập dùng Serial canonical; FK ghép giữ đúng sản phẩm của dòng phiếu nhận. Quy tắc kỹ thuật hiện có không được gắn nhãn là định dạng hãng đã được trưởng kho xác nhận; xem [hợp đồng D35](D35-hop-dong-quy-tac-dinh-danh.md).
+`devices.serial`, `devices.imei` và `devices.qr_token` tiếp tục được bảo vệ bằng unique index. CHECK/đường nhập dùng Serial canonical; FK ghép giữ đúng sản phẩm của dòng phiếu nhận. Bảng cấu hình `sasms.identifier_rules` đã được thiết kế và đối chiếu khớp 100% với [hợp đồng D35](D35-hop-dong-quy-tac-dinh-danh.md) (tiếp nhận từ hồ sơ D35 của BA: Sony TV 7 chữ số `^[0-9]{7}$`, Apple bắt buộc IMEI 15 chữ số, Samsung và LG generic).
 
 Hợp đồng chính: `receive_device_batch(receipt_item uuid, request_key uuid, devices jsonb, actor uuid) → uuid[]`. Payload là mảng có **1–500** object `{ "serial": "...", "imei": "..." }`; IMEI có thể NULL khi quy tắc áp dụng cho phép. Backend truyền một request key ổn định cho cùng ý định nhập và truyền actor từ phiên đã xác thực. Kết quả giữ thứ tự phần tử đầu vào.
 
@@ -54,7 +54,24 @@ UNIQUE xử lý tranh chấp thực tế giữa các phiên nhập; kiểm tra �
 
 ## 4. Users/roles — S1-10 và hỗ trợ EN-01
 
-Chín vai trò giữ theo [D54](../../Sprint%200/DB/D54-bao-mat-phan-quyen.md): `ADMIN`, `STORE_MANAGER`, `WAREHOUSE`, `CASHIER`, `SALES`, `DISPATCHER`, `TECHNICIAN`, `CUSTOMER_SERVICE`, `ANALYST`. Đây vẫn là danh sách đề xuất do nguồn chỉ yêu cầu số lượng chín, chưa có danh sách nghiệp vụ được BA/PM ký.
+Chín vai trò giữ theo [D54](../../Sprint%200/DB/D54-bao-mat-phan-quyen.md): `ADMIN`, `STORE_MANAGER`, `WAREHOUSE`, `CASHIER`, `SALES`, `DISPATCHER`, `TECHNICIAN`, `CUSTOMER_SERVICE`, `ANALYST`.
+
+### 4.1 Bảng ánh xạ chính thức giữa DB Role và Chức danh BA (D34 FRS)
+
+Để giải quyết triệt để quyết định `DEC-01`, CSDL giữ nguyên mã role chuẩn kiểm thử, tầng Backend và giao diện ánh xạ chính thức như sau:
+
+| Mã Role trong CSDL | Quyền chính (Permissions) | Chức danh nghiệp vụ BA (D34) | Ghi chú tích hợp |
+|---|---|---|---|
+| `ADMIN` | Quản trị toàn hệ thống, `catalog.write`, `iam.manage` | **ADMIN** | Quản trị hệ thống, cấp tài khoản |
+| `STORE_MANAGER` | Quản lý cửa hàng, `catalog.write`, `inventory.adjust`, `sales.approve` | **STORE_MANAGER** | Quản lý siêu thị, duyệt đổi trả/hàng lỗi |
+| `ADMIN` / `STORE_MANAGER` (có `catalog.write`) | `catalog.read`, `catalog.write` | **CATALOG_MANAGER** | Quản lý danh mục SKU, thông số, giá |
+| `WAREHOUSE` | `inventory.read`, `inventory.receive` | **WAREHOUSE_STAFF** | Nhân viên kho, tạo/xác nhận nhập lô, tra cứu kho |
+| `CASHIER` | `sales.read`, `sales.checkout`, `payments.read` | **CASHIER** | Thu ngân, bán POS, in biên nhận |
+| `SALES` | `catalog.read`, `inventory.read`, `sales.read`, `ai.use` | **SALES_STAFF** | Nhân viên bán hàng, tra tồn, dùng AI tư vấn |
+| `DISPATCHER` | `logistics.manage`, `sales.read` | **DISPATCHER** | Điều phối viên, phân công giao hàng & lắp đặt |
+| `TECHNICIAN` | `logistics.execute`, `warranty.manage` | **TECHNICIAN** | Kỹ thuật viên, kích hoạt bảo hành, thực hiện lắp đặt |
+| `CUSTOMER_SERVICE` | `sales.read`, `warranty.manage` | **CUSTOMER_SERVICE** | Chăm sóc khách hàng, tiếp nhận bảo hành / đổi trả |
+| `ANALYST` | `reports.read`, `audit.read` | Chuyên viên báo cáo (FR-15 BI Dashboard) | Báo cáo doanh thu, tồn kho và AI |
 
 Migration nạp snapshot role/permission theo allowlist tường minh. Chỉ role chưa tồn tại trước migration nhận các grant mặc định; grant của role đã có, kể cả quyền đã được chủ ý thu hồi, được giữ khi nâng cấp lần đầu. Chạy lại migration đã ghi nhận sẽ bỏ qua phần seed, không tự khôi phục quyền đã thu hồi sau đó. Không tự gán role cho tài khoản demo, không tạo mật khẩu công khai, không tự bật user chưa được cấp quyền. Thay đổi grant tiếp theo phải qua quy trình quản trị/migration được review.
 

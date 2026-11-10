@@ -10,6 +10,8 @@ Nhánh tiếp tục công việc: **`DB`**. Bản D50/D54 trước được tạ
 | Backup/restore cần diễn tập | Đã có [40 kiểm tra logical restore](../../../Ti%E1%BB%81n%20Sprint/DB/evidence/environment-summary.json) và [snapshot CI](../../../Ti%E1%BB%81n%20Sprint/DB/evidence/ci-runs.json) ở lần bổ sung sau | Đây là bằng chứng bổ sung tháng 11, không đổi thành kết quả đã có ở M1 tháng 9 |
 | D34/FRS_V2 chưa có | Vẫn không tìm thấy bản FRS trong repo sau khi cập nhật | Dùng D05/D06 và các quyết định thiết kế đã đánh dấu đề xuất; BA đối chiếu FRS trước ký baseline |
 | Microservices và môi trường triển khai | D50 đã có sơ đồ bối cảnh, thành phần, sequence checkout và lộ trình tách dịch vụ | Giữ nội dung; PostgreSQL dùng chung ở nền DB, các dịch vụ độc lập vẫn là kiến trúc mục tiêu |
+| Môi trường FE/BE và cấu trúc source | Đã có source skeleton tại root `backend/` và `frontend/` | Kiên xác nhận đặt tại root (A1), giữ baseline Java 26 + Spring Boot 4.1.1 (B1), FE React/Vite |
+| Tài khoản DB kết nối ứng dụng backend | [database/runtime-roles.sql](../../../database/runtime-roles.sql) tạo group role `sasms_app` | Kiên xác nhận bắt buộc dùng login thuộc `sasms_app` (C2), tuyệt đối không dùng `sasms_owner` cho runtime |
 
 Các đường dẫn ở phần Sprint 0 thể hiện baseline **37 bảng**. Sprint 1 dùng [hai migration](../../../database/migrations) để nâng lên **39 bảng**; không thay ERD/SQL Sprint 0 bằng mô hình mới rồi gắn nhãn là bản gốc.
 
@@ -35,6 +37,6 @@ Không đổi ma trận bằng việc thêm quyền mặc định hoặc cấp t
 | Danh sách 9 role, scope global/cửa hàng và quyền giảm giá/hoàn tiền có được chấp thuận không? | Huy, Kiên, PM | Ma trận được review; các thay đổi cần migration/API tương ứng |
 | Module nào thuộc baseline thiết kế, module nào chỉ cần demo hiện hành? | PM, Huy, Thái | Quyết định phạm vi theo phiên bản, tách kế hoạch tháng 9 và CR tháng 10 |
 | Khi nào có Staging/Prod và phương án WAL/backup ngoài máy? | Kiên, Thái, PM/chủ hệ thống | Cấu hình và log triển khai/diễn tập trên môi trường thật |
-| Kiến trúc và bảo mật bản nào được ký? | Dev Lead, Kiên, PM/Sponsor | Chữ ký và link phiên bản sau review; không tự dùng trạng thái tài liệu PM cũ để ký bản mới |
+| Kiến trúc và bảo mật bản nào được ký? | Dev Lead, Kiên, PM/Sponsor | Kiên đã ký/xác nhận D50 v1.1 (baseline FE/BE, root source và sasms_app runtime) ngày 11/11/2026; PM An đã chấp thuận A1, B1, C2 |
 
 Đầu ra của phụ lục là phần căn cứ còn thiếu để review D50/D54 hiện có. Các sơ đồ, ma trận và bằng chứng đã hoàn chỉnh được tái sử dụng nguyên vẹn.

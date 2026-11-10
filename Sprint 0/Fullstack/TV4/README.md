@@ -104,10 +104,10 @@ Sau khi PM Trịnh Quốc An đồng ý các phương án **A1** (`TV4-S0-ARCH-0
 - [x] **Chính sách tài khoản DB runtime (`TV4-S0-ARCH-03` — Phương án C2):** Đã đồng ý runtime backend sử dụng DB login thuộc nhóm quyền `sasms_app` (theo xác nhận người dùng cung cấp ở Phase 2; chờ DBA Kiên cấp phát login).
 - [ ] **Quy ước làm việc (`D63`) & `info.license` (`D52`) & phạm vi `D56`:** Duyệt cú pháp đặt tên branch/commit, số approval tối thiểu, quy trình merge PR, quy ước thư mục `Sprint N/<Vai trò>/`, `info.license` cho D52 và chủ sở hữu payment adapter/callback trong D56.
 
-### 5.2 Trần Trung Kiên (Architect / DBA) — `PENDING`
+### 5.2 Trần Trung Kiên (Architect / DBA) — `PARTIALLY APPROVED`
 
-- [ ] **Đồng xác nhận kiến trúc & migration (`TV4-S0-ARCH-01`, `TV4-S0-ARCH-02` / `D50` `ARC-06` / `D63` / `D64`):** Review cấu trúc `backend/` + `frontend/` đã đặt tại root, xác nhận Java 26 + Spring Boot 4.1.1, chiến lược công cụ migration (Flyway/Liquibase — `DEFERRED TO FUTURE SPRINT`) và ranh giới bảng/outbox cho D56.
-- [ ] **Provision DB login thuộc `sasms_app` (`TV4-S0-ARCH-03` / `D54` / `D64` / `D65`):** `database/runtime-roles.sql` hiện tạo group role `sasms_app` (`NOLOGIN`). Cần Kiên tạo/chốt tên login runtime kế thừa `sasms_app` để TV4 chạy `PostgreSqlConnectionSmokeTest` ở Phase 3 mà không dùng `sasms_owner`.
+- [x] **Đồng xác nhận kiến trúc & migration (`TV4-S0-ARCH-01`, `TV4-S0-ARCH-02` / `D50` `ARC-06` / `D63` / `D64`):** Đã phê duyệt cấu trúc `backend/` + `frontend/` tại root repository (A1), giữ nguyên baseline Java 26 + Spring Boot 4.1.1 (B1) và cập nhật chính thức vào D50 v1.1 (mục 5.1, 5.2 và `ARC-06`) ngày 11/11/2026.
+- [x] **Xác nhận chính sách tài khoản DB runtime thuộc `sasms_app` (`TV4-S0-ARCH-03` / `D54` / `D50` mục 5.3):** Xác nhận bắt buộc dùng login kế thừa group role `sasms_app`, nghiêm cấm cấu hình `sasms_owner` làm tài khoản chạy ứng dụng; cơ chế cấp phát tài khoản login test thực hiện qua script (như `scripts/provision_s1_db.ps1`) hoặc bí mật môi trường cục bộ.
 - [ ] **Review hợp đồng OpenAPI (`S0-19` / `D52`):** Đối chiếu 12 operation trong `D52_OPENAPI_INVENTORY_POS_AI_DRAFT.yaml` với 37 bảng PostgreSQL và 4 hàm giao dịch (`receive_device`, `reserve_order`, `complete_sale`, `cancel_order`); chốt `API-P01..P07`, `API-P10`.
 
 ### 5.3 Nguyễn Quang Huy (BA / PO) — `PENDING`
