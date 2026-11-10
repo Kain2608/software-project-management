@@ -1,6 +1,6 @@
 # Báo cáo triển khai Sprint 1 – TV4
 
-Ngày kiểm tra cuối: **09/11/2026**
+Ngày kiểm tra cuối: **10/11/2026**
 
 Nhánh làm việc: `feat/tv4-s1-catalog-api`
 
@@ -25,6 +25,8 @@ Không coi trạng thái PARTIAL là nghiệm thu Sprint 1. Không có bằng ch
 - `backend/src/main/java/com/smartelectronicsupermarket/security/`: identity contracts, JWT validation, trusted authentication và permission checker.
 - `backend/src/main/java/com/smartelectronicsupermarket/common/web/`: actor extraction và error contract an toàn.
 - Các package tương ứng dưới `backend/src/test/java/`: unit, MVC và security integration tests.
+- `backend/src/test/java/com/smartelectronicsupermarket/Sprint1PostgreSqlIntegrationTest.java`: bộ integration test fail-closed cho PostgreSQL Sprint 1 cô lập; fixture dùng UUID/giá trị dành riêng và cleanup đúng các ID đó trước/sau suite.
+- `scripts/provision_s1_db.ps1`, `scripts/run_s1_it.ps1`: xác minh đúng container `tv4_s1_it_db`, volume `tv4_s1_it_pgdata`, PostgreSQL 16, loopback `15432`, V001/V002 và tập schema artifact bắt buộc; tạo login test tạm bằng secret sinh trong RAM rồi xóa login sau lượt chạy. Script không tạo/xóa volume, không chạy migration và không chứa mật khẩu cố định.
 - `frontend/src/features/qr/`: camera scanner, payload validation, API client, UI states và tests.
 - `frontend/src/shared/api/httpClient.js`: base URL dùng được cả Vite và Node test.
 - `frontend/package.json`, `frontend/package-lock.json`: khóa `@zxing/browser` ở `0.1.5` để tương thích Node 22; `@zxing/library` là `0.21.3` (Node `>=10.4.0`).
@@ -137,21 +139,32 @@ $env:SASMS_DB_PASSWORD = '<secret-local>'
 
 Test tự giới hạn host loopback, cổng 5432, database `sasms`, mở transaction read-only và rollback trước khi đóng kết nối. Việc đáp ứng các điều kiện kỹ thuật này vẫn không thay thế bước xác nhận đó là DB thử cô lập.
 
-## 8. Minh chứng kỹ thuật ngày 09/11/2026
+### PostgreSQL integration Sprint 1 cô lập
+
+Chỉ chạy khi container đã tồn tại đúng cấu hình; script sẽ dừng nếu sai tên container/volume, image, port, database, owner, migration hoặc thiếu table/view/function/role bắt buộc. Artifact bổ sung hợp lệ không làm kiểm tra thất bại:
+
+```powershell
+docker info
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_s1_it.ps1
+```
+
+Suite mục tiêu kiểm tra Catalog CRUD/revision conflict/duplicate SKU; Inventory batch, duplicate Serial/IMEI, idempotency, changed-payload conflict và atomic rollback; QR lookup/cross-store; user active/inactive; runtime membership `sasms_app` và giới hạn DML. Fixture chỉ dùng namespace UUID `11111111-1111-4111-8111-*`, SKU `IT-S1-OLED-65`, warehouse/store/actor riêng và cleanup chính xác các khóa này. Không dùng wildcard để xóa dữ liệu có sẵn.
+
+## 8. Minh chứng kỹ thuật ngày 10/11/2026
 
 | Kiểm tra | Kết quả thực tế |
 |---|---|
-| Backend `mvnw clean test` | PASS – 114 tests, 0 failures, 0 errors, 1 skipped, BUILD SUCCESS |
-| PostgreSQL smoke test trong lượt này | SKIPPED – Docker daemon không chạy, không có biến DB test và chưa xác nhận DB cô lập |
+| Backend `mvnw clean test` | PASS – 119 tests, 0 failures, 0 errors, 6 skipped, BUILD SUCCESS; 5 integration tests và 1 smoke test skip đúng điều kiện bật |
+| PostgreSQL Sprint 1 integration trên `127.0.0.1:15432` | PASS – PostgreSQL 16.15, container `tv4_s1_it_db`, volume `tv4_s1_it_pgdata`, V001/V002; 5 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS |
 | Frontend `npm ci` | PASS – cài đúng lockfile |
 | Frontend `npm run test:qr` | PASS – 11 tests, 0 fail |
 | Frontend `npm run build` | PASS – Vite 5.4.21, 321 modules; có cảnh báo chunk 616.99 kB > 500 kB |
 | Frontend `npm audit` | 2 findings còn lại: 1 moderate, 1 high; không có critical |
-| Git/content audit | PASS – đã đọc/scan 75 file thay đổi (7 tracked, 68 untracked); không phát hiện secret, private key, generated artifact hoặc trailing whitespace |
+| Fixture/cleanup audit | PASS – setup/cleanup chỉ tác động các UUID/SKU fixture riêng; cleanup chạy trong transaction trước và sau suite; không xóa dữ liệu theo prefix rộng |
 | JWT verification | PASS ở automated tests bằng RSA key chỉ tồn tại trong test |
 | Provider/JWKS production | NOT TESTED |
 | Camera thật trên desktop/mobile | NOT TESTED |
-| HTTP + JWT + PostgreSQL end-to-end | NOT TESTED |
+| Backend HTTP + test JWT + PostgreSQL | PASS trong container cô lập; production provider/JWKS vẫn NOT TESTED |
 
 Backend còn Mockito dynamic-agent warning trên Java 26; không làm test fail nhưng cần theo dõi khi nâng framework/JDK. Cảnh báo deprecation `HttpStatus.UNPROCESSABLE_ENTITY` đã được sửa bằng API Spring hiện hành.
 
@@ -162,6 +175,9 @@ Backend còn Mockito dynamic-agent warning trên Java 26; không làm test fail 
 - 401/403 ở Spring Security trước đây không dùng JSON error contract chung; hiện trả nội dung tối thiểu, có correlation ID, không trả stack trace/token/SQL. 401 giữ header `WWW-Authenticate: Bearer`.
 - Đã thay hằng `HttpStatus` deprecated, bổ sung ba regression tests cho DB error mapping và mở rộng security integration assertions.
 - Đã vá hai transitive dependency frontend có bản tương thích; chi tiết ở bảng npm audit bên dưới.
+- Đã harden integration harness: cleanup sau suite kể cả khi test hoàn tất, thu hẹp xóa product về đúng fixture, xác minh container/volume/port và schema artifact bắt buộc trước kết nối, đồng thời dùng login tạm không hardcode secret.
+- Đã bỏ điều kiện cứng 39 artifact: schema thực có 39 base table và view `stock_availability`, nên truy vấn cũ đếm 40. Validator mới kiểm tra đầy đủ table/view bắt buộc, migration filename V001/V002, function Sprint 1 và NOLOGIN role `sasms_app`, nhưng cho phép artifact bổ sung hợp lệ.
+- Lần integration đầu phát hiện test QR sai kỳ vọng: malformed payload thuộc D52 `BadRequest` nên implementation trả 400 `INVALID_REQUEST`, không phải 422. Chỉ sửa assertion/comment của test, không đổi API production.
 
 ### npm audit sau xử lý
 
@@ -184,7 +200,7 @@ Không chạy `npm audit fix --force`. `@zxing/browser` giữ ở 0.1.5 và `@zx
 - QR canonical payload, query theo `qr_token`, permission theo store, response không chứa serial/IMEI và 404 không phân biệt missing/out-of-scope.
 - Frontend QR validation và ánh xạ 401/403/404/error sang thông báo không lộ chi tiết server.
 
-Mock JDBC/MVC không chứng minh atomic rollback, uniqueness, idempotency hoặc store scope thực sự trên PostgreSQL.
+Các unit test mock riêng lẻ không chứng minh hành vi PostgreSQL. Suite integration ngày 10/11/2026 đã kiểm chứng trên DB cô lập: revision conflict, uniqueness SKU/Serial/IMEI, idempotency, changed-payload conflict, atomic rollback, active/inactive actor, runtime role và cross-store scope. Kết quả này không thay thế kiểm thử identity provider/JWKS production.
 
 ## 10. Chênh lệch D34, D52 và DB Sprint 1
 
@@ -198,8 +214,6 @@ Mock JDBC/MVC không chứng minh atomic rollback, uniqueness, idempotency hoặ
 
 ## 11. Phần chưa kiểm thử/nghiệm thu
 
-- Chưa chạy migration hoặc integration test trên PostgreSQL test cô lập bằng runtime login thuộc `sasms_app`.
-- Chưa chứng minh bằng DB thật: revision conflict, duplicate SKU, duplicate Serial/IMEI, same-key retry, changed-payload conflict, rollback toàn batch, active/inactive actor và cross-store permission.
 - Chưa có login/provider production nên chưa demo browser -> JWT -> backend -> PostgreSQL.
 - Chưa kiểm thử camera thật, quyền camera, mobile browser và hiệu năng QR dưới 1 giây.
 - Chưa có BA duyệt các HTTP contract provisional; chưa có QA/PO nghiệm thu UI hoặc luồng nghiệp vụ.
@@ -211,20 +225,20 @@ Mock JDBC/MVC không chứng minh atomic rollback, uniqueness, idempotency hoặ
 - [ ] BA/DB duyệt Inventory path và quy tắc UUID `Idempotency-Key`.
 - [ ] BA/DB duyệt `product_id` so với `sku_id` trong QR response.
 - [ ] Architect/PM chọn provider, issuer, audience, JWKS và token delivery cho frontend.
-- [ ] DBA cấp DB test cô lập và runtime login; QA chạy ma trận integration ở mục 11.
+- [x] Đã chạy `scripts/run_s1_it.ps1` ngày 10/11/2026: 5/5 integration tests PASS, fixture và login tạm được cleanup.
 - [ ] QA thử JWT âm/dương, user inactive, thiếu quyền và cross-store.
 - [ ] QA thử QR camera trên desktop/mobile, manual payload, 401/403/404 và cleanup camera.
 - [ ] PO review nghiệp vụ Catalog, nhập kho và QR; không đánh dấu APPROVED trước khi có bằng chứng.
 - [ ] Architect/PM quyết định kế hoạch nâng Vite để xử lý hai audit findings dev-tool còn lại.
 - [ ] Review bundle size 616.99 kB và Mockito agent warning trước production hardening.
-- [ ] Xác nhận 7 file tracked đã sửa và 68 file untracked đều thuộc phạm vi TV4 trước `git add`; không thêm `target`, `dist`, `node_modules` hoặc dữ liệu DB runtime.
+- [ ] Review integration test và hai script mới; không thêm `target`, `dist`, `node_modules`, log hoặc dữ liệu DB runtime.
 
 ## 13. Lệnh Git/Draft PR đề xuất
 
 Chỉ chạy sau khi review toàn bộ `git status`, secret scan và xác nhận file thuộc TV4:
 
 ```powershell
-git add backend/pom.xml backend/src/main backend/src/test frontend/package.json frontend/package-lock.json frontend/src "Sprint 1/Fullstack/TV4/SPRINT1_IMPLEMENTATION_REPORT.md"
+git add backend/pom.xml backend/src/main backend/src/test frontend/package.json frontend/package-lock.json frontend/src scripts/provision_s1_db.ps1 scripts/run_s1_it.ps1 "Sprint 1/Fullstack/TV4/SPRINT1_IMPLEMENTATION_REPORT.md"
 git diff --cached --check
 git diff --cached --stat
 git commit -m "feat(sprint1): add secured catalog inventory and qr flows"
