@@ -1,4 +1,5 @@
 import PosPage from '../features/pos/PosPage.jsx'
+import QrCameraScanner from '../features/qr/QrCameraScanner.jsx'
 import SerialImeiPanel from '../features/serialImei/SerialImeiPanel.jsx'
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
       </header>
 
       <PosPage />
+      <QrCameraScanner />
       <SerialImeiPanel />
     </main>
   )
