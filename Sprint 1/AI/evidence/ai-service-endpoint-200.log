@@ -1,0 +1,132 @@
+# =============================================================================
+# SASMS SPRINT 1 - AI SERVICE ENDPOINT VERIFICATION LOG (HTTP 200)
+# Task: S1-13 | Output: DS1 Phan mem tang truong Sprint 1 (demo duoc)
+# Lead: Nguyen Tien Vu (Data / AI Lead) | Reviewer: Tran Trung Kien, Nguyen Quang Huy
+# Generated: 2026-11-10T13:10:50.667780+00:00
+# =============================================================================
+
+[TC-EP-01] Health & AI Status Check
+HTTP Request:  GET /api/v1/ai/status
+HTTP Response: 200 OK (Latency: 1.8 ms)
+Response Body: {
+  "status": "UP",
+  "service_name": "SASMS AI Gateway - Sprint 1 Increment (DS1)",
+  "active_provider": "OPENAI",
+  "cache_engine": "MemoryCache-5m-TTL",
+  "circuit_breaker": "CLOSED",
+  "timeout_limit_ms": 2500,
+  "supported_categories": [
+    "SMARTPHONE",
+    "LAPTOP",
+    "TELEVISION",
+    "WASHING_MACHINE",
+    "REFRIGERATOR",
+    "AIR_CONDITIONER"
+  ]
+}
+--------------------------------------------------------------------------------
+
+[TC-EP-02] Cross-sell Recommendation - Smartphone (OpenAI Provider)
+HTTP Request:  POST /api/v1/ai/cross-sell
+Request Body:  {"sku_ids": ["PHONE-IP16-128"], "store_id": "ST-HCM-01"}
+HTTP Response: 200 OK (Latency: 684.5 ms)
+Response Body: {
+  "suggestions": [
+    {
+      "sku_id": "ACC-CASE-PHONE-IP16-128",
+      "reason": "Ốp lưng chống sốc chuẩn thiết kế cho PHONE-IP16-128"
+    },
+    {
+      "sku_id": "ACC-CHG-20W",
+      "reason": "Củ sạc nhanh Type-C công suất cao 20W"
+    },
+    {
+      "sku_id": "SRV-WAR-EXT12",
+      "reason": "Gói bảo hành rơi vỡ mở rộng 12 tháng tại SASMS"
+    }
+  ],
+  "source": "AI",
+  "took_ms": 684
+}
+--------------------------------------------------------------------------------
+
+[TC-EP-03] Cross-sell Recommendation - Cache Hit Verification
+HTTP Request:  POST /api/v1/ai/cross-sell
+Request Body:  {"sku_ids": ["PHONE-IP16-128"], "store_id": "ST-HCM-01"}
+HTTP Response: 200 OK (Latency: 2.4 ms)
+Response Body: {
+  "suggestions": [
+    {
+      "sku_id": "ACC-CASE-PHONE-IP16-128",
+      "reason": "Ốp lưng chống sốc chuẩn thiết kế cho PHONE-IP16-128"
+    },
+    {
+      "sku_id": "ACC-CHG-20W",
+      "reason": "Củ sạc nhanh Type-C công suất cao 20W"
+    },
+    {
+      "sku_id": "SRV-WAR-EXT12",
+      "reason": "Gói bảo hành rơi vỡ mở rộng 12 tháng tại SASMS"
+    }
+  ],
+  "source": "CACHE",
+  "took_ms": 2
+}
+--------------------------------------------------------------------------------
+
+[TC-EP-04] Cross-sell Recommendation - Gemini Provider Simulation
+HTTP Request:  POST /api/v1/ai/simulate?provider=GEMINI
+Request Body:  {"sku_ids": ["TV-LG-OLED65"], "store_id": "ST-HN-02"}
+HTTP Response: 200 OK (Latency: 520.1 ms)
+Response Body: {
+  "provider_tested": "GEMINI",
+  "result": {
+    "suggestions": [
+      {
+        "sku_id": "ACC-MNT-TILT",
+        "reason": "Giá treo tivi thông minh điều chỉnh góc nghiêng"
+      },
+      {
+        "sku_id": "ACC-CBL-HDMI21",
+        "reason": "Cáp HDMI 2.1 siêu tốc hỗ trợ 4K 120Hz"
+      },
+      {
+        "sku_id": "ACC-SOC-SURGE",
+        "reason": "Ổ cắm điện đa năng chống sét lan truyền"
+      }
+    ],
+    "source": "AI",
+    "took_ms": 520
+  },
+  "call_log": {
+    "provider": "GEMINI",
+    "modelVersion": "gemini-2.5-flash",
+    "durationMs": 512,
+    "promptTokens": 330,
+    "completionTokens": 78,
+    "success": true,
+    "errorMessage": null
+  }
+}
+--------------------------------------------------------------------------------
+
+[TC-EP-05] Cross-sell Recommendation - Circuit Breaker Open (Rule Fallback)
+HTTP Request:  POST /api/v1/ai/cross-sell
+Request Body:  {"sku_ids": ["AC-DAIK-12000"], "store_id": "ST-DN-01"}
+HTTP Response: 200 OK (Latency: 3.2 ms)
+Response Body: {
+  "suggestions": [
+    {
+      "sku_id": "ACC-DEF-CB",
+      "reason": "Aptomat bảo vệ nguồn điện (Luật dự phòng SASMS)"
+    },
+    {
+      "sku_id": "SRV-DEF-WARRANTY",
+      "reason": "Gói bảo hành tiêu chuẩn chính hãng"
+    }
+  ],
+  "source": "RULE_FALLBACK",
+  "took_ms": 3
+}
+--------------------------------------------------------------------------------
+

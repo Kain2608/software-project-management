@@ -18,7 +18,7 @@
     <description>Week 2 source code skeleton for POS and Serial/IMEI boundaries</description>
 
     <properties>
-        <java.version>26</java.version>
+        <java.version>25</java.version>
     </properties>
 
     <dependencies>

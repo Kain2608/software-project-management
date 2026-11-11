@@ -41,7 +41,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/health",
                                 "/api/pos/status",
-                                "/api/serial-imei/status")
+                                "/api/serial-imei/status",
+                                "/api/v1/ai/status")
+                        .permitAll()
+                        .requestMatchers("/api/v1/ai/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated());
