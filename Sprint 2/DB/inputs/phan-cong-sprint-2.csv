@@ -1,0 +1,62 @@
+"SPRINT 2 – POS, BÁN LẺ TẠI QUẦY VÀ AI GỢI Ý",,,,,,,,,,,,,,
+"Thời gian: 11/10/2026 – 24/10/2026 (Tuần 6–7)  |  Mục tiêu: POS bán lẻ tại quầy, in hóa đơn + tem QR, tồn kho real-time và AI gợi ý bán kèm.  |  Phạm vi: US-04, US-05, US-06 (Should), US-07  |  Cam kết 21 điểm Must; dự phòng 3 điểm Should  |  Cột mốc: M3 (20/10), M4 (24/10)",,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+STT,Mã việc,Giai đoạn SDLC,Giai đoạn dự án / Sprint,Công việc,Người làm chính,Hỗ trợ,Tài liệu cần có (đầu vào),Tài liệu tạo ra (đầu ra),Tài liệu minh chứng đi kèm,Bắt đầu,Hạn,Giờ ước lượng,Tình trạng tài liệu đầu ra,Theo lịch (tính tại 05/11/2026)
+1,S2-02,5. Lập trình,Sprint 2,TSK-02-01 Màn hình bán hàng POS tại quầy,Vũ Duy Thái (Fullstack Lead),Nguyễn Quang Huy,"D53 Mockup UI/UX (Figma)
+D52 Đặc tả API (OpenAPI)",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"Video demo thêm hàng – chọn Serial – thanh toán; thời gian xử lý đơn < 2 giây
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",11/10/2026,14/10/2026,32,CHƯA CÓ,TRỄ HẠN
+2,S2-03,5. Lập trình,Sprint 2,TSK-02-02 API tìm kiếm và khóa chọn Serial khi bán,Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,"D51 Thiết kế cơ sở dữ liệu SASMS
+D52 Đặc tả API (OpenAPI)",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"PR đã merge; test 2 máy POS chọn cùng Serial chỉ một máy giữ được
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",11/10/2026,15/10/2026,24,CHƯA CÓ,TRỄ HẠN
+3,S2-08,5. Lập trình,Sprint 2,"TSK-02-07 AI Recommendation Engine (cross-selling, cache, luật dự phòng)",Nguyễn Tiến Vũ (Data / AI Lead),Trần Trung Kiên,"D55 Thiết kế AI: prompt, RAG, cache, luật dự phòng",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"Log nguồn LLM / cache / luật; độ trễ < 3 giây
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",11/10/2026,16/10/2026,36,CHƯA CÓ,TRỄ HẠN
+4,S2-10,6. Kiểm thử,Sprint 2,"Viết Test Case POS, xuất kho QR và AI gợi ý",Phạm Đại Phát (QA / Documentation Lead),"Nguyễn Quang Huy, Nguyễn Tiến Vũ","D34 Đặc tả yêu cầu chức năng FRS_V2
+D70 Kế hoạch kiểm thử (Test Plan)","D72 Bộ Test Case: POS, in hóa đơn, tồn kho
+D73 Bộ Test Case: AI gợi ý","Bộ test case có cả luồng lỗi và dự phòng; PO xác nhận
+(Mẫu minh chứng của tài liệu: Danh sách test case; PO xác nhận; Test case gồm luồng lỗi / dự phòng)",11/10/2026,16/10/2026,32,CHƯA CÓ,TRỄ HẠN
+5,S2-01,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,"Sprint Planning 2: Sprint Goal, capacity, cam kết 21 điểm Must (+3 Should)",Trịnh Quốc An (PM / Scrum Master),"Nguyễn Quang Huy, Cả nhóm","D31 Product Backlog và User Story
+D32 Tiêu chuẩn Sẵn sàng và Hoàn thành (DoR - DoD)",D60 Sprint Backlog và phân rã công việc (Sprint 1–4),"Biên bản Planning; Sprint Backlog 2 (8 task, 188 giờ)
+(Mẫu minh chứng của tài liệu: Biên bản Sprint Planning từng Sprint)",12/10/2026,12/10/2026,6,ĐÃ CÓ,XONG
+6,S2-12,7. Triển khai / Phát hành,Sprint 2,Thiết lập Staging và pipeline deploy tự động,Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,D22 Kế hoạch môi trường Dev / Staging / Prod và CI/CD,D22 Kế hoạch môi trường Dev / Staging / Prod và CI/CD,"Log GitHub Actions deploy Staging thành công
+(Mẫu minh chứng của tài liệu: Sơ đồ môi trường; log pipeline chạy thành công)",12/10/2026,20/10/2026,16,CHƯA CÓ,TRỄ HẠN
+7,S2-16,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,"Daily Scrum, Burndown và sổ rào cản",Trịnh Quốc An (PM / Scrum Master),Cả nhóm,D32 Tiêu chuẩn Sẵn sàng và Hoàn thành (DoR - DoD),"D61 Nhật ký Daily Scrum và rào cản
+D62 Theo dõi Burndown và Velocity","Nhật ký Daily mỗi ngày; Burndown ngày
+(Mẫu minh chứng của tài liệu: Nhật ký ghi hằng ngày; Burndown cập nhật mỗi ngày làm việc)",12/10/2026,23/10/2026,20,ĐÃ CÓ,XONG
+8,S2-15,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,"Họp CCB xử lý CR, theo dõi chi phí token AI (R-07) và EVM",Trịnh Quốc An (PM / Scrum Master),"Trần Trung Kiên, Nguyễn Tiến Vũ",D19 Kế hoạch quản lý thay đổi (quy chế CCB),"D120 Sổ rủi ro, sự cố, thay đổi và quyết định
+D121 Kiểm soát nguồn lực, chi phí và KPI (EVM)","Biên bản CCB; CR có chữ ký duyệt; EVM cập nhật
+(Mẫu minh chứng của tài liệu: Mỗi CR và quyết định có người duyệt và ngày (hiện là dữ liệu minh họa); Số liệu PV / EV / AC cập nhật mỗi Sprint (hiện là dữ liệu minh họa))",13/10/2026,23/10/2026,8,ĐÃ CÓ,XONG
+9,S2-04,5. Lập trình,Sprint 2,TSK-02-03 Mẫu in hóa đơn POS tích hợp QR bảo hành,Vũ Duy Thái (Fullstack Lead),Nguyễn Quang Huy,"D56 Thiết kế tích hợp hóa đơn điện tử, SMS, máy in
+D53 Mockup UI/UX (Figma)",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"Ảnh hóa đơn in thử có mã QR quét được
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",15/10/2026,19/10/2026,20,CHƯA CÓ,TRỄ HẠN
+10,S2-17,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,"Họp tuần, báo cáo tiến độ, cập nhật rủi ro (Tuần 6–7)",Trịnh Quốc An (PM / Scrum Master),Phạm Đại Phát,D14 Kế hoạch quản lý truyền thông,D112 Bộ báo cáo tuần: Tuần 6–7,"Biên bản, báo cáo tiến độ, phân công, nhật ký rủi ro mỗi tuần
+(Mẫu minh chứng của tài liệu: Biên bản, báo cáo tiến độ, phân công và rủi ro mỗi tuần)",17/10/2026,24/10/2026,16,CHƯA CÓ,TRỄ HẠN
+11,S2-05,5. Lập trình,Sprint 2,TSK-02-04 Driver máy in hóa đơn POS và test in nhiệt,Phạm Đại Phát (QA / Documentation Lead),Vũ Duy Thái,"D56 Thiết kế tích hợp hóa đơn điện tử, SMS, máy in
+D160 Chứng từ mua và biên bản nhận thiết bị",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"Kết quả test in; xử lý mất kết nối / PDF dự phòng
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",18/10/2026,21/10/2026,16,CHƯA CÓ,TRỄ HẠN
+12,S2-06,5. Lập trình,Sprint 2,TSK-02-05 API truy vấn tồn kho real-time theo siêu thị,Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,D51 Thiết kế cơ sở dữ liệu SASMS,DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"PR đã merge; số tồn đổi trong vài giây sau khi bán
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",19/10/2026,22/10/2026,16,CHƯA CÓ,TRỄ HẠN
+13,S2-09,5. Lập trình,Sprint 2,TSK-02-08 Tích hợp gợi ý AI vào màn hình POS,Vũ Duy Thái (Fullstack Lead),Nguyễn Tiến Vũ,"D52 Đặc tả API (OpenAPI)
+D55 Thiết kế AI: prompt, RAG, cache, luật dự phòng",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),"Video demo gợi ý hiện trong POS; thêm gợi ý vào giỏ một thao tác
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",19/10/2026,22/10/2026,24,CHƯA CÓ,TRỄ HẠN
+14,S2-11,6. Kiểm thử,Sprint 2,Kiểm thử tải AI 50 request đồng thời (xử lý ISS-003),Phạm Đại Phát (QA / Documentation Lead),Nguyễn Tiến Vũ,D73 Bộ Test Case: AI gợi ý,D79 Báo cáo kiểm thử hiệu năng và tải,"Bảng độ trễ p95 < 3 giây; tỷ lệ dùng luật dự phòng
+(Mẫu minh chứng của tài liệu: Số đo QR < 1s, POS < 2s, AI < 3s (p95), 50 request đồng thời)",19/10/2026,22/10/2026,12,CHƯA CÓ,TRỄ HẠN
+15,S2-14,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,Refinement cho Sprint 3 (US-08..11) và kiểm tra DoR,Nguyễn Quang Huy (BA / PO),"Vũ Duy Thái, Trần Trung Kiên, Phạm Đại Phát","D31 Product Backlog và User Story
+D34 Đặc tả yêu cầu chức năng FRS_V2
+D41 Mô hình BPMN: đặt hàng online, giao và lắp đặt
+D42 Mô hình BPMN: bảo hành, đổi trả",D31 Product Backlog và User Story,"Checklist DoR 6 tiêu chí cho từng story
+(Mẫu minh chứng của tài liệu: Backlog 16 story + EN-01; điểm Fibonacci; RICE chưa tính)",19/10/2026,21/10/2026,8,MỘT PHẦN,TRỄ HẠN
+16,S2-18,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,Quality Gate M3 – Omnichannel POS & Cart Operable,Trịnh Quốc An (PM / Scrum Master),"Vũ Duy Thái, Phạm Đại Phát","DS2 Phần mềm tăng trưởng Sprint 2 (demo được)
+D76 Báo cáo kiểm thử Sprint 2",D128 Biên bản Quality Gate M3 – Omnichannel POS & Cart Operable,"POS in hóa đơn mượt, xuất kho QR tức thì; biên bản ký
+(Mẫu minh chứng của tài liệu: Biên bản qua / không qua cổng, ký bởi các trưởng bộ phận liên quan và PM)",20/10/2026,20/10/2026,4,CHƯA CÓ,TRỄ HẠN
+17,S2-07,6. Kiểm thử,Sprint 2,TSK-02-06 Test luồng bán hàng POS và xuất kho QR E2E,Phạm Đại Phát (QA / Documentation Lead),Vũ Duy Thái,"D72 Bộ Test Case: POS, in hóa đơn, tồn kho",D76 Báo cáo kiểm thử Sprint 2,"Báo cáo chạy test E2E luồng bán
+(Mẫu minh chứng của tài liệu: Kết quả chạy test, số lỗi theo mức P1–P3)",21/10/2026,24/10/2026,20,CHƯA CÓ,TRỄ HẠN
+18,S2-13,6. Kiểm thử,Sprint 2,Báo cáo kiểm thử Sprint 2 và cập nhật sổ lỗi,Phạm Đại Phát (QA / Documentation Lead),"Vũ Duy Thái, Nguyễn Tiến Vũ","D72 Bộ Test Case: POS, in hóa đơn, tồn kho
+D73 Bộ Test Case: AI gợi ý","D76 Báo cáo kiểm thử Sprint 2
+D80 Sổ lỗi (Bug Log)","Báo cáo có số lỗi theo mức; lỗi P1 đã xử lý hoặc có kế hoạch
+(Mẫu minh chứng của tài liệu: Kết quả chạy test, số lỗi theo mức P1–P3; Mỗi lỗi có mã, mức độ, người sửa, ngày verify (hiện là dữ liệu minh họa))",22/10/2026,24/10/2026,8,MỘT PHẦN,TRỄ HẠN
+19,S2-19,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,Sprint Review và Retrospective 2,Nguyễn Quang Huy (BA / PO),"Trịnh Quốc An, Cả nhóm",DS2 Phần mềm tăng trưởng Sprint 2 (demo được),D123 Báo cáo Sprint Review và Retrospective: Sprint 2,"PO ký nghiệm thu US-04..07; hành động cải tiến có người và hạn
+(Mẫu minh chứng của tài liệu: PO ký nghiệm thu từng story; hành động cải tiến có người và hạn)",24/10/2026,24/10/2026,6,CHƯA CÓ,TRỄ HẠN
+20,S2-20,9. Quản lý và kiểm soát (xuyên suốt),Sprint 2,Quality Gate M4 – AI Cross-selling & Consultation Live,Trịnh Quốc An (PM / Scrum Master),"Nguyễn Tiến Vũ, Vũ Duy Thái","DS2 Phần mềm tăng trưởng Sprint 2 (demo được)
+D79 Báo cáo kiểm thử hiệu năng và tải",D129 Biên bản Quality Gate M4 – AI Cross-selling & Consultation Live,"Số đo AI < 3 giây, có luồng dự phòng; biên bản ký
+(Mẫu minh chứng của tài liệu: Biên bản qua / không qua cổng, ký bởi các trưởng bộ phận liên quan và PM)",24/10/2026,24/10/2026,4,CHƯA CÓ,TRỄ HẠN
+
