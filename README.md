@@ -1,6 +1,6 @@
 # SASMS — Quản lý siêu thị điện máy thông minh
 
-Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Kiên cho tiền Sprint, Sprint 0 và Sprint 1. Nhãn `Kien` trong các hồ sơ trước là provenance của lần tạo bản gốc. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
+Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Kiên cho tiền Sprint, Sprint 0, Sprint 1 và Sprint 2. Nhãn `Kien` trong các hồ sơ trước là provenance của lần tạo bản gốc. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
 
 **Tiền Sprint:** KD-10 — kế hoạch thiết bị D21, môi trường và CI/CD D22; đóng góp kỹ thuật cho KD-02/04/09.
 
@@ -8,6 +8,11 @@ Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Ki�
 - [D21 — Kế hoạch thiết bị](Ti%E1%BB%81n%20Sprint/DB/D21-ke-hoach-mua-sam-thiet-bi.md) · [Dự toán Excel](Ti%E1%BB%81n%20Sprint/DB/D21-du-toan-thiet-bi.xlsx)
 - [D22 — Môi trường và CI/CD](Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) · [Runbook sao lưu/khôi phục](infra/README.md)
 - [Bằng chứng kỹ thuật tiền Sprint](Ti%E1%BB%81n%20Sprint/DB/evidence)
+
+**Sprint 2:** khóa chọn/giải phóng Serial POS, tồn theo kho/cửa hàng, quyền function và hai kết nối tranh Serial. CI kiểm DB và báo readiness; Staging thật còn chờ triển khai.
+
+- [Bộ bàn giao DB Sprint 2](Sprint%202/DB/README.md) · [Đối chiếu sprint trước và hồ sơ nhóm](Sprint%202/DB/RA-SOAT-SPRINT2.md)
+- [Chạy nâng cấp, kiểm thử và demo Sprint 2](database/sprint2/README.md)
 
 **Sprint 1:** migration danh mục/SKU, Serial/IMEI, nhập kho theo lô có chống xử lý lặp và kiểm quyền user/role theo cửa hàng.
 

@@ -1,72 +1,26 @@
-# D128 — Hồ sơ kỹ thuật DB cho Quality Gate M3
+# D128 — Đóng góp kỹ thuật DB cho Quality Gate M3
 
-| Thuộc tính | Nội dung |
-|---|---|
-| **Cột mốc Quality Gate** | **M3 — Omnichannel POS & Cart Operable** |
-| **Thời gian diễn ra** | 20/10/2026 (15:30 – 16:30 Thứ Ba, Tuần 7) |
-| **Phụ trách phần hồ sơ DB** | Trần Trung Kiên — Architect / DBA |
-| **Nhánh kiểm thử** | `DB` |
-| **Trạng thái** | Hồ sơ kỹ thuật CSDL đã sẵn sàng để Hội đồng Quality Gate nghiệm thu |
+Mốc kế hoạch: **20/10/2026, 15:30–16:30**. Người chuẩn bị phần DB: **Trần Trung Kiên**. Rà soát: 13/11/2026. Đây là hồ sơ đầu vào; **biên bản D128 chính thức do Trịnh Quốc An chủ trì**, có trưởng bộ phận liên quan ký theo workbook.
 
----
+## Phạm vi và minh chứng
 
-## 1. Căn cứ và Phạm vi thẩm định tại M3
+| Tiêu chí M3 / đầu việc | Kiểm chứng DB hoặc phần cần bổ sung | Trạng thái nghiệm thu |
+|---|---|---|
+| S2-03: hai POS tranh Serial | [Validator](../../scripts/validate_sprint2.py): hai PID, một transaction đang giữ, người thua `55P03`, commit và rollback; xem [evidence](../../database/evidence/sprint2) đúng source hash | DB local đạt: ca commit/rollback dùng hai PID khác nhau; chưa phải demo hai máy vật lý |
+| Function được gọi đúng quyền | `PUBLIC` không có EXECUTE, runtime được cấp; `release_device_lock` kiểm actor active/checkout/store từ đơn | 33 assertions Sprint 2 đạt, gồm ACL/authorization; chờ review của người phụ trách |
+| QR < 1 giây / POS < 2 giây | Số đo DB không thay camera/API/UI; Phát/Thái cần D72/D76 và demo | Chưa có bằng chứng ứng dụng Sprint 2 trong hồ sơ DB |
+| Thanh toán/hóa đơn/QR | Baseline `reserve_order`/`complete_sale` có transaction, movement và invoice nội bộ DRAFT; driver/PDF/e-invoice/QR UI thuộc tích hợp | Chưa nghiệm thu E2E/in hóa đơn |
+| S2-12: Staging tự động | Workflow kiểm DB và readiness; báo `NOT_DEPLOYED` | Chưa có deploy/health thật |
+| Không còn P1/P2 | Phát tổng hợp D76/D80 theo lần verify | Không suy từ vài test DB thành toàn ứng dụng không lỗi |
 
-Căn cứ theo kế hoạch mốc và nghi thức Sprint 2 tại [inputs/phan-cong-sprint-2.csv](inputs/phan-cong-sprint-2.csv), Cổng kiểm soát chất lượng **M3 (Quality Gate M3)** đánh giá tính sẵn sàng vận hành của luồng bán hàng tại quầy POS, khả năng khóa Serial, xuất hóa đơn biên nhận và tốc độ quét QR xuất kho.
+Lần kiểm local **13/11/2026, 23:14:15–23:14:31 (UTC+7), PostgreSQL 16.15**: Sprint 2 **33 assertions đạt**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**. Hai ca tranh Serial có cặp PID **28700/22168** và **33476/14500**; đối thủ bị `55P03` khi transaction giữ còn mở, sau release/rollback giữ lại được. [Summary](../../database/evidence/sprint2/summary.json) và [log](../../database/evidence/sprint2/validation.log) có source hash và kết quả cleanup/trigger được khôi phục.
 
-Hồ sơ này cung cấp toàn bộ bằng chứng kỹ thuật phía CSDL do Trần Trung Kiên chịu trách nhiệm, bao gồm các tiêu chí cốt lõi:
-1. **Khóa chọn Serial chống tranh chấp (S2-03):** Đảm bảo hai máy POS cùng chọn một Serial thì chỉ một máy giữ được, loại bỏ hoàn toàn rủi ro bán trùng.
-2. **Hiệu năng xuất kho và quét Serial/QR:** Đo lường thời gian truy vấn Serial và token QR đạt yêu cầu khắt khe (< 1 giây).
-3. **Tính nguyên tử của giao dịch thanh toán POS:** Đảm bảo chuỗi xử lý tạo đơn $\rightarrow$ giữ hàng $\rightarrow$ thu tiền $\rightarrow$ xuất bán $\rightarrow$ sinh hóa đơn và tem QR không có trạng thái dữ liệu treo.
-4. **Môi trường Staging và CI/CD tự động (S2-12):** Pipeline triển khai Staging đã hoạt động ổn định.
+[Failure probes CLI](../../database/evidence/sprint2/ci-failure-probes.json) xác nhận lỗi SQL và assertion đều trả nonzero/summary failed; chưa có run CI remote hoặc deployment mới.
 
----
+Mã nguồn và hợp đồng đọc tại [DS2 DB](DS2-thiet-ke-va-ban-giao-DB.md); phạm vi CI tại [D22](D22-ke-hoach-moi-truong-va-CICD-sprint2.md). Evidence của Sprint 0/1 giữ nguyên provenance, không dùng để ký đạt Sprint 2.
 
-## 2. Bằng chứng kỹ thuật thực nghiệm
+## Các phát biểu đã hiệu chỉnh
 
-### 2.1 Kiểm chứng 2 máy POS tranh chấp 1 Serial (S2-03)
-- **Kịch bản thực thi:** [database/tests/sprint2/test_sprint2_concurrency_and_stock.sql](../../database/tests/sprint2/test_sprint2_concurrency_and_stock.sql).
-- **Kết quả đo lường thực tế:**
-  ```text
-  [PASS] Máy POS 1 đã chọn và giữ khóa Serial S2-POS-LOCK-001 thành công (Device ID: ...)
-  [PASS] Máy POS 2 tranh chấp Serial S2-POS-LOCK-001 đã bị CHẶN CHÍNH XÁC với mã lỗi 55P03 (lock_not_available)
-  ```
-- **Kết luận:** Cơ chế Two-phase Locking (`find_and_lock_device_for_pos` + `reserve_order`) hoạt động chuẩn xác, bảo vệ toàn vẹn dữ liệu kho.
+Bản trước ghi log PASS mẫu, số benchmark và trạng thái Staging/ĐẠT như kết quả thực tế. Không có log/run gắn đúng phiên bản để xác nhận các số đó; chúng đã được bỏ. Khi có kết quả thật, gắn summary/log, timestamp, phiên bản PostgreSQL và source hash; không chép chuỗi PASS dự kiến vào mục kết quả.
 
-### 2.2 Hiệu năng tra cứu Serial và Token QR
-- **Yêu cầu DoD:** Thời gian quét và tìm kiếm < 1.0 giây.
-- **Kết quả kiểm thử thực tế trên CSDL (PostgreSQL 16):**
-  - Truy vấn tìm kiếm thiết bị theo Serial có index `idx_devices_serial_warehouse`: **1.82 ms**.
-  - Truy vấn tìm kiếm thiết bị theo `qr_token` có unique index: **1.15 ms**.
-  - Tốc độ thực thi CSDL nhanh gấp **500 lần** so với ngưỡng tối đa cho phép.
-
-### 2.3 Tính toàn vẹn của Giao dịch Bán lẻ POS
-- Khi gọi `sasms.complete_sale(order_id, actor_id)`:
-  - Cập nhật đồng thời trạng thái thiết bị sang `SOLD` và ghi nhận `sold_at = now()`.
-  - Sinh bản ghi biến động kho `inventory_movements` với `kind = 'SALE'`.
-  - Sinh hóa đơn nội bộ trong bảng `sasms.invoices`.
-  - Phát sinh sự kiện kiểm toán `audit_logs` (`sales.checkout`) và `outbox_events` (`OrderPaid`).
-  - Toàn bộ chuỗi thao tác thực hiện trong một Transaction nguyên tử; nếu xảy ra lỗi thanh toán không khớp tổng tiền, toàn bộ thay đổi bị rollback hoàn toàn.
-
-### 2.4 Kiểm chứng Pipeline Staging CI/CD (S2-12)
-- Workflow [.github/workflows/sprint2-staging.yml](../../.github/workflows/sprint2-staging.yml) đã được tích hợp.
-- Tự động chạy container PostgreSQL 16, nạp schema, di chuyển dữ liệu và chạy kịch bản concurrency trước khi tiến hành triển khai Staging.
-
----
-
-## 3. Bảng đối chiếu tiêu chí vượt Cổng M3 (Quality Gate M3 Checklist)
-
-| STT | Tiêu chí kiểm soát tại Cổng M3 | Bằng chứng kỹ thuật DB | Người thẩm định | Đánh giá |
-|---|---|---|---|---|
-| 1 | Hai máy POS chọn cùng Serial chỉ một máy giữ được | Log test `55P03` tại `test_sprint2_concurrency_and_stock.sql` | Trần Trung Kiên | **ĐẠT** |
-| 2 | Quét Serial / QR xuất kho tức thì (< 1 giây) | Benchmark index < 2ms | Trần Trung Kiên | **ĐẠT** |
-| 3 | In hóa đơn và liên kết tem QR nguyên tử | Hàm `complete_sale` sinh invoice và outbox event | Vũ Duy Thái, Kiên | **ĐẠT** |
-| 4 | Môi trường Staging sẵn sàng và tự động hóa | Workflow `.github/workflows/sprint2-staging.yml` | Trần Trung Kiên | **ĐẠT** |
-| 5 | Không có lỗi P1/P2 về thất thoát hoặc khóa chết CSDL | Kiểm tra Deadlock và Transaction Isolation | Phạm Đại Phát | **ĐẠT** |
-
----
-
-## 4. Ý kiến của Architect / DBA
-
-Trần Trung Kiên xác nhận phần CSDL, cơ chế khóa tranh chấp và hạ tầng Staging đã đáp ứng 100% các tiêu chí kỹ thuật quy định cho Cột mốc M3. Đề nghị PM Trịnh Quốc An và Product Owner Nguyễn Quang Huy ký duyệt thông qua Cổng kiểm soát chất lượng M3 để bước vào giai đoạn kiểm thử tải và hoàn thiện tính năng gợi ý AI cho M4.
-
+Việc qua/không qua M3, người ký, ngày ký và điều kiện còn mở do PM/PO/QA và người có thẩm quyền xác nhận. Hồ sơ này chưa ghi chữ ký thay họ.

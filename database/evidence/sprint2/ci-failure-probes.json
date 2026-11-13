@@ -1,0 +1,25 @@
+{
+  "scope": "Local real CLI with intentionally corrupted copied sources; no GitHub run claim",
+  "production_sources_unchanged": true,
+  "cases": [
+    {
+      "case": "extension_sql_error",
+      "cli_exit_code": 1,
+      "summary_status": "failed",
+      "error": "atomic Sprint2 extension apply failed (psql exit 3); see validation.log",
+      "injected_source": "database/sprint2/realtime_stock_and_locking.sql",
+      "injected_source_sha256": "ce5d3197036eff28ce15e7e1e73a1430f3b1ba3ac368f08896fa88d9b36776f4",
+      "expected_error_observed": "42703",
+      "extension_ddl_rolled_back": true
+    },
+    {
+      "case": "test_assertion_error",
+      "cli_exit_code": 1,
+      "summary_status": "failed",
+      "error": "Sprint2 runtime ACL authorization and stock lifecycle failed (psql exit 3); see validation.log",
+      "injected_source": "database/tests/sprint2/test_sprint2_concurrency_and_stock.sql",
+      "injected_source_sha256": "de645b6dcaa1657d0c622c1b0dd38e3e2d617694f233ebe9de35ea8a30309c23",
+      "expected_error_observed": "S2_INJECTED_ASSERTION_FAILURE"
+    }
+  ]
+}

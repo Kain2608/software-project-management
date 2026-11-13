@@ -1,0 +1,203 @@
+{
+  "started_at_utc": "2026-11-13T16:14:15.325433+00:00",
+  "status": "passed",
+  "checks": {
+    "captured payment guard initially enabled": {
+      "passed": true,
+      "seconds": 0.0646
+    },
+    "table names": {
+      "passed": true,
+      "seconds": 0.0875
+    },
+    "seed snapshot": {
+      "passed": true,
+      "seconds": 0.232
+    },
+    "atomic Sprint2 extension apply": {
+      "passed": true,
+      "seconds": 0.1112
+    },
+    "Sprint2 extension reapply": {
+      "passed": true,
+      "seconds": 0.099
+    },
+    "Sprint2 runtime ACL authorization and stock lifecycle": {
+      "passed": true,
+      "seconds": 0.1514
+    },
+    "commit independent POS fixtures": {
+      "passed": true,
+      "seconds": 0.1234
+    },
+    "committed realtime stock": {
+      "passed": true,
+      "seconds": 0.0805
+    },
+    "commit initial allocation count": {
+      "passed": true,
+      "seconds": 0.0808
+    },
+    "authorized POS1 release": {
+      "passed": true,
+      "seconds": 0.1376
+    },
+    "POS2 retry after release": {
+      "passed": true,
+      "seconds": 0.1108
+    },
+    "exactly one committed active draft owner": {
+      "passed": true,
+      "seconds": 0.0667
+    },
+    "winning POS2 reserve commit": {
+      "passed": true,
+      "seconds": 0.1224
+    },
+    "winning POS2 captured payment and sale commit": {
+      "passed": true,
+      "seconds": 0.0938
+    },
+    "unique committed checkout side effects": {
+      "passed": true,
+      "seconds": 0.0927
+    },
+    "commit exact synthetic UUID cleanup": {
+      "passed": true,
+      "seconds": 0.125
+    },
+    "rollback independent POS fixtures": {
+      "passed": true,
+      "seconds": 0.1204
+    },
+    "rollback initial allocation count": {
+      "passed": true,
+      "seconds": 0.1063
+    },
+    "POS2 retry after rollback": {
+      "passed": true,
+      "seconds": 0.0997
+    },
+    "rollback exact synthetic UUID cleanup": {
+      "passed": true,
+      "seconds": 0.1237
+    },
+    "captured payment guard restored": {
+      "passed": true,
+      "seconds": 0.073
+    }
+  },
+  "scope": "isolated PostgreSQL behavior, ACL and two POS connections; no API, browser, remote Staging deployment or health claim",
+  "concurrency": [
+    {
+      "case": "POS1_commit",
+      "independent_pos_connections": 2,
+      "pos_backend_pids": [
+        28700,
+        22168
+      ],
+      "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
+      "overlap_55P03_rejections": 1,
+      "post_commit_55P03_rejections": 1,
+      "retry_after_release_or_rollback": true,
+      "draft_stock_unchanged": true,
+      "stock_before": [
+        2,
+        0,
+        0
+      ],
+      "stock_after_reserve": [
+        1,
+        1,
+        0
+      ],
+      "stock_after_sale": [
+        1,
+        0,
+        1
+      ],
+      "committed_side_effects": {
+        "sold_device": 1,
+        "paid_order": 1,
+        "reserve_movement": 1,
+        "sale_movement": 1,
+        "invoice": 1,
+        "checkout_audit": 1,
+        "paid_event": 1
+      }
+    },
+    {
+      "case": "POS1_rollback",
+      "independent_pos_connections": 2,
+      "pos_backend_pids": [
+        33476,
+        14500
+      ],
+      "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
+      "overlap_55P03_rejections": 1,
+      "post_commit_55P03_rejections": 0,
+      "retry_after_release_or_rollback": true,
+      "draft_stock_unchanged": true,
+      "stock_before": [
+        2,
+        0,
+        0
+      ],
+      "stock_after_reserve": [
+        1,
+        1,
+        0
+      ],
+      "stock_after_sale": [
+        1,
+        0,
+        1
+      ],
+      "committed_side_effects": {
+        "sold_device": 1,
+        "paid_order": 1,
+        "reserve_movement": 1,
+        "sale_movement": 1,
+        "invoice": 1,
+        "checkout_audit": 1,
+        "paid_event": 1
+      }
+    }
+  ],
+  "source_sha256": {
+    "scripts/validate_sprint2.py": "b31c398cd5d9edc028b6a5e1bdac628d9a7d579c763ba9bf21c500ab3c7566f0",
+    "scripts/validate_db.py": "79d28cbd7859615551eae68f80c4c781449f35064737d038b7ea3c9f391b3841",
+    "scripts/validate_sprint1.py": "05abaa691781fff21b95abc13e534b46385cc8846f12d5f373541a6cfe5ecdea",
+    ".github/workflows/sprint2-staging.yml": "3557c9db25354b70647f2de48e31f4ad51b6471fa08088a680f3f8f2d2714d87",
+    "database/sprint2/realtime_stock_and_locking.sql": "e2b93fd3115ef2c5432b5fc5898dc96a8c561d83aae639566f3050fda93ffdf5",
+    "database/tests/sprint2/test_sprint2_concurrency_and_stock.sql": "db4cdb3ff9004191310e1fdc1509ab5fcd405da119fe8a4aa27a7f4aa6849bfc"
+  },
+  "prior_sprints": {
+    "sprint1_status": "passed",
+    "sprint1_assertions": 76,
+    "sprint0_regression": {
+      "passed": true,
+      "constraint_assertions": 56,
+      "runtime_acl_assertions": 7
+    },
+    "migration_safety": {
+      "reapply_noop": true,
+      "checksum_rejected": true,
+      "all_pending_ddl_and_ledger_rolled_back": true,
+      "applied_migrations": 2
+    }
+  },
+  "ci_failure_detection": {
+    "sql_file_nonzero_exit": 3,
+    "later_sql_not_executed": true,
+    "assertion_failure_propagated": true
+  },
+  "assertions": 33,
+  "fixtures_cleaned": true,
+  "fixture_cleanup": {
+    "owner_only_exact_synthetic_uuids": true,
+    "captured_payment_guard_disabled_only_during_cleanup_transaction": true,
+    "captured_payment_guard_restored": true
+  },
+  "finished_at_utc": "2026-11-13T16:14:31.669631+00:00"
+}

@@ -1,139 +1,97 @@
-name: Sprint 2 CI/CD - Staging Automated Deployment & DB Concurrency
+name: Sprint 2 DB validation and Staging readiness
 
 on:
   push:
-    paths:
-      - 'database/**'
-      - 'backend/**'
-      - 'frontend/**'
-      - 'Sprint 2/**'
-      - '.github/workflows/sprint2-staging.yml'
+    paths: ['database/**', 'scripts/**', 'backend/**', 'frontend/**', 'Sprint 2/**', '.github/workflows/sprint2-staging.yml']
   pull_request:
-    paths:
-      - 'database/**'
-      - 'backend/**'
-      - 'frontend/**'
-      - 'Sprint 2/**'
-      - '.github/workflows/sprint2-staging.yml'
+    paths: ['database/**', 'scripts/**', 'backend/**', 'frontend/**', 'Sprint 2/**', '.github/workflows/sprint2-staging.yml']
   workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   validate-db-and-concurrency:
-    name: 1. Validate DB Concurrency, Serial Locking & Realtime Stock
+    name: PostgreSQL 16 regression, ACL and two POS sessions
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
         env:
           POSTGRES_USER: sasms_ci
-          POSTGRES_PASSWORD: ci_staging_password_safe
-          POSTGRES_DB: sasms_staging_ci
-        ports:
-          - 5432:5432
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: sasms_sprint2_validation
+        ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U sasms_ci -d sasms_staging_ci"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+          --health-cmd "pg_isready -U sasms_ci -d sasms_sprint2_validation"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       PGHOST: 127.0.0.1
-      PGPORT: 5432
+      PGPORT: '5432'
       PGUSER: sasms_ci
-      PGPASSWORD: ci_staging_password_safe
-      PGDATABASE: sasms_staging_ci
+      PGPASSWORD: isolated-ci-only
+      PGDATABASE: sasms_sprint2_validation
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-
-      - name: Install PostgreSQL Client
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply and verify Sprint 0, 1 and 2
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Initialize Baseline & Apply Migrations
-        run: |
-          echo "Initializing baseline schema..."
-          psql -f database/schema.sql
-          psql -f database/seed.sql
-          psql -f database/runtime-roles.sql
-          
-          echo "Applying migrations V001 and V002..."
-          python scripts/migrate_db.py --dsn "host=127.0.0.1 port=5432 user=sasms_ci password=ci_staging_password_safe dbname=sasms_staging_ci"
-
-      - name: Apply Sprint 2 Database Extensions
-        run: |
-          echo "Applying Sprint 2 Realtime Stock & Serial Locking..."
-          psql -f database/sprint2/realtime_stock_and_locking.sql
-
-      - name: Run Sprint 2 Concurrency & Realtime Inventory Verification Test
-        run: |
-          echo "Executing test_sprint2_concurrency_and_stock.sql..."
-          mkdir -p /tmp/sprint2-evidence
-          psql -f database/tests/sprint2/test_sprint2_concurrency_and_stock.sql 2>&1 | tee /tmp/sprint2-evidence/concurrency-test.log
-
-      - name: Upload Verification Evidence
+          set -euo pipefail
+          python scripts/validate_sprint2.py --apply --evidence-dir /tmp/sasms-sprint2-evidence
+      - name: Preserve actual validation evidence on success or failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sprint2-db-concurrency-evidence
-          path: /tmp/sprint2-evidence/
+          path: /tmp/sasms-sprint2-evidence/
+          if-no-files-found: warn
 
-  deploy-staging:
-    name: 2. Automated Deployment to Staging Environment
+  staging-readiness:
+    name: Record Staging readiness from actual validation result
     needs: validate-db-and-concurrency
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Staging Deployment Environment
+      - name: Generate readiness report
+        env:
+          DB_RESULT: ${{ needs.validate-db-and-concurrency.result }}
         run: |
-          echo "=== STAGING DEPLOYMENT PIPELINE ==="
-          echo "Target Environment: Staging (AWS/Private VPC)"
-          echo "Database Host: db.staging.sasms.internal (PostgreSQL 16.x)"
-          echo "App Host: app.staging.sasms.internal"
-          echo "Deployer: GitHub Actions (Role: Tran Trung Kien / DBA & Architect)"
-          echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-
-      - name: Verify Staging Deployment Pre-conditions
-        run: |
-          echo "Checking configuration files..."
-          test -f database/schema.sql
-          test -f database/sprint2/realtime_stock_and_locking.sql
-          test -f backend/pom.xml
-          echo "Pre-conditions check: PASSED"
-
-      - name: Execute Staging Deployment Simulation & Health Check
-        run: |
-          mkdir -p /tmp/staging-deploy-log
-          cat << 'EOF' > /tmp/staging-deploy-log/deploy-report.json
-          {
-            "deployment_id": "deploy-staging-sprint2-001",
-            "environment": "staging",
-            "branch": "DB",
-            "target_version": "Sprint 2 Increment (M3/M4)",
-            "database_status": "MIGRATIONS_UP_TO_DATE",
-            "backend_health": "UP",
-            "pos_serial_locking": "ENABLED",
-            "realtime_inventory": "ENABLED",
-            "ai_cross_sell": "ACTIVE",
-            "deployed_by": "Tran Trung Kien (Architect / DBA)",
-            "status": "SUCCESS"
+          set -euo pipefail
+          mkdir -p /tmp/sasms-staging-readiness
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          import json, os
+          from pathlib import Path
+          result = os.environ['DB_RESULT']
+          status = {'success': 'READY_FOR_STAGING', 'failure': 'FAILED',
+                    'cancelled': 'CANCELLED', 'skipped': 'BLOCKED'}[result]
+          report = {
+              'status': status,
+              'db_validation_result': result,
+              'deployment_status': 'NOT_DEPLOYED',
+              'scope': 'Isolated PostgreSQL validation; no remote deployment or application health check',
+              'commit': os.environ['GITHUB_SHA'],
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'timestamp_utc': datetime.now(timezone.utc).isoformat(),
           }
-          EOF
-          echo "Staging Deployment Completed Successfully."
-
-      - name: Upload Staging Deployment Log
+          Path('/tmp/sasms-staging-readiness/readiness-report.json').write_text(
+              json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          print(status)
+          raise SystemExit(0 if result == 'success' else 1)
+          PY
+      - name: Preserve readiness report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: staging-deployment-evidence
-          path: /tmp/staging-deploy-log/
-
+          name: sprint2-staging-readiness
+          path: /tmp/sasms-staging-readiness/

@@ -1,33 +1,33 @@
--- ==============================================================================
--- SASMS - Sprint 2 Demo Script: POS Checkout, Serial Locking & Realtime Stock
--- Author: Tran Trung Kien (Architect / DBA)
--- Safe to run in psql / pgAdmin - executes inside a transaction and rolls back
--- ==============================================================================
-
+-- SASMS Sprint 2 read-only SQL demo against synthetic baseline data.
+-- Run with psql as owner, or a trusted backend login in sasms_app.
+-- This does not exercise POS concurrency, checkout, printing or a live AI provider.
 \set ON_ERROR_STOP on
 
-BEGIN;
-SET search_path = sasms, pg_catalog;
+BEGIN READ ONLY;
+SET LOCAL search_path = pg_catalog, sasms;
 
--- 1. Xem tồn kho thời gian thực tại Siêu thị 1 (Store 00000000-0000-4000-8000-000000000010)
-SELECT 
+-- Baseline synthetic store DEMO-HN; total_physical_stock counts device records,
+-- including SOLD. It is not a count of goods physically present in the warehouse.
+SELECT
+    warehouse_code,
     sku,
     product_name,
     price,
-    total_physical_stock AS tong_ton_vat_ly,
-    available_stock AS ton_kha_dung,
-    reserved_stock AS dang_giu_cho,
-    sold_stock AS da_xuat_ban
+    total_physical_stock AS tong_ban_ghi_thiet_bi,
+    available_stock AS in_stock,
+    reserved_stock AS reserved,
+    sold_stock AS sold
 FROM sasms.v_realtime_inventory
 WHERE store_id = '00000000-0000-4000-8000-000000000010'
-ORDER BY total_physical_stock DESC;
+ORDER BY warehouse_code, sku;
 
--- 2. Demo gợi ý phụ kiện bán kèm (AI Cross-selling Fallback Rule) khi chọn Tivi Sony 55 inch
+-- Source product DEMO-TV-55 is a synthetic DEMO product, not a Sony catalog item.
+-- An empty result is valid if no other candidate currently has IN_STOCK devices.
+-- Candidate ranking alone does not establish accessory compatibility.
 SELECT * FROM sasms.get_cross_sell_fallback_rules(
-    '00000000-0000-4000-8000-000000000030', -- Tivi Sony
-    '00000000-0000-4000-8000-000000000010', -- Siêu thị 1
+    '00000000-0000-4000-8000-000000000030',
+    '00000000-0000-4000-8000-000000000010',
     5
 );
 
 ROLLBACK;
-

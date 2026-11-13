@@ -1,0 +1,27 @@
+=== extension_sql_error ===
+Sprint2 validation failed: atomic Sprint2 extension apply failed (psql exit 3); see validation.log
+
+
+=== atomic Sprint2 extension apply ===
+psql:database/sprint2/realtime_stock_and_locking.sql:15: NOTICE:  42P07: relation "idx_devices_warehouse_product_status" already exists, skipping
+LOCATION:  index_create, index.c:887
+psql:database/sprint2/realtime_stock_and_locking.sql:18: NOTICE:  42P07: relation "idx_devices_serial_warehouse" already exists, skipping
+LOCATION:  index_create, index.c:887
+psql:database/sprint2/realtime_stock_and_locking.sql:21: NOTICE:  42P07: relation "idx_order_devices_order_active" already exists, skipping
+LOCATION:  index_create, index.c:887
+psql:database/sprint2/realtime_stock_and_locking.sql:274: ERROR:  42703: column "missing_s2_probe_column" does not exist
+LINE 1: SELECT missing_s2_probe_column;
+               ^
+LOCATION:  errorMissingColumn, parse_relation.c:3727
+FAILED: atomic Sprint2 extension apply failed (psql exit 3); see validation.log
+
+
+=== test_assertion_error ===
+Sprint2 validation failed: Sprint2 runtime ACL authorization and stock lifecycle failed (psql exit 3); see validation.log
+
+
+=== Sprint2 runtime ACL authorization and stock lifecycle ===
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:5: ERROR:  P0001: S2_INJECTED_ASSERTION_FAILURE
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+FAILED: Sprint2 runtime ACL authorization and stock lifecycle failed (psql exit 3); see validation.log

@@ -1,59 +1,43 @@
 # Sprint 2 — Phần DB của Trần Trung Kiên
 
-Nhánh thực hiện: **`DB`**.  
-Kỳ Sprint trong kế hoạch: **11/10/2026 – 24/10/2026 (Tuần 6–7)**.  
-Chủ đề Sprint 2: **POS, Bán lẻ tại quầy và AI gợi ý**.  
-Phạm vi nghiệp vụ: **US-04, US-05, US-06 (Should), US-07**. Cam kết: 21 điểm Must, 3 điểm Should.  
-Cột mốc kiểm soát: **Quality Gate M3 (20/10/2026)** và **Quality Gate M4 (24/10/2026)**.
+Kỳ kế hoạch: **11/10–24/10/2026**, chủ đề POS tại quầy và AI gợi ý; phạm vi US-04, US-05, US-06 (Should), US-07. Mốc kế hoạch M3: 20/10, M4: 24/10. Ngày rà soát thực tế: **13/11/2026**; không hồi tố ngày thực hiện hoặc chữ ký.
 
----
+## Phân công và phạm vi bàn giao
 
-## 1. Đầu việc chính do Trần Trung Kiên (Architect / DBA) phụ trách
+Đã đối chiếu workbook `04 - Sprint 2 (11-10 đến 24-10) - Phân chia công việc.xlsx`, sheet **Theo người, dòng 20–25**, với [CSV trong repo](inputs/phan-cong-sprint-2.csv). Kiên có ba việc chính, tổng **56 giờ ước lượng**:
 
-Theo bảng phân công chính thức tại [inputs/phan-cong-sprint-2.csv](inputs/phan-cong-sprint-2.csv), Kiên làm chính 3 đầu việc với tổng cộng **56 giờ**:
+| Mã việc | Trách nhiệm | Hạn kế hoạch | Giờ | Minh chứng cần có |
+|---|---|---|---|---|
+| S2-03 / TSK-02-02 | Tìm và khóa chọn Serial khi bán | 15/10/2026 | 24 | PR đã merge; hai kết nối POS cùng Serial chỉ một bên giữ được |
+| S2-12 | Staging và pipeline deploy tự động | 20/10/2026 | 16 | Sơ đồ môi trường; log GitHub Actions deploy Staging thật |
+| S2-06 / TSK-02-05 | Truy vấn tồn kho theo siêu thị | 22/10/2026 | 16 | PR đã merge; số tồn đổi trong vài giây sau bán |
 
-| Mã việc | Công việc | Hạn hoàn thành | Giờ ước lượng | Tài liệu đầu ra | Minh chứng yêu cầu theo phân công |
-|---|---|---|---|---|---|
-| **S2-03** (TSK-02-02) | API tìm kiếm và khóa chọn Serial khi bán | 15/10/2026 | 24 giờ | [DS2 — Thiết kế và bàn giao DB](DS2-thiet-ke-va-ban-giao-DB.md) | PR đã merge; test 2 máy POS chọn cùng Serial chỉ một máy giữ được (Pessimistic locking / SELECT FOR UPDATE) |
-| **S2-12** | Thiết lập Staging và pipeline deploy tự động | 20/10/2026 | 16 giờ | [D22 — Kế hoạch môi trường & CI/CD Sprint 2](D22-ke-hoach-moi-truong-va-CICD-sprint2.md) | Sơ đồ môi trường Staging hoàn chỉnh; log GitHub Actions deploy Staging thành công |
-| **S2-06** (TSK-02-05) | API truy vấn tồn kho real-time theo siêu thị | 22/10/2026 | 16 giờ | [DS2 — Thiết kế và bàn giao DB](DS2-thiet-ke-va-ban-giao-DB.md) | PR đã merge; số tồn đổi trong vài giây sau khi bán (View real-time, index tối ưu < 10ms) |
+Kiên hỗ trợ S2-08 do **Nguyễn Tiến Vũ** chủ trì (AI), S2-15 do **Trịnh Quốc An** chủ trì (CCB/token/EVM), S2-14 do **Nguyễn Quang Huy** chủ trì (refinement Sprint 3). **Vũ Duy Thái** phối hợp API/ứng dụng; **Phạm Đại Phát** phụ trách QA. Hồ sơ DB là phần đóng góp cho DS2; DS2 toàn ứng dụng, D128/D129 chính thức và ký nghiệm thu vẫn theo người chủ trì trong workbook.
 
----
+## Hồ sơ và mã nguồn
 
-## 2. Đầu việc Kiên tham gia hỗ trợ
+| Tài liệu / thành phần | Mục đích |
+|---|---|
+| [DS2 — Thiết kế và bàn giao DB](DS2-thiet-ke-va-ban-giao-DB.md) | SQL/API, quyền, trạng thái tồn và giới hạn tích hợp |
+| [D22 — Môi trường và CI/CD](D22-ke-hoach-moi-truong-va-CICD-sprint2.md) | CI báo lỗi đúng; readiness và phần Staging còn chờ |
+| [Rà soát Sprint 2](RA-SOAT-SPRINT2.md) | Bốn lỗi cần sửa, căn cứ từ sprint trước và phần bàn giao liên nhóm |
+| [D128 — Đóng góp DB cho M3](D128-ho-so-review-DB-M3.md) | Checklist kỹ thuật; không thay biên bản PM ký |
+| [D129 — Đóng góp DB cho M4](D129-ho-so-review-DB-M4.md) | Checklist tồn kho/AI; không thay báo cáo tải D79 |
+| [Runbook DB Sprint 2](../../database/sprint2/README.md) | Cài đặt, chạy test, demo và đọc evidence |
+| [SQL Sprint 2](../../database/sprint2/realtime_stock_and_locking.sql) | View, khóa/giải phóng Serial, candidate fallback và ACL |
+| [Validator Sprint 2](../../scripts/validate_sprint2.py) | Hai kết nối độc lập, kiểm quyền và số tồn |
+| [Workflow](../../.github/workflows/sprint2-staging.yml) | Kiểm chứng DB và báo cáo readiness; chưa deploy remote |
 
-Kiên tham gia hỗ trợ 3 đầu việc chuyên môn theo bảng phân công:
+## Trạng thái nghiệm thu
 
-| Mã việc | Công việc | Người làm chính | Đóng góp chuyên môn DB của Kiên |
-|---|---|---|---|
-| **S2-08** (TSK-02-07) | AI Recommendation Engine (cross-selling, cache, luật dự phòng) | Nguyễn Tiến Vũ (Data / AI Lead) | Cung cấp View và Stored Function `sasms.get_cross_sell_fallback_rules` để gợi ý phụ kiện còn tồn kho tại quầy khi LLM timeout/mất mạng; tối ưu cache truy vấn catalog |
-| **S2-15** | Họp CCB xử lý CR, theo dõi chi phí token AI (R-07) và EVM | Trịnh Quốc An (PM / Scrum Master) | Cung cấp số liệu kỹ thuật DB, đánh giá tải hệ thống, phương án giảm chi phí token AI bằng DB caching |
-| **S2-14** | Refinement cho Sprint 3 (US-08..11) và kiểm tra DoR | Nguyễn Quang Huy (BA / PO) | Rà soát cấu trúc CSDL cho các User Story Sprint 3 (đặt hàng online, điều phối giao hàng, kích hoạt bảo hành điện tử và đổi trả thiết bị) |
+Kiểm local **13/11/2026** đã đạt **33 assertions Sprint 2**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**, cùng hai ca tranh Serial commit/rollback trên PostgreSQL **16.15**. Xem [kết quả và giới hạn](RA-SOAT-SPRINT2.md), [summary](../../database/evidence/sprint2/summary.json) và [failure probes CLI](../../database/evidence/sprint2/ci-failure-probes.json). Chưa có run GitHub Actions mới hoặc deploy Staging trong hồ sơ này.
 
----
+Nguồn phân công ghi trạng thái tại **05/11/2026**, không phải kết quả test của phiên bản hiện tại. Dấu chọn DoR/DoD chỉ được cập nhật khi có minh chứng và người xác nhận.
 
-## 3. Bộ hồ sơ và sản phẩm bàn giao Sprint 2
+- [ ] Kiên/Thái review SQL và hợp đồng API trên phiên bản cuối; PR được duyệt và merge.
+- [ ] Đối chiếu `database/evidence/sprint2/summary.json` và log với nguồn thực tế, gồm hai backend PID khác nhau, conflict và kiểm quyền.
+- [ ] Phát kiểm E2E, QR < 1 giây, POS < 2 giây; Vũ/Phát đo AI p95 < 3 giây với 50 request đồng thời.
+- [ ] Staging được cấp phát, deploy thật, kiểm health và lưu URL run/commit/log.
+- [ ] Huy/An và các trưởng bộ phận xác nhận DoR/DoD, M3/M4 và Sprint Review.
 
-1. **Tài liệu kỹ thuật & kiến trúc:**
-   - [DS2 — Thiết kế và bàn giao DB Sprint 2](DS2-thiet-ke-va-ban-giao-DB.md): Đặc tả chi tiết cơ chế khóa Serial, view tồn kho real-time, hàm dự phòng AI và hợp đồng API/SQL với Backend.
-   - [D22 — Kế hoạch môi trường Dev / Staging / Prod và CI/CD (Sprint 2)](D22-ke-hoach-moi-truong-va-CICD-sprint2.md): Kiến trúc môi trường Staging và sơ đồ tự động hóa triển khai.
-   - [D128 — Hồ sơ DB cho Quality Gate M3](D128-ho-so-review-DB-M3.md): Hồ sơ kỹ thuật phục vụ nghiệm thu Cổng kiểm soát chất lượng M3 (20/10/2026: Omnichannel POS & Cart Operable).
-   - [D129 — Hồ sơ DB cho Quality Gate M4](D129-ho-so-review-DB-M4.md): Hồ sơ kỹ thuật phục vụ nghiệm thu Cổng kiểm soát chất lượng M4 (24/10/2026: AI Cross-selling & Consultation Live).
-
-2. **Mã nguồn và script kiểm chứng CSDL:**
-   - [database/sprint2/realtime_stock_and_locking.sql](../../database/sprint2/realtime_stock_and_locking.sql): Stored functions, view tồn kho và index tối ưu hóa.
-   - [database/sprint2/demo.sql](../../database/sprint2/demo.sql): Script chạy thử nghiệm các tính năng Sprint 2 trong transaction an toàn.
-   - [database/tests/sprint2/test_sprint2_concurrency_and_stock.sql](../../database/tests/sprint2/test_sprint2_concurrency_and_stock.sql): Kịch bản kiểm chứng tự động chống tranh chấp Serial và trừ tồn tức thời.
-
-3. **Tự động hóa CI/CD:**
-   - [.github/workflows/sprint2-staging.yml](../../.github/workflows/sprint2-staging.yml): Workflow GitHub Actions tự động kiểm thử CSDL, kiểm tra concurrency và deploy Staging.
-
----
-
-## 4. Kiểm tra Cổng vào (DoR) và Cổng ra (DoD) Sprint 2 của Kiên
-
-- [x] **DoR:** Đã chốt mockup Figma và DB Schema liên quan (Trần Trung Kiên xác nhận khớp với schema Sprint 1 + Sprint 2 extensions).
-- [x] **DoD:** 100% Pull Request DB được Kiên duyệt và kiểm thử trước khi merge vào main.
-- [x] **DoD:** Đạt hiệu năng CSDL: quét Serial/QR < 10ms (chuẩn hệ thống < 1s), truy vấn tồn kho real-time < 15ms (chuẩn POS < 2s), luật dự phòng AI < 10ms (chuẩn AI < 3s).
-- [x] **DoD:** Thiết lập pipeline tự động deploy thành công lên Staging.
-
+Một kết quả SQL đạt chỉ chứng minh phạm vi DB trong log tương ứng. Không dùng nó để xác nhận đã có hai máy POS vật lý, in hóa đơn, AI tích hợp, deploy hoặc chữ ký PO.
