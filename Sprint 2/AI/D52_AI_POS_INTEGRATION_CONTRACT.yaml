@@ -21,7 +21,7 @@ paths:
       operationId: getCrossSellRecommendations
       summary: FR-08 - Lấy danh sách phụ kiện gợi ý bán kèm đã xác thực giá niêm yết và tồn khả dụng tại siêu thị
       description: |
-        Tiếp nhận danh sách SKU giỏ hàng từ màn hình POS, đối chiếu quyền truy cập của actor qua JWT (quyền ai.use tại store_id),
+        Tiếp nhận danh sách sản phẩm giỏ hàng (items gồm product_id & sku) từ màn hình POS, đối chiếu quyền truy cập của actor qua JWT (quyền ai.use tại store_id),
         suy luận qua Cache L1/L2 -> LLM Adapter (OpenAI / Gemini) -> Timeout 2.5s -> Rule Fallback Engine.
         Kết quả trả về được backend xác thực authoritative price từ products.list_price và tồn khả dụng available > 0 từ stock_availability.
       security:
@@ -35,6 +35,9 @@ paths:
             example:
               store_id: "00000000-0000-0000-0000-000000000101"
               warehouse_id: "00000000-0000-0000-0000-000000000201"
+              items:
+                - product_id: "00000000-0000-0000-0000-000000000702"
+                  sku: "PHONE-IP16-128"
               sku_ids:
                 - "PHONE-IP16-128"
               limit: 4
@@ -100,15 +103,15 @@ paths:
                         is_serialized: false
                         reason: "Phụ kiện bảo vệ tương thích theo danh mục thiết bị (Luật dự phòng SASMS)"
         '400':
-          description: Yêu cầu không hợp lệ (Thiếu sku_ids, định dạng UUID sai hoặc rỗng)
+          description: Yêu cầu không hợp lệ (Thiếu items/sku_ids, định dạng UUID sai hoặc rỗng)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
                 code: "INVALID_ARGUMENT"
-                message: "sku_ids must contain at least 1 item and store_id must be valid UUID"
-                field: "sku_ids"
+                message: "items/sku_ids must contain at least 1 item and store_id must be valid UUID"
+                field: "items"
                 correlation_id: "corr-8f92a10b-1234"
                 retryable: false
         '401':
@@ -136,7 +139,7 @@ paths:
                 correlation_id: "corr-8f92a10b-1236"
                 retryable: false
         '422':
-          description: Dữ liệu không xử lý được (SKU không tồn tại trong catalog hoặc đã bị soft delete)
+          description: Dữ liệu không xử lý được (SKU/Product không tồn tại trong catalog hoặc đã bị soft delete)
           content:
             application/json:
               schema:
@@ -144,7 +147,7 @@ paths:
               example:
                 code: "SKU_NOT_FOUND"
                 message: "Provided SKU PHONE-UNKNOWN does not exist or is inactive"
-                field: "sku_ids"
+                field: "items"
                 correlation_id: "corr-8f92a10b-1237"
                 retryable: false
         '503':
@@ -198,36 +201,54 @@ components:
       description: Token Bearer JWT hợp lệ được cấp sau khi đăng nhập tài khoản nhân viên (Cashier/Sales)
 
   schemas:
+    CartItemInput:
+      type: object
+      required:
+        - product_id
+        - sku
+      properties:
+        product_id:
+          type: string
+          format: uuid
+          description: "UUID của sản phẩm trong bảng sasms.products"
+          example: "00000000-0000-0000-0000-000000000702"
+        sku:
+          type: string
+          description: "Mã SKU của sản phẩm"
+          example: "PHONE-IP16-128"
+
     CrossSellRequest:
       type: object
       required:
         - store_id
-        - warehouse_id
-        - sku_ids
       properties:
         store_id:
           type: string
           format: uuid
-          description: UUID siêu thị của phiên thu ngân hiện hành (phải khớp store_id trong user_roles)
+          description: "ID siêu thị hiện tại của phiên bán hàng (bắt buộc)"
+          example: "00000000-0000-0000-0000-000000000101"
         warehouse_id:
           type: string
           format: uuid
-          description: UUID kho xuất hàng tại quầy thu ngân (phải thuộc store_id)
+          description: "ID kho phục vụ tại quầy"
+          example: "00000000-0000-0000-0000-000000000201"
+        items:
+          type: array
+          description: "Danh sách sản phẩm giỏ hàng (khuyên dùng theo mục III)"
+          items:
+            $ref: '#/components/schemas/CartItemInput'
         sku_ids:
           type: array
-          minItems: 1
-          maxItems: 20
+          description: "Danh sách SKU đơn giản (tương thích ngược)"
           items:
             type: string
-            minLength: 1
-            maxLength: 64
-          description: Danh sách mã SKU các sản phẩm chính đang có trong giỏ hàng POS
+          example: ["PHONE-IP16-128"]
         limit:
           type: integer
           minimum: 1
           maximum: 10
           default: 4
-          description: Số lượng phụ kiện tối đa cần gợi ý (mặc định 4)
+          description: "Số lượng phụ kiện tối đa cần gợi ý (mặc định 4)"
 
     CrossSellResult:
       type: object
@@ -239,16 +260,16 @@ components:
         source:
           type: string
           enum: [AI, CACHE, RULE_FALLBACK]
-          description: Nguồn sinh ra gợi ý phục vụ hiển thị nhãn minh bạch trên POS và kiểm toán dashboard
+          description: "Nguồn sinh ra gợi ý (AI: LLM Inference, CACHE: Redis/Memory hit, RULE_FALLBACK: Động cơ luật dự phòng)"
         took_ms:
           type: integer
           minimum: 0
-          description: Tổng thời gian xử lý của backend (ms)
+          description: "Tổng thời gian xử lý của backend (ms)"
         suggestions:
           type: array
           items:
             $ref: '#/components/schemas/CrossSellItem'
-          description: Danh sách sản phẩm bán kèm khả dụng tại kho
+          description: "Danh sách phụ kiện/dịch vụ gợi ý khả dụng tại kho"
 
     CrossSellItem:
       type: object
@@ -264,32 +285,36 @@ components:
         product_id:
           type: string
           format: uuid
-          description: UUID sản phẩm trong bảng sasms.products (Dùng trực tiếp để tạo dòng sales_order_items khi thu ngân bấm chọn)
+          description: "UUID sản phẩm trong bảng sasms.products (Dùng trực tiếp để tạo dòng sales_order_items)"
+          example: "e1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c"
         sku:
           type: string
-          description: Mã SKU duy nhất của phụ kiện
+          description: "Mã SKU duy nhất của phụ kiện"
+          example: "ACC-CASE-IP16"
         name:
           type: string
-          description: Tên thương mại của sản phẩm hiển thị trên màn hình POS
+          description: "Tên thương mại của sản phẩm hiển thị trên màn hình POS"
+          example: "Ốp lưng chống sốc iPhone 16"
         list_price:
           type: number
           format: double
           minimum: 0
-          description: Giá bán niêm yết chính thức từ PostgreSQL (VND)
+          description: "Giá bán niêm yết chính thức từ PostgreSQL (VND)"
+          example: 450000.00
         available_quantity:
           type: integer
           minimum: 0
-          description: Số lượng tồn kho khả dụng tức thời tại kho siêu thị (stock_availability.available)
+          description: "Số lượng tồn kho khả dụng tức thời tại kho siêu thị (stock_availability.available)"
+          example: 12
         is_serialized:
           type: boolean
-          description: |
-            Quy tắc nghiệp vụ xác định:
-            - false: Phụ kiện/dịch vụ bán theo số lượng (Quantity), thu ngân bấm [+] không cần quét Serial.
-            - true: Thiết bị có định danh cá thể (Serial/IMEI), thu ngân phải quét mã barcode/Serial khi thêm vào đơn.
+          description: "false: bán theo số lượng; true: phải quét Serial từng chiếc"
+          example: false
         reason:
           type: string
           maxLength: 200
-          description: Lý do tư vấn bán kèm súc tích hiển thị dưới nút bấm thêm vào giỏ
+          description: "Lý do tư vấn bán kèm súc tích hiển thị dưới nút bấm thêm vào giỏ"
+          example: "Phụ kiện bảo vệ tương thích tối ưu"
 
     ApiError:
       type: object
@@ -308,7 +333,7 @@ components:
         field:
           type: string
           nullable: true
-          example: "sku_ids"
+          example: "items"
         correlation_id:
           type: string
           example: "corr-8f92a10b-1234"
