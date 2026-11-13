@@ -1,0 +1,351 @@
+openapi: 3.0.3
+info:
+  title: SASMS POS - AI Cross-sell Integration Contract (Sprint 2 Baseline)
+  version: 2.0.0
+  description: |
+    Hợp đồng API OpenAPI chính thức tích hợp Phân hệ AI gợi ý bán kèm (FR-08) vào màn hình bán hàng Web POS (US-04).
+    Được chuẩn hóa giữa Nguyễn Tiến Vũ (Data / AI Lead) và Vũ Duy Thái (Fullstack Lead), tuân thủ CSDL D51 của Trần Trung Kiên và nghiệp vụ D34 của Nguyễn Quang Huy.
+  contact:
+    name: Nguyen Tien Vu (Data / AI Lead)
+    email: tienvutb21@gmail.com
+servers:
+  - url: http://localhost:8080
+    description: Local Spring Boot Development Server
+  - url: https://staging.sasms.internal
+    description: SASMS Staging Environment (Sprint 2 Quality Gate M3/M4)
+paths:
+  /api/v1/ai/cross-sell:
+    post:
+      tags:
+        - AI Cross-sell Integration
+      operationId: getCrossSellRecommendations
+      summary: FR-08 - Lấy danh sách phụ kiện gợi ý bán kèm đã xác thực giá niêm yết và tồn khả dụng tại siêu thị
+      description: |
+        Tiếp nhận danh sách SKU giỏ hàng từ màn hình POS, đối chiếu quyền truy cập của actor qua JWT (quyền ai.use tại store_id),
+        suy luận qua Cache L1/L2 -> LLM Adapter (OpenAI / Gemini) -> Timeout 2.5s -> Rule Fallback Engine.
+        Kết quả trả về được backend xác thực authoritative price từ products.list_price và tồn khả dụng available > 0 từ stock_availability.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossSellRequest'
+            example:
+              store_id: "00000000-0000-0000-0000-000000000101"
+              warehouse_id: "00000000-0000-0000-0000-000000000201"
+              sku_ids:
+                - "PHONE-IP16-128"
+              limit: 4
+      responses:
+        '200':
+          description: Phản hồi thành công danh sách gợi ý bán kèm khả dụng tại kho (hoặc danh sách rỗng nếu hết tồn)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossSellResult'
+              examples:
+                ai_inference_success:
+                  summary: Gợi ý thành công từ Mô hình AI (OpenAI / Gemini)
+                  value:
+                    source: "AI"
+                    took_ms: 684
+                    suggestions:
+                      - product_id: "e1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c"
+                        sku: "ACC-CASE-IP16"
+                        name: "Ốp lưng chống sốc iPhone 16 chính hãng"
+                        list_price: 450000.00
+                        available_quantity: 15
+                        is_serialized: false
+                        reason: "Ốp lưng chống sốc chuẩn thiết kế bảo vệ tối ưu cho iPhone 16"
+                      - product_id: "f2b3c4d5-e6f7-8a9b-0c1d-2e3f4a5b6c7d"
+                        sku: "ACC-CHG-20W"
+                        name: "Củ sạc nhanh Type-C Power Delivery 20W"
+                        list_price: 590000.00
+                        available_quantity: 28
+                        is_serialized: false
+                        reason: "Củ sạc nhanh Type-C công suất cao tương thích chuẩn sạc máy"
+                      - product_id: "a3c4d5e6-f7a8-9b0c-1d2e-3f4a5b6c7d8e"
+                        sku: "SRV-WAR-EXT12"
+                        name: "Gói bảo hành rơi vỡ mở rộng 12 tháng SASMS"
+                        list_price: 1200000.00
+                        available_quantity: 999
+                        is_serialized: false
+                        reason: "Gói bảo hành toàn diện bảo vệ rủi ro rơi vỡ vào nước"
+                cache_hit:
+                  summary: Phản hồi từ Bộ nhớ đệm (Cache Hit < 5ms)
+                  value:
+                    source: "CACHE"
+                    took_ms: 2
+                    suggestions:
+                      - product_id: "e1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c"
+                        sku: "ACC-CASE-IP16"
+                        name: "Ốp lưng chống sốc iPhone 16 chính hãng"
+                        list_price: 450000.00
+                        available_quantity: 15
+                        is_serialized: false
+                        reason: "Ốp lưng chống sốc chuẩn thiết kế bảo vệ tối ưu cho iPhone 16"
+                rule_fallback:
+                  summary: Phản hồi từ Động cơ Luật dự phòng khi AI Timeout > 2.5s (AC-08-2)
+                  value:
+                    source: "RULE_FALLBACK"
+                    took_ms: 2510
+                    suggestions:
+                      - product_id: "e1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c"
+                        sku: "ACC-DEF-CASE"
+                        name: "Ốp lưng bảo vệ cơ bản (Luật dự phòng SASMS)"
+                        list_price: 250000.00
+                        available_quantity: 10
+                        is_serialized: false
+                        reason: "Phụ kiện bảo vệ tương thích theo danh mục thiết bị (Luật dự phòng SASMS)"
+        '400':
+          description: Yêu cầu không hợp lệ (Thiếu sku_ids, định dạng UUID sai hoặc rỗng)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: "INVALID_ARGUMENT"
+                message: "sku_ids must contain at least 1 item and store_id must be valid UUID"
+                field: "sku_ids"
+                correlation_id: "corr-8f92a10b-1234"
+                retryable: false
+        '401':
+          description: Chưa xác thực (Thiếu hoặc Bearer JWT hết hạn)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: "UNAUTHORIZED"
+                message: "Full authentication is required to access this resource"
+                field: null
+                correlation_id: "corr-8f92a10b-1235"
+                retryable: false
+        '403':
+          description: Bị từ chối quyền (User thiếu quyền ai.use hoặc không thuộc store_id được gán)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: "FORBIDDEN_SCOPE"
+                message: "Actor is not assigned to store_id 00000000-0000-0000-0000-000000000101 or lacks ai.use permission"
+                field: "store_id"
+                correlation_id: "corr-8f92a10b-1236"
+                retryable: false
+        '422':
+          description: Dữ liệu không xử lý được (SKU không tồn tại trong catalog hoặc đã bị soft delete)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: "SKU_NOT_FOUND"
+                message: "Provided SKU PHONE-UNKNOWN does not exist or is inactive"
+                field: "sku_ids"
+                correlation_id: "corr-8f92a10b-1237"
+                retryable: false
+        '503':
+          description: Dịch vụ tạm thời không khả dụng (Chỉ khi cả AI và Rule Engine đều lỗi nặng)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: "SERVICE_UNAVAILABLE"
+                message: "AI subsystem temporarily unavailable; POS operation unblocked"
+                field: null
+                correlation_id: "corr-8f92a10b-1238"
+                retryable: true
+
+  /api/v1/ai/status:
+    get:
+      tags:
+        - AI Health & Operations
+      operationId: getAiStatus
+      summary: Health check và trạng thái phân hệ AI Gateway
+      description: Kiểm tra tình trạng kết nối Adapter LLM, Cache Engine và Circuit Breaker phục vụ monitoring/BI.
+      responses:
+        '200':
+          description: Trạng thái phân hệ AI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiStatusResponse'
+              example:
+                status: "UP"
+                service_name: "SASMS AI Gateway - Sprint 2 Increment (DS2)"
+                active_provider: "OPENAI"
+                cache_engine: "MemoryCache-5m-TTL"
+                circuit_breaker: "CLOSED"
+                timeout_limit_ms: 2500
+                supported_categories:
+                  - "SMARTPHONE"
+                  - "LAPTOP"
+                  - "TELEVISION"
+                  - "WASHING_MACHINE"
+                  - "REFRIGERATOR"
+                  - "AIR_CONDITIONER"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token Bearer JWT hợp lệ được cấp sau khi đăng nhập tài khoản nhân viên (Cashier/Sales)
+
+  schemas:
+    CrossSellRequest:
+      type: object
+      required:
+        - store_id
+        - warehouse_id
+        - sku_ids
+      properties:
+        store_id:
+          type: string
+          format: uuid
+          description: UUID siêu thị của phiên thu ngân hiện hành (phải khớp store_id trong user_roles)
+        warehouse_id:
+          type: string
+          format: uuid
+          description: UUID kho xuất hàng tại quầy thu ngân (phải thuộc store_id)
+        sku_ids:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+          description: Danh sách mã SKU các sản phẩm chính đang có trong giỏ hàng POS
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 4
+          description: Số lượng phụ kiện tối đa cần gợi ý (mặc định 4)
+
+    CrossSellResult:
+      type: object
+      required:
+        - source
+        - took_ms
+        - suggestions
+      properties:
+        source:
+          type: string
+          enum: [AI, CACHE, RULE_FALLBACK]
+          description: Nguồn sinh ra gợi ý phục vụ hiển thị nhãn minh bạch trên POS và kiểm toán dashboard
+        took_ms:
+          type: integer
+          minimum: 0
+          description: Tổng thời gian xử lý của backend (ms)
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrossSellItem'
+          description: Danh sách sản phẩm bán kèm khả dụng tại kho
+
+    CrossSellItem:
+      type: object
+      required:
+        - product_id
+        - sku
+        - name
+        - list_price
+        - available_quantity
+        - is_serialized
+        - reason
+      properties:
+        product_id:
+          type: string
+          format: uuid
+          description: UUID sản phẩm trong bảng sasms.products (Dùng trực tiếp để tạo dòng sales_order_items khi thu ngân bấm chọn)
+        sku:
+          type: string
+          description: Mã SKU duy nhất của phụ kiện
+        name:
+          type: string
+          description: Tên thương mại của sản phẩm hiển thị trên màn hình POS
+        list_price:
+          type: number
+          format: double
+          minimum: 0
+          description: Giá bán niêm yết chính thức từ PostgreSQL (VND)
+        available_quantity:
+          type: integer
+          minimum: 0
+          description: Số lượng tồn kho khả dụng tức thời tại kho siêu thị (stock_availability.available)
+        is_serialized:
+          type: boolean
+          description: |
+            Quy tắc nghiệp vụ xác định:
+            - false: Phụ kiện/dịch vụ bán theo số lượng (Quantity), thu ngân bấm [+] không cần quét Serial.
+            - true: Thiết bị có định danh cá thể (Serial/IMEI), thu ngân phải quét mã barcode/Serial khi thêm vào đơn.
+        reason:
+          type: string
+          maxLength: 200
+          description: Lý do tư vấn bán kèm súc tích hiển thị dưới nút bấm thêm vào giỏ
+
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+        - correlation_id
+        - retryable
+      properties:
+        code:
+          type: string
+          example: "INVALID_ARGUMENT"
+        message:
+          type: string
+          example: "Yêu cầu không hợp lệ"
+        field:
+          type: string
+          nullable: true
+          example: "sku_ids"
+        correlation_id:
+          type: string
+          example: "corr-8f92a10b-1234"
+        retryable:
+          type: boolean
+          example: false
+
+    AiStatusResponse:
+      type: object
+      required:
+        - status
+        - service_name
+        - active_provider
+        - cache_engine
+        - circuit_breaker
+        - timeout_limit_ms
+        - supported_categories
+      properties:
+        status:
+          type: string
+          example: "UP"
+        service_name:
+          type: string
+          example: "SASMS AI Gateway - Sprint 2 Increment (DS2)"
+        active_provider:
+          type: string
+          example: "OPENAI"
+        cache_engine:
+          type: string
+          example: "MemoryCache-5m-TTL"
+        circuit_breaker:
+          type: string
+          example: "CLOSED"
+        timeout_limit_ms:
+          type: integer
+          example: 2500
+        supported_categories:
+          type: array
+          items:
+            type: string
