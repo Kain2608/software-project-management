@@ -47,6 +47,17 @@ class ApiExceptionHandlerTest {
         assertSafe(response.getBody());
     }
 
+    @Test
+    void mapsConcurrentDeviceLockToRetryableConflict() {
+        ResponseEntity<ApiErrorResponse> response = handler.databaseError(
+                databaseException("55P03", "internal serial and lock detail"));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("DEVICE_LOCKED", response.getBody().code());
+        assertEquals(true, response.getBody().retryable());
+        assertSafe(response.getBody());
+    }
+
     private static DataIntegrityViolationException databaseException(String sqlState, String detail) {
         return new DataIntegrityViolationException(
                 "database operation failed",
