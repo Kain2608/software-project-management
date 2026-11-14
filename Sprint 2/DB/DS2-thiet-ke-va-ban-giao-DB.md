@@ -1,179 +1,82 @@
 # DS2 — Thiết kế và bàn giao DB Sprint 2
 
-| Thuộc tính | Nội dung |
+Phụ trách: **Trần Trung Kiên — Architect / DBA**. Kế hoạch 11/10–24/10/2026; rà soát 13/11/2026. Phần DB cho S2-03, S2-06 và S2-12; hỗ trợ S2-08/S2-15/S2-14. Đây là đóng góp kỹ thuật cho DS2, chưa phải nghiệm thu toàn ứng dụng.
+
+## 1. Baseline và căn cứ
+
+Kế thừa [schema Sprint 0](../../database/schema.sql) gồm 37 bảng và [V001/V002 Sprint 1](../../database/migrations) nâng lên 39 bảng nghiệp vụ. Sprint 2 bổ sung view, index, function và quyền gọi; không đổi tên cột `products.list_price`, không sửa các migration đã ghi checksum. Ledger `sasms_meta.schema_migrations` thuộc runner Sprint 1; file SQL Sprint 2 hiện là extension áp dụng riêng, chưa nằm trong ledger đó.
+
+Hợp đồng quyền theo [DS1](../../Sprint%201/DB/DS1-thiet-ke-va-ban-giao-DB.md) và [D54](../../Sprint%200/DB/D54-bao-mat-phan-quyen.md): backend xác thực token, ánh xạ `users.id`, truyền actor tin cậy; SQL kiểm actor active, permission và scope. `sasms_app` là group runtime của backend, không cấp cho trình duyệt và không thay RLS.
+
+## 2. S2-03 — Chọn và giải phóng Serial
+
+Nguồn thực thi: [realtime_stock_and_locking.sql](../../database/sprint2/realtime_stock_and_locking.sql). Client không được truyền actor tùy ý, ghi trạng thái thiết bị hoặc tự đặt giá bán.
+
+| Hàm | Hợp đồng |
 |---|---|
-| **Phụ trách** | Trần Trung Kiên — Architect / DBA |
-| **Đầu việc chính** | S2-03 (TSK-02-02), S2-12, S2-06 (TSK-02-05); tổng 56 giờ |
-| **Đầu việc hỗ trợ** | S2-08 (Vũ AI), S2-15 (An PM / CCB), S2-14 (Huy BA / Refinement) |
-| **Kỳ Sprint / Mốc** | Sprint 2, 11/10/2026 – 24/10/2026 (Tuần 6–7); M3 (20/10/2026), M4 (24/10/2026) |
-| **Nhánh / Baseline** | `DB`; kế thừa baseline 37 bảng (Sprint 0) và 39 bảng (Sprint 1) |
-| **Phạm vi tài liệu** | Increment CSDL cho phần mềm tăng trưởng DS2 (POS bán lẻ tại quầy, khóa Serial, tồn kho real-time, AI fallback) |
+| `find_and_lock_device_for_pos(store uuid, order uuid, item uuid, serial text, actor uuid) → uuid` | Yêu cầu `sales.checkout` tại cửa hàng; đơn DRAFT đúng store/kho, item đúng đơn/sản phẩm; Serial trim/uppercase; khóa hàng thiết bị và gắn lựa chọn active |
+| `release_device_lock(order uuid, device uuid, actor uuid) → boolean` | Kiểm `sales.checkout` theo **store của đơn đọc từ DB**; đơn phải DRAFT; trả true khi bỏ lựa chọn active, false khi không có lựa chọn active; không đổi trực tiếp trạng thái RESERVED/SOLD |
+| `reserve_order(order uuid, actor uuid) → numeric` | Hàm baseline kiểm tập device active/số lượng và chuyển RESERVED; backend vẫn phải kiểm quyền, scope và đường gọi |
+| `complete_sale(order uuid, actor uuid) → uuid` | Hàm baseline yêu cầu thanh toán hợp lệ, chuyển SOLD, ghi movement/audit/outbox và invoice nội bộ DRAFT trong transaction |
 
----
+Khóa hàng thiết bị dùng `FOR UPDATE NOWAIT`: khi phiên thứ nhất chưa kết thúc transaction, phiên thứ hai bị `55P03`. Sau commit, lựa chọn active của đơn DRAFT còn hạn 15 phút tính từ `sales_orders.created_at` tiếp tục chặn đơn khác. Đây là thời hạn từ lúc tạo đơn, không phải 15 phút kể từ lần quét cuối; chọn vào đơn đã hết hạn bị `23514`. Không có worker tự hủy đơn/thanh toán. Sau rollback của phiên giữ, phiên khác có thể thử lại.
 
-## 1. Bối cảnh, mục tiêu và căn cứ
+`SELECT FOR UPDATE` chỉ bảo vệ trong transaction hiện tại; liên kết `order_devices` bảo vệ lựa chọn sau commit. Không giữ transaction trong khi thu ngân thao tác UI hoặc gọi AI/payment qua mạng. Mọi đường chỉnh giỏ/giữ/hủy phải theo hợp đồng backend; quyền DML và các hàm POS baseline còn yêu cầu kiểm quyền ở service. Hai function Sprint 2 chưa harden mọi đường ghi của toàn hệ thống.
 
-Theo bản phân công Sprint 2 tại [inputs/phan-cong-sprint-2.csv](inputs/phan-cong-sprint-2.csv), mục tiêu trọng tâm của Sprint 2 bao gồm:
-- **US-04:** Bán hàng tại quầy POS, quét chọn Serial/IMEI, in hóa đơn biên nhận tích hợp mã QR tra cứu bảo hành.
-- **US-05:** In hóa đơn bán lẻ tại quầy và tem QR bảo hành dán trên thiết bị.
-- **US-06 (Should):** Quản lý và tra cứu tồn kho real-time đa chi nhánh siêu thị.
-- **US-07:** Gợi ý sản phẩm bán kèm (AI Cross-selling) trên màn hình POS với thời gian phản hồi < 3 giây và có luồng dự phòng.
-- **Cột mốc chất lượng:** Quality Gate M3 (20/10/2026: Omnichannel POS & Cart Operable) và M4 (24/10/2026: AI Cross-selling & Consultation Live).
+| SQLSTATE | Ý nghĩa tích hợp |
+|---|---|
+| `42501` | Actor thiếu quyền/inactive/sai scope hoặc runtime chưa được cấp EXECUTE; phân biệt lỗi người dùng với lỗi cấu hình server |
+| `P0002` | Không tìm thấy đơn/item/device phù hợp |
+| `23514` | Sai trạng thái, quan hệ, đơn hết hạn chọn hoặc thiết bị không còn bán được |
+| `55P03` | Hàng đang bị khóa hoặc Serial thuộc giỏ nháp khác còn hạn; API trả xung đột có ý nghĩa |
 
-CSDL SASMS ở Sprint 1 đã cung cấp cấu trúc 39 bảng và các ràng buộc bảo vệ tính duy nhất của Serial/IMEI. Trong Sprint 2, phần DB của Trần Trung Kiên tập trung giải quyết triệt để **bài toán tranh chấp đồng thời khi chọn Serial** (S2-03), **truy vấn tồn kho tức thời** (S2-06), **cơ chế dự phòng cho gợi ý AI** (S2-08) và **pipeline tự động hóa Staging** (S2-12).
+Backend dùng bind parameter và trả kết quả sau COMMIT. Nếu mất phản hồi lúc commit, đối soát đơn/lựa chọn theo scope trước retry. Mã HTTP/envelope phải được Thái chốt trong D52; SQLSTATE không phải endpoint HTTP đã triển khai.
 
----
+## 3. S2-06 — Tồn kho và nguồn giá
 
-## 2. S2-03 / TSK-02-02: Cơ chế tìm kiếm và khóa chọn Serial khi bán tại quầy POS
+View `sasms.v_realtime_inventory` có một hàng cho **sản phẩm active × kho thuộc store active**. Schema không có `warehouses.is_active`; chỉ lọc `products.is_active` và `stores.is_active`. Giá vật lý là **`p.list_price`**, chiếu thành **`price`** để giữ hợp đồng đầu ra view/fallback và DTO giá. API phải lọc store/kho được phép; view không tự lọc theo actor.
 
-### 2.1 Bản chất bài toán tranh chấp (Concurrency Issue)
-Trong mô hình siêu thị bán lẻ điện máy, mỗi thiết bị vật lý có một mã Serial duy nhất. Khi nhiều thu ngân tại các máy POS khác nhau (hoặc 1 máy POS và kênh trực tuyến) cùng thực hiện thao tác quét hoặc chọn cùng một Serial để bán, hệ thống phải đảm bảo:
-1. **Duy nhất một máy POS giữ được Serial đó.**
-2. Máy POS còn lại phải lập tức nhận được thông báo lỗi rằng thiết bị đã được chọn/khóa bởi thu ngân khác, tuyệt đối không để xảy ra hiện tượng **bán trùng (double selling)**.
-3. Không làm nghẽn CSDL (deadlock) khi nhiều máy POS giao dịch cùng lúc.
+| Trường | Ý nghĩa theo SQL hiện có |
+|---|---|
+| `available_stock` | Số device `IN_STOCK`; lựa chọn giỏ DRAFT chưa gọi reserve vẫn được tính ở đây |
+| `reserved_stock` | Số device `RESERVED` |
+| `sold_stock` | Số device `SOLD` còn mang warehouse ID đó |
+| `total_physical_stock` | Tên trường kế thừa, thực tế là tổng **bản ghi device** tại kho, gồm SOLD/các trạng thái khác; không phải lượng hàng vật lý đang nằm trong kho |
 
-### 2.2 Thiết kế cơ chế khóa hai tầng (Two-Phase Locking)
+Vì vậy `available_stock > 0` không cam kết mọi Serial đang chọn được: function khóa Serial còn kiểm lựa chọn DRAFT và quyền. Sau `reserve_order`, available giảm/reserved tăng; sau `complete_sale`, reserved giảm/sold tăng. Hai kết nối phải kiểm thay đổi đã commit và rollback không làm lộ thay đổi chưa commit.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor POS1 as Thu ngân Máy POS 1
-    actor POS2 as Thu ngân Máy POS 2
-    participant DB as PostgreSQL 16 (SASMS)
-    
-    POS1->>DB: find_and_lock_device_for_pos(Store_1, Order_1, Serial_X)
-    Note over DB: Bắt đầu giao dịch, SELECT ... FOR UPDATE trên hàng Serial_X
-    DB-->>POS1: Khóa thành công (Device ID: X, Status: IN_STOCK, Active Draft Lease)
-    
-    POS2->>DB: find_and_lock_device_for_pos(Store_1, Order_2, Serial_X)
-    Note over DB: Kiểm tra: Serial_X đã được giữ bởi Order_1 (active draft lease)
-    DB-->>POS2: BỊ TỪ CHỐI! Lỗi SQLSTATE 55P03 (lock_not_available)
-    
-    POS1->>DB: reserve_order(Order_1)
-    Note over DB: Chuyển Device X sang status = RESERVED
-    DB-->>POS1: 200 OK (Đơn hàng đã giữ chỗ)
-    
-    POS1->>DB: complete_sale(Order_1)
-    Note over DB: Chuyển Device X sang status = SOLD, xuất biên nhận
-    DB-->>POS1: 200 OK (Thanh toán hoàn tất, giảm tồn tức thì)
-```
+Đây là view thường, đọc dữ liệu theo snapshot PostgreSQL. Ở READ COMMITTED, truy vấn mới sau commit thấy thay đổi đã commit; transaction dùng snapshot cũ có thể tiếp tục thấy dữ liệu cũ. Không có phép đo “0 ms”, cam kết độ trễ UI hoặc cache ngoài DB từ đặc tính này. Yêu cầu workbook là số tồn đổi trong vài giây sau bán; QR/POS/AI phải đo toàn đường ứng dụng.
 
-1. **Tầng 1 — Giữ chỗ giỏ hàng nháp (Cart Selection Lease):**
-   - Được thực thi thông qua Stored Function `sasms.find_and_lock_device_for_pos`.
-   - Hàm sử dụng `SELECT ... FOR UPDATE` để đồng bộ hóa truy cập tới thiết bị trong kho siêu thị.
-   - Kiểm tra nếu thiết bị đã được gắn vào một `order_devices` thuộc đơn hàng `DRAFT` còn hiệu lực (thời hạn 15 phút), giao dịch thứ hai sẽ bị từ chối ngay lập tức với mã lỗi PostgreSQL **`55P03`** (`lock_not_available`).
-   - Nếu khách hàng hủy món hàng tại màn hình POS, hàm `sasms.release_device_lock` giải phóng thiết bị ngay lập tức.
-2. **Tầng 2 — Khóa giao dịch có thẩm quyền (`reserve_order` & `complete_sale`):**
-   - Kế thừa hàm có sẵn trong baseline, thực hiện chuyển trạng thái thiết bị từ `IN_STOCK` $\rightarrow$ `RESERVED` $\rightarrow$ `SOLD`.
-   - Ghi nhận đầy đủ biến động vào bảng `sasms.inventory_movements` (với các kind tương ứng: `RESERVE`, `SALE`).
+Index theo `(warehouse_id, product_id, status)`, `(serial, warehouse_id)` và lựa chọn active hỗ trợ truy vấn. Hiệu năng phụ thuộc dữ liệu/kế hoạch thực thi; các ngưỡng DB 10–15 ms trong bản cũ chưa có bằng chứng và không được ghi như kết quả đạt.
 
-### 2.3 Hợp đồng API / SQL với Fullstack (Vũ Duy Thái)
+## 4. Hỗ trợ S2-08 — Candidate fallback cho AI
 
-| Hàm / Thao tác | Đầu vào | Đầu ra / Kết quả | Mã lỗi chuẩn hóa |
-|---|---|---|---|
-| `find_and_lock_device_for_pos` | `p_store_id uuid`, `p_order_id uuid`, `p_order_item_id uuid`, `p_serial text`, `p_actor_id uuid` | `uuid` (ID của thiết bị đã khóa) | `42501`: Không có quyền thu ngân tại cửa hàng<br>`P0002`: Serial không có trong kho siêu thị này<br>`23514`: Thiết bị không ở trạng thái khả dụng<br>`55P03`: **Đã bị máy POS khác khóa giữ** |
-| `release_device_lock` | `p_order_id uuid`, `p_device_id uuid`, `p_actor_id uuid` | `boolean` (`true` nếu giải phóng thành công) | `23514`: Đơn hàng không ở trạng thái DRAFT |
+`get_cross_sell_fallback_rules(product uuid, store uuid, limit integer DEFAULT 5)` trả `recommended_product_id`, `sku`, `product_name`, `price`, `available_stock`, `recommendation_reason`. Function lấy giá từ view, lọc sản phẩm khác source và còn IN_STOCK trong store, xếp ưu tiên cùng brand/tồn/giá. Một sản phẩm có thể xuất hiện ở nhiều kho; consumer phải hiểu phạm vi từng hàng, không giả định product ID duy nhất.
 
----
+Đây là heuristic candidate, chưa có bảng luật tương thích phụ kiện đã được Huy/Vũ phê duyệt. Cùng brand/category không tự chứng minh cáp, sạc hoặc phụ kiện tương thích. Không mô tả kết quả là “chỉ phụ kiện chính hãng phù hợp”. Dịch vụ/gói bảo hành không có device cũng không tự xuất hiện như hàng kho trong view này.
 
-## 3. S2-06 / TSK-02-05: API truy vấn tồn kho Real-time theo siêu thị
+Theo [D55](../../Sprint%200/AI/D55-thiet-ke-ai-prompt-rag-cache-fallback.md), [DS1 AI](../../Sprint%201/AI/DS1-phan-mem-tang-truong-ai-sprint1.md) và `AiCacheManager`, cache cross-sell hiện dùng **5 phút**, timeout mục tiêu **2.500 ms** trước fallback. TTL 24 giờ trong thiết kế dành cho tóm tắt thông số, không áp dụng mặc định cho cross-sell. Bảng `ai_recommendations` không có đầy đủ store/cache key hoặc quyền ghi runtime để trở thành DB cache đang chạy. Không có số liệu chứng minh giảm 60% token.
 
-### 3.1 Yêu cầu kỹ thuật và phân định số liệu tồn
-Theo đặc tả FRS và tiêu chuẩn kiểm thử của QA (D72):
-- Thu ngân và nhân viên bán hàng chỉ được bán hàng còn tồn thực tế tại siêu thị đang đăng nhập (`warehouses.store_id = current_store`).
-- Hệ thống phân định rạch ròi 3 trạng thái tồn kho:
-  1. **Tồn khả dụng bán lẻ (`available_stock`):** Các thiết bị có trạng thái `IN_STOCK` và không bị giữ trong đơn hàng khác.
-  2. **Tồn đang giữ chỗ (`reserved_stock`):** Các thiết bị có trạng thái `RESERVED` đang chờ thanh toán hoặc chuẩn bị giao.
-  3. **Tồn đã xuất bán (`sold_stock`):** Các thiết bị có trạng thái `SOLD`.
-  4. **Tổng tồn vật lý (`total_physical_stock`):** Tổng số lượng thiết bị đang hiện diện tại kho siêu thị.
+`AiCrossSellService`/`AiRuleFallbackEngine` hiện chưa gọi function DB Sprint 2. Thái/Vũ cần nối candidate thật, loại inactive/sai scope, kiểm lại giá/tồn khi hiển thị và khi thêm giỏ, dùng luật tương thích được duyệt và đo nguồn AI/CACHE/RULE_FALLBACK. Không đưa PII/secret hoặc payment vào prompt/cache/log.
 
-### 3.2 View CSDL `sasms.v_realtime_inventory` và Chỉ mục tối ưu
-Để đảm bảo tốc độ phản hồi trên màn hình POS đạt chuẩn DoD **< 2 giây** (trong đó phần CSDL cam kết **< 15 mili-giây**), CSDL được bổ sung:
+## 5. CI, quyền thực thi và kiểm chứng
 
-```sql
--- View tính toán tồn kho thời gian thực đa chi nhánh
-CREATE OR REPLACE VIEW sasms.v_realtime_inventory AS
-SELECT 
-    w.store_id,
-    s.code AS store_code,
-    s.name AS store_name,
-    w.id AS warehouse_id,
-    w.code AS warehouse_code,
-    w.name AS warehouse_name,
-    p.id AS product_id,
-    p.sku,
-    p.name AS product_name,
-    p.price,
-    COUNT(d.id) AS total_physical_stock,
-    COUNT(d.id) FILTER (WHERE d.status = 'IN_STOCK') AS available_stock,
-    COUNT(d.id) FILTER (WHERE d.status = 'RESERVED') AS reserved_stock,
-    COUNT(d.id) FILTER (WHERE d.status = 'SOLD') AS sold_stock
-FROM sasms.products p
-CROSS JOIN sasms.warehouses w
-JOIN sasms.stores s ON s.id = w.store_id
-LEFT JOIN sasms.devices d ON d.product_id = p.id AND d.warehouse_id = w.id
-WHERE p.is_active AND w.is_active AND s.is_active
-GROUP BY w.store_id, s.code, s.name, w.id, w.code, w.name, p.id, p.sku, p.name, p.price;
-```
+Owner/migrator áp dụng DDL và ACL. Ba function mới và view thu hồi quyền từ `PUBLIC`/`sasms_reader`; `sasms_app` được EXECUTE/SELECT theo allowlist khi group đã được provision. Chạy runtime Sprint 1 trước extension. Quyền EXECUTE không thay kiểm quyền nghiệp vụ; credential app vẫn thuộc backend tin cậy.
 
-**Các chỉ mục chuyên biệt (Indexes):**
-- `CREATE INDEX idx_devices_warehouse_product_status ON sasms.devices(warehouse_id, product_id, status);`: Tối ưu hóa phép lọc trạng thái tồn kho theo kho và sản phẩm.
-- `CREATE INDEX idx_devices_serial_warehouse ON sasms.devices(serial, warehouse_id);`: Tối ưu hóa truy vấn tìm kiếm Serial khi quét mã vạch/QR tại POS.
+[Validator](../../scripts/validate_sprint2.py) dùng `psql` với `ON_ERROR_STOP=1`, kiểm exit code, ACL/authorization và điều phối hai tiến trình/kết nối có backend PID khác nhau. Ca commit phải có một người giữ và người thua `55P03`; ca rollback cho phép người còn lại giữ sau rollback; kiểm đúng liên kết active và delta tồn sau reserve/sale.
 
-### 3.3 Tính tức thời (Zero Lag)
-Do view được truy vấn trực tiếp trên bảng dữ liệu transactional với cấu trúc index bao phủ, **ngay khi hàm `complete_sale` commit**, trạng thái của thiết bị đổi từ `IN_STOCK` sang `SOLD`, lệnh truy vấn tồn kho kế tiếp lập tức phản ánh số tồn khả dụng đã giảm đi 1 đơn vị mà không hề có độ trễ caching hay xử lý nền bất đồng bộ.
+Đối chiếu [summary/log Sprint 2](../../database/evidence/sprint2) với lần chạy và source hash tương ứng. SQL một `DO` block chạy tuần tự không chứng minh hai kết nối đồng thời. Regression Sprint 0/1 bảo vệ schema, migration và nhập kho cũ; evidence của commit cũ không xác nhận code mới.
 
----
+Workflow và trạng thái Staging xem [D22](D22-ke-hoach-moi-truong-va-CICD-sprint2.md). Kết quả local/CI DB và readiness không phải log deploy remote.
 
-## 4. Hỗ trợ S2-08 (Vũ AI): Luật dự phòng gợi ý bán kèm (Cross-selling Fallback)
+## 6. Bàn giao liên nhóm
 
-### 4.1 Bối cảnh yêu cầu
-- Tiêu chí nghiệm thu của Quality Gate M4 yêu cầu: **Thời gian phản hồi AI < 3 giây** và **bắt buộc phải có cơ chế dự phòng (Rule-based Fallback)** khi gọi dịch vụ LLM bên ngoài bị gián đoạn, quá tải hoặc mất mạng.
-- Ngoài ra, để kiểm soát chi phí token AI (rủi ro R-07 do PM Trịnh Quốc An theo dõi tại S2-15), hệ thống cần ưu tiên tái sử dụng dữ liệu đã cache.
+| Người chủ trì | Phần cần tiếp nhận / xác nhận |
+|---|---|
+| Thái — Fullstack | D52 endpoint chọn/bỏ Serial/tồn, actor từ JWT, transaction/commit, mapping lỗi; POS hiện mới có `/api/pos/status` với `SKELETON_READY` |
+| Vũ — AI | Candidate/giá/tồn DB, luật tương thích, cache 5 phút, fallback thật và log nguồn/latency; chưa đồng nhất heuristic SQL với engine ứng dụng |
+| Phát — QA | D72/D73/D76, quyền và hai kết nối, E2E bán/in/QR; D79 cho p95/50 request |
+| Huy — BA/PO | AC/DoR, semantics tồn khả dụng/giỏ DRAFT, phạm vi lease, luật phụ kiện và demo nghiệm thu |
+| An — PM | Hạ tầng/secret/phát hành S2-12, biên bản D128/D129, CR/token/EVM; không dùng readiness làm deploy thành công |
 
-### 4.2 Thiết kế Stored Function `sasms.get_cross_sell_fallback_rules`
-Kiên cung cấp Stored Function mức DB để tầng ứng dụng gọi ngay lập tức khi LLM timeout:
-- **Nguyên tắc nghiệp vụ:** Chỉ gợi ý các sản phẩm phụ kiện/thiết bị phụ trợ mà **HIỆN ĐANG CÒN HÀNG TỒN KHẢ DỤNG (`available_stock > 0`) ngay tại kho của siêu thị đang bán hàng**. Tuyệt đối không gợi ý sản phẩm đã hết hàng.
-- **Thứ tự ưu tiên gợi ý:**
-  1. Phụ kiện chính hãng cùng thương hiệu (`brand_id`).
-  2. Sản phẩm cùng loại/danh mục (`category_id`) có số lượng tồn khả dụng cao.
-  3. Giá thành hợp lý để khách dễ dàng ra quyết định mua kèm tại quầy thu ngân.
-- **Tốc độ thực thi:** < 10 mili-giây, đảm bảo tổng thời gian phản hồi toàn hệ thống luôn < 100 mili-giây khi kích hoạt luồng dự phòng.
-
----
-
-## 5. S2-12: Kế hoạch và thiết lập Staging CI/CD tự động
-
-- **Chi tiết kế hoạch:** Được quy định cụ thể tại văn bản [D22 — Kế hoạch môi trường & CI/CD Sprint 2](D22-ke-hoach-moi-truong-va-CICD-sprint2.md).
-- **Workflow tự động hóa:** Pipeline GitHub Actions `.github/workflows/sprint2-staging.yml` tự động kiểm tra CSDL, thực thi kịch bản concurrency tranh chấp 2 máy POS, kiểm tra biến động tồn kho và chuẩn bị gói triển khai Staging.
-- **Bảo mật môi trường Staging:** Tách biệt hoàn toàn tài khoản `sasms_app` (chỉ có quyền thao tác nghiệp vụ) khỏi tài khoản quản trị hạ tầng (Owner/Superuser).
-
----
-
-## 6. Ma trận truy vết yêu cầu (Traceability Matrix)
-
-| Mã Story FRS | Yêu cầu nghiệp vụ | Thành phần CSDL SASMS đáp ứng | Minh chứng kỹ thuật đã kiểm chứng |
-|---|---|---|---|
-| **US-04** | Thu ngân quét/nhập Serial, chọn hàng vào giỏ, khóa Serial chống bán trùng | Hàm `sasms.find_and_lock_device_for_pos`, bảng `sasms.order_devices`, ràng buộc `devices.status` | Kịch bản test 2 máy POS chọn cùng Serial: máy 2 bị chặn với mã `55P03` |
-| **US-05** | In hóa đơn và tem QR tại quầy | Bảng `sasms.invoices`, trường `devices.qr_token`, hàm `sasms.complete_sale` | Giao dịch nguyên tử sinh hóa đơn nội bộ và liên kết tem QR |
-| **US-06** | Tra cứu tồn kho real-time đa chi nhánh | View `sasms.v_realtime_inventory`, composite index `idx_devices_warehouse_product_status` | Query phân tích EXPLAIN ANALYZE < 10ms, số tồn giảm ngay sau khi `complete_sale` |
-| **US-07** | AI gợi ý bán kèm có cơ chế dự phòng | Hàm `sasms.get_cross_sell_fallback_rules`, bảng cache `sasms.ai_recommendations` | Hàm trả về phụ kiện còn tồn khả dụng tại siêu thị trong < 10ms |
-
----
-
-## 7. Rà soát Tiêu chuẩn Cổng vào (DoR) và Cổng ra (DoD)
-
-### 7.1 Cổng vào (DoR)
-- [x] **Cấu trúc User Story:** Tuân thủ đúng chuẩn *As a... I want... So that...* theo tài liệu FRS V2.
-- [x] **Tiêu chí chấp nhận (Acceptance Criteria):** Có tối thiểu 3 AC cho từng story, bao gồm luồng lỗi khi Serial bị khóa trùng hoặc hết tồn kho.
-- [x] **DB Schema đã chốt:** Schema cơ bản và phần mở rộng Sprint 2 (`realtime_stock_and_locking.sql`) đã được Kiên hoàn thiện và lưu trong repo.
-
-### 7.2 Cổng ra (DoD)
-- [x] **Code sạch và chuẩn quy ước:** Tuân thủ nghiêm ngặt naming convention SQL/PostgreSQL, bảo toàn các checksum của baseline và Sprint 1.
-- [x] **Kiểm thử tự động:** Script `test_sprint2_concurrency_and_stock.sql` chạy thành công 100% các assertions về khóa Serial và cập nhật tồn kho.
-- [x] **Chỉ số hiệu năng:**
-  - Tra cứu Serial/QR: < 10ms (chuẩn hệ thống < 1 giây).
-  - Khóa chọn Serial và truy vấn tồn kho: < 15ms (chuẩn POS < 2 giây).
-  - Trả về danh sách gợi ý bán kèm fallback: < 10ms (chuẩn AI < 3 giây).
-- [x] **CI/CD tự động:** Pipeline GitHub Actions `.github/workflows/sprint2-staging.yml` sẵn sàng kích hoạt và lưu log minh chứng.
-
+PR/merge, demo ứng dụng, báo cáo tải, Staging thật và chữ ký thuộc đầu ra cần bổ sung của người sở hữu. Tài liệu này không ký thay họ.

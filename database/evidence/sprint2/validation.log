@@ -1,0 +1,258 @@
+
+=== Sprint 0 / 1 regression ===
+Sprint1 validation passed: 76 assertions; migration safety and concurrent Serial/IMEI/import-key checks; evidence: C:\Users\co\Documents\BTL QLDA\database\evidence\sprint2\sprint1-regression
+
+
+=== intentional SQL failure detection ===
+1
+psql:C:/Users/co/AppData/Local/Temp/sasms-s2-fail-probe-seo0inqv/intentional_failure.sql:2: ERROR:  P0001: S2_EXPECTED_FAILURE
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+
+=== intentional assertion failure detection ===
+ERROR:  P0001: S2_EXPECTED_ASSERTION_FAILURE
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+=== captured payment guard initially enabled ===
+t
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "identifier_rules", "inventory_import_batches", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "d4fe5b731fe15eeb8ba9f8ebca40aa85", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "a2174c0a824145fc3bacfec6a43056eb", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "27988fc6bd6a4cc4655551f2ae466601", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "49eda816f34d7f92fafbca3f747c626b", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "b23cfc409d1ce2fda1f701d2760c62bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "3dd9994e7d09235ad4299d7381270978", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "436b81a0499c573bbdbf54055a6a4399", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "identifier_rules": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "90662654cf973b44bcfbe3aa0e6b7156", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "eb549f391d57cbea2d8d8385f1415276", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd", "inventory_import_batches": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== atomic Sprint2 extension apply ===
+
+=== Sprint2 extension reapply ===
+psql:database/sprint2/realtime_stock_and_locking.sql:15: NOTICE:  42P07: relation "idx_devices_warehouse_product_status" already exists, skipping
+LOCATION:  index_create, index.c:887
+psql:database/sprint2/realtime_stock_and_locking.sql:18: NOTICE:  42P07: relation "idx_devices_serial_warehouse" already exists, skipping
+LOCATION:  index_create, index.c:887
+psql:database/sprint2/realtime_stock_and_locking.sql:21: NOTICE:  42P07: relation "idx_order_devices_order_active" already exists, skipping
+LOCATION:  index_create, index.c:887
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "identifier_rules", "inventory_import_batches", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "d4fe5b731fe15eeb8ba9f8ebca40aa85", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "a2174c0a824145fc3bacfec6a43056eb", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "27988fc6bd6a4cc4655551f2ae466601", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "49eda816f34d7f92fafbca3f747c626b", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "b23cfc409d1ce2fda1f701d2760c62bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "3dd9994e7d09235ad4299d7381270978", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "436b81a0499c573bbdbf54055a6a4399", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "identifier_rules": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "90662654cf973b44bcfbe3aa0e6b7156", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "eb549f391d57cbea2d8d8385f1415276", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd", "inventory_import_batches": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== Sprint2 runtime ACL authorization and stock lifecycle ===
+
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: app EXECUTE and reader denied: sasms.find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: PUBLIC EXECUTE denied: sasms.find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: app EXECUTE and reader denied: sasms.release_device_lock(uuid,uuid,uuid)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: PUBLIC EXECUTE denied: sasms.release_device_lock(uuid,uuid,uuid)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: app EXECUTE and reader denied: sasms.get_cross_sell_fallback_rules(uuid,uuid,integer)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: PUBLIC EXECUTE denied: sasms.get_cross_sell_fallback_rules(uuid,uuid,integer)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:88: NOTICE:  00000: PASS: app SELECT on realtime view
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:93: NOTICE:  00000: PASS: reader cannot execute release (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: view price is products.list_price
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: expired draft cannot acquire an expired lease (SQLSTATE 23514)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: runtime app locks normalized Serial
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: same cart selection is idempotent
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release denies missing checkout permission (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: lock denies missing checkout permission (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release denies wrong store (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: lock denies wrong store (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release denies inactive actor (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: lock denies inactive actor (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release denies NULL actor (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: lock denies NULL actor (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release denies unknown actor (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: lock denies unknown actor (SQLSTATE 42501)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: denied release preserves active allocation
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: authorized release changes allocation
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release returns false when already released
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release returns false for unrelated device
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: released device can be selected again
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: draft selection leaves physical stock unchanged
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: reserve exact stock delta (-1,+1,0)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: release denies RESERVED order (SQLSTATE 23514)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: sale exact stock delta (-1,0,+1)
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: sale has one invoice and movement
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+psql:database/tests/sprint2/test_sprint2_concurrency_and_stock.sql:175: NOTICE:  00000: PASS: fallback returns available accessory with catalog price
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "identifier_rules", "inventory_import_batches", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "d4fe5b731fe15eeb8ba9f8ebca40aa85", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "a2174c0a824145fc3bacfec6a43056eb", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "27988fc6bd6a4cc4655551f2ae466601", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "49eda816f34d7f92fafbca3f747c626b", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "b23cfc409d1ce2fda1f701d2760c62bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "3dd9994e7d09235ad4299d7381270978", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "436b81a0499c573bbdbf54055a6a4399", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "identifier_rules": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "90662654cf973b44bcfbe3aa0e6b7156", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "eb549f391d57cbea2d8d8385f1415276", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd", "inventory_import_batches": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== commit independent POS fixtures ===
+
+=== committed realtime stock ===
+[2, 0, 0]
+
+=== commit overlapping POS2: exit 1 ===
+{"session_pid" : 22168}
+ERROR:  55P03: could not obtain lock on row in relation "devices"
+CONTEXT:  SQL statement "SELECT *                   FROM sasms.devices
+    WHERE serial = v_clean_serial
+      AND warehouse_id = v_order.warehouse_id
+    FOR UPDATE NOWAIT"
+PL/pgSQL function find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid) line 41 at SQL statement
+LOCATION:  heap_lock_tuple, heapam.c:4835
+
+
+=== committed realtime stock ===
+[2, 0, 0]
+
+=== release owner gate ===
+
+t
+
+
+=== POS1 commit: exit 0 ===
+{"session_pid" : 28700}
+16a45edf-573d-45df-8f4a-c19f0ce9e51b
+
+
+
+=== commit initial allocation count ===
+1
+
+=== POS2 after POS1 commit: exit 1 ===
+ERROR:  55P03: Device with serial S2-RACE-8D10E9510AC4437EA8A87764958BAAEB is temporarily locked by another active POS terminal
+CONTEXT:  PL/pgSQL function find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid) line 76 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3911
+
+
+=== authorized POS1 release ===
+t
+
+=== POS2 retry after release ===
+16a45edf-573d-45df-8f4a-c19f0ce9e51b
+
+=== exactly one committed active draft owner ===
+{"all_active" : 1, "winner_active" : 1}
+
+=== committed realtime stock ===
+[2, 0, 0]
+
+=== winning POS2 reserve commit ===
+1000.00
+
+=== committed realtime stock ===
+[1, 1, 0]
+
+=== winning POS2 captured payment and sale commit ===
+a8733943-86f7-4e96-89fa-999e7aefa01a
+
+=== committed realtime stock ===
+[1, 0, 1]
+
+=== unique committed checkout side effects ===
+{"sold_device" : 1, "paid_order" : 1, "reserve_movement" : 1, "sale_movement" : 1, "invoice" : 1, "checkout_audit" : 1, "paid_event" : 1}
+
+=== commit exact synthetic UUID cleanup ===
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "identifier_rules", "inventory_import_batches", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "d4fe5b731fe15eeb8ba9f8ebca40aa85", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "a2174c0a824145fc3bacfec6a43056eb", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "27988fc6bd6a4cc4655551f2ae466601", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "49eda816f34d7f92fafbca3f747c626b", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "b23cfc409d1ce2fda1f701d2760c62bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "3dd9994e7d09235ad4299d7381270978", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "436b81a0499c573bbdbf54055a6a4399", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "identifier_rules": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "90662654cf973b44bcfbe3aa0e6b7156", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "eb549f391d57cbea2d8d8385f1415276", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd", "inventory_import_batches": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== rollback independent POS fixtures ===
+
+=== committed realtime stock ===
+[2, 0, 0]
+
+=== rollback overlapping POS2: exit 1 ===
+{"session_pid" : 14500}
+ERROR:  55P03: could not obtain lock on row in relation "devices"
+CONTEXT:  SQL statement "SELECT *                   FROM sasms.devices
+    WHERE serial = v_clean_serial
+      AND warehouse_id = v_order.warehouse_id
+    FOR UPDATE NOWAIT"
+PL/pgSQL function find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid) line 41 at SQL statement
+LOCATION:  heap_lock_tuple, heapam.c:4835
+
+
+=== committed realtime stock ===
+[2, 0, 0]
+
+=== release owner gate ===
+
+t
+
+
+=== POS1 rollback: exit 0 ===
+{"session_pid" : 33476}
+91141d36-bd1c-43f9-a4cb-091af9d85f13
+
+
+
+=== rollback initial allocation count ===
+0
+
+=== POS2 retry after rollback ===
+91141d36-bd1c-43f9-a4cb-091af9d85f13
+
+=== exactly one committed active draft owner ===
+{"all_active" : 1, "winner_active" : 1}
+
+=== committed realtime stock ===
+[2, 0, 0]
+
+=== winning POS2 reserve commit ===
+1000.00
+
+=== committed realtime stock ===
+[1, 1, 0]
+
+=== winning POS2 captured payment and sale commit ===
+65fd952e-1ba4-4fcc-93cc-f92c70228a8a
+
+=== committed realtime stock ===
+[1, 0, 1]
+
+=== unique committed checkout side effects ===
+{"sold_device" : 1, "paid_order" : 1, "reserve_movement" : 1, "sale_movement" : 1, "invoice" : 1, "checkout_audit" : 1, "paid_event" : 1}
+
+=== rollback exact synthetic UUID cleanup ===
+
+=== table names ===
+["ai_recommendations", "audit_logs", "brands", "categories", "customers", "deliveries", "delivery_items", "devices", "goods_receipt_items", "goods_receipts", "identifier_rules", "inventory_import_batches", "inventory_movements", "invoices", "order_devices", "outbox_events", "payments", "permissions", "product_images", "products", "purchase_order_items", "purchase_orders", "return_items", "returns", "role_permissions", "roles", "sales_order_items", "sales_orders", "stocktake_items", "stocktakes", "stores", "suppliers", "technician_assignments", "user_roles", "users", "warehouses", "warranties", "warranty_claims", "warranty_policies"]
+
+=== seed snapshot ===
+{"roles": "cd2c4e6f62326c48a31f8fa37c86ccc0", "users": "d4fe5b731fe15eeb8ba9f8ebca40aa85", "brands": "e1d180c66b10642dfce38b687ad8f97f", "stores": "b42975653c190d41cdc4741578a29e65", "devices": "a2174c0a824145fc3bacfec6a43056eb", "returns": "37a6259cc0c1dae299a7866489dff0bd", "invoices": "37a6259cc0c1dae299a7866489dff0bd", "payments": "37a6259cc0c1dae299a7866489dff0bd", "products": "27988fc6bd6a4cc4655551f2ae466601", "customers": "37a6259cc0c1dae299a7866489dff0bd", "suppliers": "1ca30307046b4fbff83e7292059407ba", "audit_logs": "49eda816f34d7f92fafbca3f747c626b", "categories": "c9dafb8c486f3a7a13d77acf0d49f344", "deliveries": "37a6259cc0c1dae299a7866489dff0bd", "stocktakes": "37a6259cc0c1dae299a7866489dff0bd", "user_roles": "37a6259cc0c1dae299a7866489dff0bd", "warehouses": "d8dfd0a8b1d3ac892765512fca9dfb18", "warranties": "37a6259cc0c1dae299a7866489dff0bd", "permissions": "e4f7bde81b36a0c0894b09c7576200c8", "return_items": "37a6259cc0c1dae299a7866489dff0bd", "sales_orders": "37a6259cc0c1dae299a7866489dff0bd", "order_devices": "37a6259cc0c1dae299a7866489dff0bd", "outbox_events": "b23cfc409d1ce2fda1f701d2760c62bd", "delivery_items": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipts": "3dd9994e7d09235ad4299d7381270978", "product_images": "37a6259cc0c1dae299a7866489dff0bd", "purchase_orders": "436b81a0499c573bbdbf54055a6a4399", "stocktake_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_claims": "37a6259cc0c1dae299a7866489dff0bd", "identifier_rules": "37a6259cc0c1dae299a7866489dff0bd", "role_permissions": "90662654cf973b44bcfbe3aa0e6b7156", "sales_order_items": "37a6259cc0c1dae299a7866489dff0bd", "warranty_policies": "37a6259cc0c1dae299a7866489dff0bd", "ai_recommendations": "37a6259cc0c1dae299a7866489dff0bd", "goods_receipt_items": "e64e60c4d658051af8b37304400f1a29", "inventory_movements": "eb549f391d57cbea2d8d8385f1415276", "purchase_order_items": "aec026b6aa7b9632a99eb12e19587538", "technician_assignments": "37a6259cc0c1dae299a7866489dff0bd", "inventory_import_batches": "37a6259cc0c1dae299a7866489dff0bd"}
+
+=== captured payment guard restored ===
+t

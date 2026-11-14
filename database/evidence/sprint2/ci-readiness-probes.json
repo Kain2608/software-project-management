@@ -1,0 +1,30 @@
+{
+  "scope": "Local execution of workflow report Python with synthetic GitHub context; no hosted workflow run",
+  "workflow_sha256": "3557c9db25354b70647f2de48e31f4ad51b6471fa08088a680f3f8f2d2714d87",
+  "cases": [
+    {
+      "db_result": "success",
+      "report_status": "READY_FOR_STAGING",
+      "exit_code": 0,
+      "deployment_status": "NOT_DEPLOYED"
+    },
+    {
+      "db_result": "failure",
+      "report_status": "FAILED",
+      "exit_code": 1,
+      "deployment_status": "NOT_DEPLOYED"
+    },
+    {
+      "db_result": "cancelled",
+      "report_status": "CANCELLED",
+      "exit_code": 1,
+      "deployment_status": "NOT_DEPLOYED"
+    },
+    {
+      "db_result": "skipped",
+      "report_status": "BLOCKED",
+      "exit_code": 1,
+      "deployment_status": "NOT_DEPLOYED"
+    }
+  ]
+}

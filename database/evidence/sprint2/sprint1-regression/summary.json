@@ -1,0 +1,189 @@
+{
+  "started_at_utc": "2026-11-13T16:14:15.454022+00:00",
+  "status": "passed",
+  "checks": {
+    "PostgreSQL16 version": {
+      "passed": true,
+      "seconds": 0.1068
+    },
+    "baseline schema presence": {
+      "passed": true,
+      "seconds": 0.0971
+    },
+    "Sprint1 migration schema presence": {
+      "passed": true,
+      "seconds": 0.1042
+    },
+    "pre-existing device fixture before upgrade": {
+      "passed": true,
+      "seconds": 0.12
+    },
+    "pre-upgrade intentional permission revocation and legacy integration grant": {
+      "passed": true,
+      "seconds": 0.0663
+    },
+    "snapshot table names": {
+      "passed": true,
+      "seconds": 0.0805
+    },
+    "snapshot table contents": {
+      "passed": true,
+      "seconds": 0.1348
+    },
+    "apply Sprint1 migrations to populated Sprint0": {
+      "passed": true,
+      "seconds": 0.2492
+    },
+    "prior revocation and legacy private ACL preserved safely": {
+      "passed": true,
+      "seconds": 0.074
+    },
+    "migration ledger before safety probes": {
+      "passed": true,
+      "seconds": 0.0667
+    },
+    "migration reapply is a noop": {
+      "passed": true,
+      "seconds": 0.1851
+    },
+    "migration ledger after noop": {
+      "passed": true,
+      "seconds": 0.0767
+    },
+    "changed applied migration is rejected": {
+      "passed": true,
+      "expected_failure_rejected": true,
+      "seconds": 0.2805
+    },
+    "failed pending migrations roll back together": {
+      "passed": true,
+      "expected_failure_rejected": true,
+      "seconds": 0.3164
+    },
+    "atomic probe table absent": {
+      "passed": true,
+      "seconds": 0.0715
+    },
+    "migration ledger after rejected probes": {
+      "passed": true,
+      "seconds": 0.0647
+    },
+    "Sprint1 runtime role provisioning": {
+      "passed": true,
+      "seconds": 0.0874
+    },
+    "transactional Sprint1 database demonstration": {
+      "passed": true,
+      "seconds": 0.1314
+    },
+    "Sprint1 catalog IAM and batch assertions": {
+      "passed": true,
+      "seconds": 0.2159
+    },
+    "concurrent import independent PO fixtures": {
+      "passed": true,
+      "seconds": 0.1301
+    },
+    "same_serial committed invariants": {
+      "passed": true,
+      "seconds": 0.0894
+    },
+    "same_imei committed invariants": {
+      "passed": true,
+      "seconds": 0.127
+    },
+    "same_request_key committed invariants": {
+      "passed": true,
+      "seconds": 0.093
+    },
+    "concurrency exact UUID fixture cleanup": {
+      "passed": true,
+      "seconds": 0.1251
+    }
+  },
+  "scope": "isolated PostgreSQL database behavior; no API, device scan, remote Staging, provider or approval claim",
+  "source_sha256": {
+    "database/schema.sql": "66aacda1101c20ed0cc6c80062d93ef917660b4f6e825fa124f536dc2a1fcd96",
+    "database/seed.sql": "8ed00da989ccb6700867636d7d5616f0e90f2422086205bddfbe79fcd783d385",
+    "database/runtime-roles.sql": "c119d150d6a6b93166258d85b125df52a765acb9c9558db9f0a3e2942ac86c85",
+    "scripts/migrate_db.py": "d2ef36d3ff7ada3fffcaea725626c316887d4ca7a5bd495a6ff2d0ee959b908a",
+    "scripts/validate_sprint1.py": "05abaa691781fff21b95abc13e534b46385cc8846f12d5f373541a6cfe5ecdea",
+    "scripts/generate_db_artifacts.py": "e7eadd62ec9a0d77c00f2a1bed587cf21e1532eab8f9bad394728b9ee33e79c4",
+    ".github/workflows/sprint1-database.yml": "ab3a5ae2cfcdb09e110dcf01b5b4f599343ec5cdb3665af3c4fa39d004205558",
+    "database/migrations/V001__catalog_and_iam.sql": "4ebbb59ad4b8bee50c16e26becabe1ec2fab5d69e44ad5a613a049f6583d3f71",
+    "database/migrations/V002__inventory_batches_and_identifiers.sql": "48038d23eaaf418d49e8a840a71faed2f59b4f8350089dee2f9f3566524a020e",
+    "database/tests/sprint1/assertions.sql": "c3b2cdb17692dd6ad814a21d8c23728d98c3bd9ac22278cd57e0f9239dc1efc8",
+    "database/sprint1/demo.sql": "64e4cf6aedc23064a05b99fad7a38e18fea86eb45a577bd903a5ddc4a25da1c5",
+    "database/sprint1/runtime-roles.sql": "8377c1829c177fd84eeb75d31716fa695a1fbcea2e065086b14d1ba409345335"
+  },
+  "postgresql": {
+    "version": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+    "version_num": 160015
+  },
+  "baseline_regression": {
+    "passed": true,
+    "constraint_assertions": 56,
+    "runtime_acl_assertions": 7
+  },
+  "upgrade_preservation": {
+    "passed": true,
+    "baseline_tables": 37,
+    "baseline_rows": 112,
+    "pre_existing_device_preserved": true,
+    "revoked_grant_still_absent": true,
+    "legacy_private_execute_removed": true
+  },
+  "migration_safety": {
+    "reapply_noop": true,
+    "checksum_rejected": true,
+    "all_pending_ddl_and_ledger_rolled_back": true,
+    "applied_migrations": 2
+  },
+  "assertions": 76,
+  "concurrency": [
+    {
+      "case": "same_serial",
+      "independent_sessions": 2,
+      "successful_calls": 1,
+      "expected_unique_rejections": 1,
+      "distinct_purchase_orders": true,
+      "committed_invariants": {
+        "devices": 1,
+        "batches": 1,
+        "receive_movements": 1,
+        "audits": 1,
+        "outbox_events": 1
+      }
+    },
+    {
+      "case": "same_imei",
+      "independent_sessions": 2,
+      "successful_calls": 1,
+      "expected_unique_rejections": 1,
+      "distinct_purchase_orders": true,
+      "committed_invariants": {
+        "devices": 1,
+        "batches": 1,
+        "receive_movements": 1,
+        "audits": 1,
+        "outbox_events": 1
+      }
+    },
+    {
+      "case": "same_request_key",
+      "independent_sessions": 2,
+      "successful_calls": 2,
+      "expected_unique_rejections": 0,
+      "distinct_purchase_orders": false,
+      "committed_invariants": {
+        "devices": 1,
+        "batches": 1,
+        "receive_movements": 1,
+        "audits": 1,
+        "outbox_events": 1
+      }
+    }
+  ],
+  "fixtures_cleaned": true,
+  "finished_at_utc": "2026-11-13T16:14:26.082148+00:00"
+}
