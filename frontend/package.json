@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "node --test src/features/qr/qrPayload.test.js src/features/qr/qrApi.test.js src/features/pos/posApi.test.js",
     "test:qr": "node --test src/features/qr/qrPayload.test.js src/features/qr/qrApi.test.js"
   },
   "dependencies": {

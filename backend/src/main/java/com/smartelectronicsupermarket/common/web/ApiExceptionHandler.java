@@ -31,6 +31,11 @@ public class ApiExceptionHandler {
         return response(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource was not found", null, false);
     }
 
+    @ExceptionHandler(ResourceConflictException.class)
+    ResponseEntity<ApiErrorResponse> conflict(ResourceConflictException exception) {
+        return response(HttpStatus.CONFLICT, "CONFLICT", "Resource state does not allow this operation", null, false);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiErrorResponse> forbidden(AccessDeniedException exception) {
         return response(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied", null, false);
@@ -43,6 +48,8 @@ public class ApiExceptionHandler {
                     HttpStatus.CONFLICT, "DUPLICATE", "A unique value already exists", null, false);
             case "40001" -> response(
                     HttpStatus.CONFLICT, "REVISION_CONFLICT", "The resource changed; reload before retrying", null, false);
+            case "55P03" -> response(
+                    HttpStatus.CONFLICT, "DEVICE_LOCKED", "The device is held by another active order", null, true);
             case "42501" -> response(
                     HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied", null, false);
             case "23503", "P0002" -> response(

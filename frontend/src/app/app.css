@@ -63,7 +63,35 @@ button {
 
 .error { margin-top: 14px; font-weight: 600; }
 
+.pos-scope-note, .receipt-message {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff8e6;
+  color: #674c00;
+}
+
+.receipt-form { display: flex; gap: 12px; align-items: end; margin-top: 18px; }
+.receipt-form label { display: grid; gap: 6px; flex: 1; font-weight: 600; }
+.receipt-form input { padding: 11px; border: 1px solid #b7c0cf; border-radius: 10px; }
+.receipt-preview { margin-top: 18px; padding: 22px; border: 1px solid #d7dce4; border-radius: 12px; }
+.receipt-preview header, .receipt-preview header div, .receipt-preview dl div, .receipt-preview li {
+  display: flex; justify-content: space-between; gap: 12px;
+}
+.receipt-preview header div { flex-direction: column; gap: 2px; }
+.receipt-preview dl, .receipt-preview ul { padding: 0; }
+.receipt-preview li { padding: 10px 0; border-top: 1px solid #e6eaf0; }
+.receipt-preview dt { color: #5b6474; }
+
+@media print {
+  body * { visibility: hidden; }
+  .receipt-preview, .receipt-preview * { visibility: visible; }
+  .receipt-preview { position: absolute; inset: 0; border: 0; }
+  .receipt-preview button, .receipt-preview > small { display: none; }
+}
+
 @media (max-width: 760px) {
   .section-heading { align-items: flex-start; flex-direction: column; }
   .placeholder-grid { grid-template-columns: 1fr; }
+  .receipt-form { align-items: stretch; flex-direction: column; }
 }

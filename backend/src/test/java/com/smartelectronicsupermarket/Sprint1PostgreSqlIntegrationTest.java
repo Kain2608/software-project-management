@@ -20,6 +20,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -121,6 +122,15 @@ class Sprint1PostgreSqlIntegrationTest {
 
     private static final UUID BATCH_REQ_KEY_1 = UUID.fromString("11111111-1111-4111-8111-000000000701");
     private static final UUID BATCH_REQ_KEY_ROLLBACK = UUID.fromString("11111111-1111-4111-8111-000000000702");
+
+    private static final UUID PAID_ORDER_A_ID = UUID.fromString("11111111-1111-4111-8111-000000000901");
+    private static final UUID DRAFT_ORDER_A_ID = UUID.fromString("11111111-1111-4111-8111-000000000902");
+    private static final UUID PAID_ORDER_B_ID = UUID.fromString("11111111-1111-4111-8111-000000000903");
+    private static final UUID STOCK_RESERVED_ORDER_ID = UUID.fromString("11111111-1111-4111-8111-000000000904");
+    private static final UUID STOCK_RESERVED_ITEM_ID = UUID.fromString("11111111-1111-4111-8111-000000000914");
+    private static final UUID STOCK_RESERVED_LINK_ID = UUID.fromString("11111111-1111-4111-8111-000000000944");
+    private static final UUID RECEIPT_DEVICE_A_ID = UUID.fromString("11111111-1111-4111-8111-000000000921");
+    private static final UUID RECEIPT_DEVICE_B_ID = UUID.fromString("11111111-1111-4111-8111-000000000922");
 
     private static HttpServer jwksServer;
     private static String jwksUri;
@@ -746,6 +756,200 @@ class Sprint1PostgreSqlIntegrationTest {
         assertEquals("IN_STOCK", statusAfter, "QR lookup must not alter device status");
     }
 
+    @Test
+    @Order(6)
+    void sprint2StockLookupUsesRealViewAndConcealsCrossStoreRows() throws Exception {
+        String warehouseStoreAToken = validTokenFor(SUB_STORE_A_WAREHOUSE);
+        String adminToken = validTokenFor(SUB_GLOBAL_ADMIN);
+        String inactiveToken = validTokenFor(SUB_INACTIVE_ADMIN);
+        String unassignedToken = validTokenFor(SUB_UNASSIGNED);
+
+        assertEquals(4, jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.devices WHERE warehouse_id = ?",
+                Integer.class,
+                WAREHOUSE_A_ID));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.devices WHERE warehouse_id = ? AND status = 'SOLD'",
+                Integer.class,
+                WAREHOUSE_A_ID));
+
+        mockMvc.perform(get("/api/v1/inventory/stock")
+                        .header("Authorization", "Bearer " + warehouseStoreAToken)
+                        .queryParam("warehouse_id", WAREHOUSE_A_ID.toString())
+                        .queryParam("sku", "IT-S1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].sku_id").value(FIXTURE_PRODUCT_ID.toString()))
+                .andExpect(jsonPath("$.items[0].warehouse_id").value(WAREHOUSE_A_ID.toString()))
+                .andExpect(jsonPath("$.items[0].accounting_stock").value(3))
+                .andExpect(jsonPath("$.items[0].sellable_count").value(3))
+                .andExpect(jsonPath("$.items[0].reserved_count").value(0))
+                .andExpect(jsonPath("$.snapshot_at").isNotEmpty());
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO sasms.sales_orders(
+                    id, code, idempotency_key, store_id, warehouse_id, channel, created_by)
+                VALUES (?, 'IT-S2-STOCK-RESERVED', ?, ?, ?, 'POS', ?)
+                """,
+                STOCK_RESERVED_ORDER_ID,
+                UUID.fromString("11111111-1111-4111-8111-000000000934"),
+                STORE_A_ID,
+                WAREHOUSE_A_ID,
+                ACTOR_GLOBAL_ADMIN);
+        jdbcTemplate.update(
+                """
+                INSERT INTO sasms.sales_order_items(id, order_id, product_id, quantity, unit_price)
+                VALUES (?, ?, ?, 1, 15990000.00)
+                """,
+                STOCK_RESERVED_ITEM_ID,
+                STOCK_RESERVED_ORDER_ID,
+                FIXTURE_PRODUCT_ID);
+        jdbcTemplate.update(
+                """
+                INSERT INTO sasms.order_devices(id, order_item_id, order_id, product_id, device_id)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                STOCK_RESERVED_LINK_ID,
+                STOCK_RESERVED_ITEM_ID,
+                STOCK_RESERVED_ORDER_ID,
+                FIXTURE_PRODUCT_ID,
+                receivedStoreADevice1Id);
+        assertEquals(new BigDecimal("15990000.00"), jdbcTemplate.queryForObject(
+                "SELECT sasms.reserve_order(CAST(? AS uuid), CAST(? AS uuid))",
+                BigDecimal.class,
+                STOCK_RESERVED_ORDER_ID,
+                ACTOR_GLOBAL_ADMIN));
+
+        try {
+            mockMvc.perform(get("/api/v1/inventory/stock")
+                            .header("Authorization", "Bearer " + warehouseStoreAToken)
+                            .queryParam("warehouse_id", WAREHOUSE_A_ID.toString())
+                            .queryParam("sku", "IT-S1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.items[0].accounting_stock").value(3))
+                    .andExpect(jsonPath("$.items[0].sellable_count").value(2))
+                    .andExpect(jsonPath("$.items[0].reserved_count").value(1));
+        } finally {
+            restoreReservedStockFixture();
+        }
+
+        mockMvc.perform(get("/api/v1/inventory/stock")
+                        .header("Authorization", "Bearer " + warehouseStoreAToken)
+                        .queryParam("warehouse_id", WAREHOUSE_B_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+
+        mockMvc.perform(get("/api/v1/inventory/stock")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .queryParam("warehouse_id", WAREHOUSE_B_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].warehouse_id").value(WAREHOUSE_B_ID.toString()));
+
+        mockMvc.perform(get("/api/v1/inventory/stock")
+                        .header("Authorization", "Bearer " + warehouseStoreAToken)
+                        .queryParam("sku", "NO-SUCH-SKU"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+
+        mockMvc.perform(get("/api/v1/inventory/stock")
+                        .header("Authorization", "Bearer " + unassignedToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+
+        mockMvc.perform(get("/api/v1/inventory/stock")
+                        .header("Authorization", "Bearer " + inactiveToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Order(7)
+    void sprint2ReceiptReadsOnlyPaidOrdersAndConcealsCrossStoreData() throws Exception {
+        String salesStoreAToken = validTokenFor(SUB_STORE_A_SALES);
+        String adminToken = validTokenFor(SUB_GLOBAL_ADMIN);
+        String inactiveToken = validTokenFor(SUB_INACTIVE_ADMIN);
+        String unassignedToken = validTokenFor(SUB_UNASSIGNED);
+        UUID missingOrderId = UUID.fromString("11111111-1111-4111-8111-999999999998");
+
+        Integer ordersBefore = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.sales_orders WHERE id IN (?, ?, ?)",
+                Integer.class,
+                PAID_ORDER_A_ID,
+                DRAFT_ORDER_A_ID,
+                PAID_ORDER_B_ID);
+        Integer movementsBefore = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.inventory_movements WHERE device_id IN (?, ?)",
+                Integer.class,
+                RECEIPT_DEVICE_A_ID,
+                RECEIPT_DEVICE_B_ID);
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", PAID_ORDER_A_ID)
+                        .header("Authorization", "Bearer " + salesStoreAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order_id").value(PAID_ORDER_A_ID.toString()))
+                .andExpect(jsonPath("$.currency").value("VND"))
+                .andExpect(jsonPath("$.total_minor").value(15990000L))
+                .andExpect(jsonPath("$.paid_at").isNotEmpty())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].sku_id").value(FIXTURE_PRODUCT_ID.toString()))
+                .andExpect(jsonPath("$.items[0].device_id").value(RECEIPT_DEVICE_A_ID.toString()))
+                .andExpect(jsonPath("$.items[0].serial_masked").value("****0001"))
+                .andExpect(jsonPath("$.items[0].price_minor").value(15990000L))
+                .andExpect(jsonPath("$.customer_id").doesNotExist())
+                .andExpect(jsonPath("$.payment").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", DRAFT_ORDER_A_ID)
+                        .header("Authorization", "Bearer " + salesStoreAToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", missingOrderId)
+                        .header("Authorization", "Bearer " + salesStoreAToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", PAID_ORDER_B_ID)
+                        .header("Authorization", "Bearer " + salesStoreAToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", PAID_ORDER_B_ID)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order_id").value(PAID_ORDER_B_ID.toString()))
+                .andExpect(jsonPath("$.items[0].device_id").value(RECEIPT_DEVICE_B_ID.toString()));
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", PAID_ORDER_A_ID)
+                        .header("Authorization", "Bearer " + unassignedToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+
+        mockMvc.perform(get("/api/v1/pos/orders/{orderId}/receipt", PAID_ORDER_A_ID)
+                        .header("Authorization", "Bearer " + inactiveToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+
+        assertEquals(ordersBefore, jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.sales_orders WHERE id IN (?, ?, ?)",
+                Integer.class,
+                PAID_ORDER_A_ID,
+                DRAFT_ORDER_A_ID,
+                PAID_ORDER_B_ID));
+        assertEquals(movementsBefore, jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.inventory_movements WHERE device_id IN (?, ?)",
+                Integer.class,
+                RECEIPT_DEVICE_A_ID,
+                RECEIPT_DEVICE_B_ID));
+        assertEquals("PAID", jdbcTemplate.queryForObject(
+                "SELECT status FROM sasms.sales_orders WHERE id = ?",
+                String.class,
+                PAID_ORDER_A_ID));
+        assertEquals("SOLD", jdbcTemplate.queryForObject(
+                "SELECT status FROM sasms.devices WHERE id = ?",
+                String.class,
+                RECEIPT_DEVICE_A_ID));
+    }
+
     private void assertUnauthorizedGet(String path, String token) throws Exception {
         mockMvc.perform(get(path).header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized())
@@ -805,22 +1009,82 @@ class Sprint1PostgreSqlIntegrationTest {
     private static void cleanupTestArtifacts(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("""
+                    UPDATE sasms.devices
+                    SET status = 'IN_STOCK', sold_order_id = NULL, sold_at = NULL
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000921',
+                        '11111111-1111-4111-8111-000000000922'
+                    );
+                    UPDATE sasms.sales_orders
+                    SET status = 'DRAFT', total_amount = 0, paid_at = NULL
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000901',
+                        '11111111-1111-4111-8111-000000000903'
+                    );
+                    DELETE FROM sasms.order_devices
+                    WHERE order_id IN (
+                        '11111111-1111-4111-8111-000000000901',
+                        '11111111-1111-4111-8111-000000000902',
+                        '11111111-1111-4111-8111-000000000903',
+                        '11111111-1111-4111-8111-000000000904'
+                    );
+                    DELETE FROM sasms.sales_order_items
+                    WHERE order_id IN (
+                        '11111111-1111-4111-8111-000000000901',
+                        '11111111-1111-4111-8111-000000000902',
+                        '11111111-1111-4111-8111-000000000903',
+                        '11111111-1111-4111-8111-000000000904'
+                    );
                     DELETE FROM sasms.inventory_import_batches
                     WHERE receipt_item_id IN ('11111111-1111-4111-8111-000000000504', '11111111-1111-4111-8111-000000000604');
                     DELETE FROM sasms.inventory_movements
                     WHERE warehouse_id IN ('11111111-1111-4111-8111-000000000211', '11111111-1111-4111-8111-000000000212');
                     DELETE FROM sasms.outbox_events
                     WHERE payload->>'warehouse_id' IN ('11111111-1111-4111-8111-000000000211', '11111111-1111-4111-8111-000000000212');
+                    DELETE FROM sasms.outbox_events
+                    WHERE aggregate_id IN (
+                        '11111111-1111-4111-8111-000000000901',
+                        '11111111-1111-4111-8111-000000000902',
+                        '11111111-1111-4111-8111-000000000903',
+                        '11111111-1111-4111-8111-000000000904'
+                    );
                     DELETE FROM sasms.devices
                     WHERE warehouse_id IN ('11111111-1111-4111-8111-000000000211', '11111111-1111-4111-8111-000000000212');
+                    DELETE FROM sasms.sales_orders
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000901',
+                        '11111111-1111-4111-8111-000000000902',
+                        '11111111-1111-4111-8111-000000000903',
+                        '11111111-1111-4111-8111-000000000904'
+                    );
                     DELETE FROM sasms.goods_receipt_items
-                    WHERE id IN ('11111111-1111-4111-8111-000000000504', '11111111-1111-4111-8111-000000000604');
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000504',
+                        '11111111-1111-4111-8111-000000000604',
+                        '11111111-1111-4111-8111-000000000957',
+                        '11111111-1111-4111-8111-000000000958'
+                    );
                     DELETE FROM sasms.goods_receipts
-                    WHERE id IN ('11111111-1111-4111-8111-000000000503', '11111111-1111-4111-8111-000000000603');
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000503',
+                        '11111111-1111-4111-8111-000000000603',
+                        '11111111-1111-4111-8111-000000000955',
+                        '11111111-1111-4111-8111-000000000956'
+                    );
                     DELETE FROM sasms.purchase_order_items
-                    WHERE id IN ('11111111-1111-4111-8111-000000000502', '11111111-1111-4111-8111-000000000602');
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000502',
+                        '11111111-1111-4111-8111-000000000602',
+                        '11111111-1111-4111-8111-000000000953',
+                        '11111111-1111-4111-8111-000000000954'
+                    );
                     DELETE FROM sasms.purchase_orders
-                    WHERE id IN ('11111111-1111-4111-8111-000000000501', '11111111-1111-4111-8111-000000000601');
+                    WHERE id IN (
+                        '11111111-1111-4111-8111-000000000501',
+                        '11111111-1111-4111-8111-000000000601',
+                        '11111111-1111-4111-8111-000000000951',
+                        '11111111-1111-4111-8111-000000000952'
+                    );
                     DELETE FROM sasms.suppliers
                     WHERE id = '11111111-1111-4111-8111-000000000301';
                     DELETE FROM sasms.audit_logs
@@ -905,19 +1169,48 @@ class Sprint1PostgreSqlIntegrationTest {
 
                     INSERT INTO sasms.purchase_orders(id, code, supplier_id, warehouse_id, status, created_by) VALUES
                         ('11111111-1111-4111-8111-000000000501', 'IT-PO-A', '11111111-1111-4111-8111-000000000301', '11111111-1111-4111-8111-000000000211', 'APPROVED', '11111111-1111-4111-8111-000000000101'),
-                        ('11111111-1111-4111-8111-000000000601', 'IT-PO-B', '11111111-1111-4111-8111-000000000301', '11111111-1111-4111-8111-000000000212', 'APPROVED', '11111111-1111-4111-8111-000000000101');
+                        ('11111111-1111-4111-8111-000000000601', 'IT-PO-B', '11111111-1111-4111-8111-000000000301', '11111111-1111-4111-8111-000000000212', 'APPROVED', '11111111-1111-4111-8111-000000000101'),
+                        ('11111111-1111-4111-8111-000000000951', 'IT-S2-RECEIPT-PO-A', '11111111-1111-4111-8111-000000000301', '11111111-1111-4111-8111-000000000211', 'APPROVED', '11111111-1111-4111-8111-000000000101'),
+                        ('11111111-1111-4111-8111-000000000952', 'IT-S2-RECEIPT-PO-B', '11111111-1111-4111-8111-000000000301', '11111111-1111-4111-8111-000000000212', 'APPROVED', '11111111-1111-4111-8111-000000000101');
 
                     INSERT INTO sasms.purchase_order_items(id, purchase_order_id, product_id, quantity, unit_cost) VALUES
                         ('11111111-1111-4111-8111-000000000502', '11111111-1111-4111-8111-000000000501', '11111111-1111-4111-8111-000000000401', 20, 10000000.00),
-                        ('11111111-1111-4111-8111-000000000602', '11111111-1111-4111-8111-000000000601', '11111111-1111-4111-8111-000000000401', 10, 10000000.00);
+                        ('11111111-1111-4111-8111-000000000602', '11111111-1111-4111-8111-000000000601', '11111111-1111-4111-8111-000000000401', 10, 10000000.00),
+                        ('11111111-1111-4111-8111-000000000953', '11111111-1111-4111-8111-000000000951', '11111111-1111-4111-8111-000000000401', 1, 10000000.00),
+                        ('11111111-1111-4111-8111-000000000954', '11111111-1111-4111-8111-000000000952', '11111111-1111-4111-8111-000000000401', 1, 10000000.00);
 
                     INSERT INTO sasms.goods_receipts(id, code, purchase_order_id, warehouse_id, status, received_by) VALUES
                         ('11111111-1111-4111-8111-000000000503', 'IT-GR-A', '11111111-1111-4111-8111-000000000501', '11111111-1111-4111-8111-000000000211', 'OPEN', '11111111-1111-4111-8111-000000000103'),
-                        ('11111111-1111-4111-8111-000000000603', 'IT-GR-B', '11111111-1111-4111-8111-000000000601', '11111111-1111-4111-8111-000000000212', 'OPEN', '11111111-1111-4111-8111-000000000101');
+                        ('11111111-1111-4111-8111-000000000603', 'IT-GR-B', '11111111-1111-4111-8111-000000000601', '11111111-1111-4111-8111-000000000212', 'OPEN', '11111111-1111-4111-8111-000000000101'),
+                        ('11111111-1111-4111-8111-000000000955', 'IT-S2-RECEIPT-GR-A', '11111111-1111-4111-8111-000000000951', '11111111-1111-4111-8111-000000000211', 'CLOSED', '11111111-1111-4111-8111-000000000101'),
+                        ('11111111-1111-4111-8111-000000000956', 'IT-S2-RECEIPT-GR-B', '11111111-1111-4111-8111-000000000952', '11111111-1111-4111-8111-000000000212', 'CLOSED', '11111111-1111-4111-8111-000000000101');
 
                     INSERT INTO sasms.goods_receipt_items(id, receipt_id, purchase_order_id, purchase_order_item_id, product_id, quantity) VALUES
                         ('11111111-1111-4111-8111-000000000504', '11111111-1111-4111-8111-000000000503', '11111111-1111-4111-8111-000000000501', '11111111-1111-4111-8111-000000000502', '11111111-1111-4111-8111-000000000401', 20),
-                        ('11111111-1111-4111-8111-000000000604', '11111111-1111-4111-8111-000000000603', '11111111-1111-4111-8111-000000000601', '11111111-1111-4111-8111-000000000602', '11111111-1111-4111-8111-000000000401', 10);
+                        ('11111111-1111-4111-8111-000000000604', '11111111-1111-4111-8111-000000000603', '11111111-1111-4111-8111-000000000601', '11111111-1111-4111-8111-000000000602', '11111111-1111-4111-8111-000000000401', 10),
+                        ('11111111-1111-4111-8111-000000000957', '11111111-1111-4111-8111-000000000955', '11111111-1111-4111-8111-000000000951', '11111111-1111-4111-8111-000000000953', '11111111-1111-4111-8111-000000000401', 1),
+                        ('11111111-1111-4111-8111-000000000958', '11111111-1111-4111-8111-000000000956', '11111111-1111-4111-8111-000000000952', '11111111-1111-4111-8111-000000000954', '11111111-1111-4111-8111-000000000401', 1);
+
+                    INSERT INTO sasms.sales_orders(id, code, idempotency_key, store_id, warehouse_id, channel, status, total_amount, created_by, paid_at) VALUES
+                        ('11111111-1111-4111-8111-000000000901', 'IT-S2-PAID-A', '11111111-1111-4111-8111-000000000931', '11111111-1111-4111-8111-000000000201', '11111111-1111-4111-8111-000000000211', 'POS', 'DRAFT', 0, '11111111-1111-4111-8111-000000000104', NULL),
+                        ('11111111-1111-4111-8111-000000000902', 'IT-S2-DRAFT-A', '11111111-1111-4111-8111-000000000932', '11111111-1111-4111-8111-000000000201', '11111111-1111-4111-8111-000000000211', 'POS', 'DRAFT', 0, '11111111-1111-4111-8111-000000000104', NULL),
+                        ('11111111-1111-4111-8111-000000000903', 'IT-S2-PAID-B', '11111111-1111-4111-8111-000000000933', '11111111-1111-4111-8111-000000000202', '11111111-1111-4111-8111-000000000212', 'POS', 'DRAFT', 0, '11111111-1111-4111-8111-000000000101', NULL);
+
+                    INSERT INTO sasms.sales_order_items(id, order_id, product_id, quantity, unit_price) VALUES
+                        ('11111111-1111-4111-8111-000000000911', '11111111-1111-4111-8111-000000000901', '11111111-1111-4111-8111-000000000401', 1, 15990000.00),
+                        ('11111111-1111-4111-8111-000000000913', '11111111-1111-4111-8111-000000000903', '11111111-1111-4111-8111-000000000401', 1, 15990000.00);
+
+                    INSERT INTO sasms.devices(id, product_id, receipt_item_id, warehouse_id, serial, status, sold_order_id, sold_at) VALUES
+                        ('11111111-1111-4111-8111-000000000921', '11111111-1111-4111-8111-000000000401', '11111111-1111-4111-8111-000000000957', '11111111-1111-4111-8111-000000000211', 'IT-S2-RECEIPT-A-0001', 'SOLD', '11111111-1111-4111-8111-000000000901', TIMESTAMPTZ '2026-11-10 10:00:00+07'),
+                        ('11111111-1111-4111-8111-000000000922', '11111111-1111-4111-8111-000000000401', '11111111-1111-4111-8111-000000000958', '11111111-1111-4111-8111-000000000212', 'IT-S2-RECEIPT-B-0002', 'SOLD', '11111111-1111-4111-8111-000000000903', TIMESTAMPTZ '2026-11-10 10:05:00+07');
+
+                    INSERT INTO sasms.order_devices(id, order_item_id, order_id, product_id, device_id) VALUES
+                        ('11111111-1111-4111-8111-000000000941', '11111111-1111-4111-8111-000000000911', '11111111-1111-4111-8111-000000000901', '11111111-1111-4111-8111-000000000401', '11111111-1111-4111-8111-000000000921'),
+                        ('11111111-1111-4111-8111-000000000943', '11111111-1111-4111-8111-000000000913', '11111111-1111-4111-8111-000000000903', '11111111-1111-4111-8111-000000000401', '11111111-1111-4111-8111-000000000922');
+
+                    UPDATE sasms.sales_orders
+                    SET status = 'PAID', total_amount = 15990000.00, paid_at = TIMESTAMPTZ '2026-11-10 10:10:00+07'
+                    WHERE id IN ('11111111-1111-4111-8111-000000000901', '11111111-1111-4111-8111-000000000903');
                     """);
         }
 
@@ -938,6 +1231,24 @@ class Sprint1PostgreSqlIntegrationTest {
         String value = System.getenv(name);
         assumeTrue(value != null && !value.isBlank(), () -> name + " is required when Sprint 1 PG IT is enabled");
         return value;
+    }
+
+    private static void restoreReservedStockFixture() throws SQLException {
+        String jdbcUrl = requiredEnv(URL_ENV);
+        String adminUser = requiredEnv(ADMIN_USERNAME_ENV);
+        String adminPassword = requiredEnv(ADMIN_PASSWORD_ENV);
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, adminUser, adminPassword);
+                PreparedStatement device = conn.prepareStatement(
+                        "UPDATE sasms.devices SET status = 'IN_STOCK', reserved_order_id = NULL WHERE id = ?");
+                PreparedStatement order = conn.prepareStatement(
+                        "UPDATE sasms.sales_orders SET status = 'DRAFT', total_amount = 0 WHERE id = ?")) {
+            conn.setAutoCommit(false);
+            device.setObject(1, receivedStoreADevice1Id);
+            device.executeUpdate();
+            order.setObject(1, STOCK_RESERVED_ORDER_ID);
+            order.executeUpdate();
+            conn.commit();
+        }
     }
 
     private static void assertSafeIsolatedTarget(String jdbcUrl, String appUser) {
