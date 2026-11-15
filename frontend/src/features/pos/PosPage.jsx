@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { classifyPosError, getPosStatus, getReceipt } from './posApi.js'
+import CrossSellWidget from './CrossSellWidget.jsx'
 import StatusCard from '../../shared/components/StatusCard.jsx'
 
 function shortIdentifier(value) {
@@ -14,7 +15,9 @@ function formatMinor(value) {
     .format(value)
 }
 
-export default function PosPage({ accessToken = null }) {
+// Store/warehouse/cart must come from the real authenticated checkout flow.
+// App.jsx does not yet supply these; the AI widget remains read-only and idle until integrated.
+export default function PosPage({ accessToken = null, storeId = null, warehouseId = null, cartItems = [], onReviewSuggestion = null }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [orderId, setOrderId] = useState('')
@@ -67,6 +70,14 @@ export default function PosPage({ accessToken = null }) {
       <div className="pos-scope-note">
         Checkout và xác nhận thanh toán đang chờ hợp đồng Sprint 2. Màn hình này chỉ đọc hóa đơn của đơn PAID và mở hộp thoại in của trình duyệt.
       </div>
+
+      <CrossSellWidget
+        accessToken={accessToken}
+        storeId={storeId}
+        warehouseId={warehouseId}
+        cartItems={cartItems}
+        onReviewSuggestion={onReviewSuggestion}
+      />
 
       <form className="receipt-form" onSubmit={loadReceipt}>
         <label htmlFor="receipt-order-id">
