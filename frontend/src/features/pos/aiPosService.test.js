@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildCrossSellPayload, reconcileSuggestion, classifyCrossSellError } from './aiPosContract.js'
+import {
+  buildCrossSellPayload,
+  reconcileSuggestion,
+  classifyCrossSellError,
+  isCrossSellContextReady,
+} from './aiPosContract.js'
 import { fetchVerifiedCrossSell } from './aiPosService.js'
 
 const store = '00000000-0000-4000-8000-000000000101'
@@ -35,6 +40,12 @@ test('builds the new Vu_AI items and the matching legacy sku_ids', () => {
   assert.equal(payload.limit, 4)
 })
 
+test('accepts a complete JWT, store, warehouse and cart context only', () => {
+  assert.equal(isCrossSellContextReady({ accessToken: 'jwt', storeId: store, warehouseId: warehouse, cartItems }), true)
+  assert.equal(isCrossSellContextReady({ accessToken: '   ', storeId: store, warehouseId: warehouse, cartItems }), false)
+  assert.equal(isCrossSellContextReady({ accessToken: 'jwt', storeId: store, warehouseId: warehouse, cartItems: [{ sku: 'PHONE-IP16-128' }] }), false)
+})
+
 test('rejects invalid store, warehouse, items and limits before a request', () => {
   assert.throws(() => buildCrossSellPayload({ storeId: 'ST1', warehouseId: warehouse, cartItems }), /INVALID/)
   assert.throws(() => buildCrossSellPayload({ storeId: store, warehouseId: warehouse, cartItems: [] }), /INVALID/)
@@ -55,7 +66,20 @@ test('renders only authoritative Catalog name/price and current warehouse stock'
   assert.equal(response.suggestions[0].listPrice, 450000)
   assert.equal(response.suggestions[0].availableQuantity, 5)
   assert.equal(response.suggestions[0].requiresServerValidation, true)
+  assert.equal(client.calls[0][0], '/v1/ai/cross-sell')
+  assert.equal(client.calls[0][1].store_id, store)
+  assert.equal(client.calls[0][1].warehouse_id, warehouse)
   assert.equal(client.calls[0][2].headers.Authorization, 'Bearer test-token')
+  assert.equal(client.calls[1][0], `/v1/products/${accessoryId}`)
+  assert.equal(client.calls[2][0], '/v1/inventory/stock')
+  assert.deepEqual(client.calls[2][1].params, { warehouse_id: warehouse, sku: candidate.sku, limit: 100, offset: 0 })
+})
+
+test('fails closed for the legacy main AI response without product_id', async () => {
+  const client = clientWith({ suggestions: [{ sku_id: candidate.sku, reason: candidate.reason }] })
+  const response = await fetchVerifiedCrossSell({ accessToken: 'test-token', storeId: store, warehouseId: warehouse, cartItems }, client)
+  assert.deepEqual(response.suggestions, [])
+  assert.equal(client.calls.length, 1)
 })
 
 test('fails closed for fabricated AI UUID or SKU mismatch', async () => {

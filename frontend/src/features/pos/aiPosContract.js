@@ -5,6 +5,16 @@ export function isUuid(value) {
   return typeof value === 'string' && UUID_PATTERN.test(value)
 }
 
+export function isCrossSellContextReady({ accessToken, storeId, warehouseId, cartItems }) {
+  return typeof accessToken === 'string' && accessToken.trim().length > 0 &&
+    isUuid(storeId) && isUuid(warehouseId) &&
+    Array.isArray(cartItems) && cartItems.length > 0 && cartItems.length <= 50 &&
+    cartItems.every((item) => {
+      const productId = item?.productId ?? item?.product_id
+      return isUuid(productId) && typeof item?.sku === 'string' && item.sku.trim().length > 0
+    })
+}
+
 export function buildCrossSellPayload({ storeId, warehouseId, cartItems, limit = 4 }) {
   if (!isUuid(storeId) || !isUuid(warehouseId)) {
     throw new Error('INVALID_STORE_OR_WAREHOUSE')

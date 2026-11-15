@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getVerifiedCrossSell } from './aiPosApi.js'
 import './aiPos.css'
-import { classifyCrossSellError, isUuid } from './aiPosContract.js'
+import { classifyCrossSellError, isCrossSellContextReady } from './aiPosContract.js'
 
 const vnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
 
@@ -9,8 +9,7 @@ export default function CrossSellWidget({ accessToken, storeId, warehouseId, car
   const [state, setState] = useState({ status: 'idle', suggestions: [], message: '' })
   // The POS cart is not yet wired to the App/login. Recompute only when its meaningful data changes.
   const cartKey = JSON.stringify(Array.isArray(cartItems) ? cartItems.map((item) => [item.productId ?? item.product_id, item.sku]) : [])
-  const ready = typeof accessToken === 'string' && accessToken.length > 0 &&
-    isUuid(storeId) && isUuid(warehouseId) && Array.isArray(cartItems) && cartItems.length > 0
+  const ready = isCrossSellContextReady({ accessToken, storeId, warehouseId, cartItems })
 
   useEffect(() => {
     if (!ready) {
@@ -40,6 +39,9 @@ export default function CrossSellWidget({ accessToken, storeId, warehouseId, car
       controller.abort()
     }
   }, [ready, accessToken, storeId, warehouseId, cartKey])
+
+  // D52 specifies that an authoritative empty result must not occupy POS screen space.
+  if (state.status === 'success' && state.suggestions.length === 0) return null
 
   return (
     <div className="cross-sell" aria-label="Gợi ý AI bán kèm">
