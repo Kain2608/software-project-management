@@ -1,0 +1,47 @@
+/* S2-09: read-only, DB-verified cross-selling view. */
+.cross-sell {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #d7e5f3;
+  background: #f8fbff;
+  border-radius: 14px;
+}
+.cross-sell__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cross-sell__heading h3 { margin: 6px 0 0; font-size: 20px; }
+.cross-sell__tag {
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #e4eefb;
+  color: #224f7e;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cross-sell__status { margin: 14px 0; color: #4a5870; }
+.cross-sell__list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 10px; }
+.cross-sell__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #dae2ec;
+  background: white;
+}
+.cross-sell__item > div { display: grid; gap: 5px; min-width: 0; }
+.cross-sell__item small { color: #64748b; }
+.cross-sell__item span { font-weight: 700; color: #1f425f; }
+.cross-sell__item button { background: #215f99; color: white; white-space: nowrap; }
+.cross-sell__item button:disabled { cursor: not-allowed; opacity: .55; }
+.cross-sell > small { display: block; margin-top: 12px; color: #556274; }
+@media (max-width: 760px) {
+  .cross-sell__item { flex-direction: column; align-items: stretch; }
+  .cross-sell__item button { width: 100%; }
+}
+@media print { .cross-sell { display: none; } }
