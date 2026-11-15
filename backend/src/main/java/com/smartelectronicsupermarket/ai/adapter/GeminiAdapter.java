@@ -1,7 +1,9 @@
 package com.smartelectronicsupermarket.ai.adapter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,23 +34,71 @@ public class GeminiAdapter implements LlmAdapter {
         for (String sku : skuIds) {
             String upper = sku.toUpperCase();
             if (upper.contains("IP") || upper.contains("PHONE") || upper.contains("SS") || upper.contains("SMART")) {
-                items.add(new CrossSellItem("ACC-SCR-GLASS", "Kính cường lực 9H bảo vệ màn hình cảm ứng"));
-                items.add(new CrossSellItem("ACC-CHG-20W", "Củ sạc Type-C chuẩn sạc nhanh Power Delivery"));
-                items.add(new CrossSellItem("AUD-TWS-PRO", "Tai nghe không dây Bluetooth TWS chống ồn"));
-            } else if (upper.contains("LAP") || upper.contains("MAC") || upper.contains("DELL") || upper.contains("NB")) {
-                items.add(new CrossSellItem("ACC-BAG-PREMIUM", "Balo laptop cao cấp chống sốc đa ngăn"));
-                items.add(new CrossSellItem("ACC-MOU-SILENT", "Chuột không dây công thái học tiết kiệm pin"));
-                items.add(new CrossSellItem("SRV-OFFICE-365", "Bản quyền Microsoft 365 Personal chính hãng"));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("ACC-SCR-GLASS".getBytes()).toString(),
+                        "ACC-SCR-GLASS",
+                        "Kính cường lực 9H bảo vệ màn hình cảm ứng",
+                        new BigDecimal("220000.00"),
+                        45,
+                        false,
+                        "Kính cường lực 9H bảo vệ chống trầy xước va đập tối ưu"
+                ));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("ACC-CHG-20W".getBytes()).toString(),
+                        "ACC-CHG-20W",
+                        "Củ sạc Type-C chuẩn sạc nhanh Power Delivery",
+                        new BigDecimal("590000.00"),
+                        28,
+                        false,
+                        "Củ sạc Type-C chuẩn sạc nhanh Power Delivery 20W"
+                ));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("AUD-TWS-PRO".getBytes()).toString(),
+                        "AUD-TWS-PRO",
+                        "Tai nghe không dây Bluetooth TWS chống ồn",
+                        new BigDecimal("1890000.00"),
+                        8,
+                        true, // Tai nghe TWS quản lý theo Serial
+                        "Tai nghe không dây Bluetooth TWS chống ồn chủ động ANC"
+                ));
             } else if (upper.contains("TV") || upper.contains("OLED") || upper.contains("QLED")) {
-                items.add(new CrossSellItem("ACC-MNT-TILT", "Giá treo tivi thông minh điều chỉnh góc nghiêng"));
-                items.add(new CrossSellItem("ACC-CBL-HDMI21", "Cáp HDMI 2.1 siêu tốc hỗ trợ 4K 120Hz"));
-                items.add(new CrossSellItem("ACC-SOC-SURGE", "Ổ cắm điện đa năng chống sét lan truyền"));
-            } else if (upper.contains("AC") || upper.contains("AIR") || upper.contains("COOL")) {
-                items.add(new CrossSellItem("ACC-CB-EARTH", "Aptomat chống giật chuyên dụng cho máy điều hòa"));
-                items.add(new CrossSellItem("SRV-CLN-1Y", "Gói bảo dưỡng và nạp gas điều hòa miễn phí 1 năm"));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("ACC-MNT-TILT".getBytes()).toString(),
+                        "ACC-MNT-TILT",
+                        "Giá treo tivi thông minh điều chỉnh góc nghiêng",
+                        new BigDecimal("690000.00"),
+                        18,
+                        false,
+                        "Giá treo tivi thông minh điều chỉnh góc nghiêng chống chói"
+                ));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("ACC-CBL-HDMI21".getBytes()).toString(),
+                        "ACC-CBL-HDMI21",
+                        "Cáp HDMI 2.1 siêu tốc hỗ trợ 4K 120Hz",
+                        new BigDecimal("420000.00"),
+                        30,
+                        false,
+                        "Cáp HDMI 2.1 siêu tốc hỗ trợ 4K 120Hz mượt mà"
+                ));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("ACC-SOC-SURGE".getBytes()).toString(),
+                        "ACC-SOC-SURGE",
+                        "Ổ cắm điện đa năng chống sét lan truyền",
+                        new BigDecimal("350000.00"),
+                        25,
+                        false,
+                        "Ổ cắm điện đa năng chống sét lan truyền bảo vệ bo mạch"
+                ));
             } else {
-                items.add(new CrossSellItem("ACC-GEN-ESSENTIAL", "Phụ kiện thiết yếu tương thích"));
-                items.add(new CrossSellItem("SRV-GEN-SUPPORT", "Gói hỗ trợ kỹ thuật tận nơi"));
+                items.add(new CrossSellItem(
+                        UUID.nameUUIDFromBytes("ACC-GEN-ESSENTIAL".getBytes()).toString(),
+                        "ACC-GEN-ESSENTIAL",
+                        "Phụ kiện thiết yếu tương thích",
+                        new BigDecimal("190000.00"),
+                        40,
+                        false,
+                        "Phụ kiện thiết yếu tương thích chuẩn SASMS"
+                ));
             }
         }
 

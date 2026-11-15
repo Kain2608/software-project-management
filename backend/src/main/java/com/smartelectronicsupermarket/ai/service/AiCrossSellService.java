@@ -45,7 +45,7 @@ public class AiCrossSellService {
 
     public CrossSellResult getCrossSellRecommendations(CrossSellRequest request) {
         long startTime = System.currentTimeMillis();
-        List<String> skuIds = request.skuIds();
+        List<String> skuIds = request.getEffectiveSkuIds();
         String storeId = request.storeId();
 
         // 1. Build standardized Cache Key per D55
