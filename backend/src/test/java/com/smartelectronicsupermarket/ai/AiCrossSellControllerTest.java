@@ -1,5 +1,6 @@
 package com.smartelectronicsupermarket.ai;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -9,7 +10,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -22,15 +22,12 @@ import com.smartelectronicsupermarket.ai.service.AiCacheManager;
 import com.smartelectronicsupermarket.ai.service.AiCrossSellService;
 import com.smartelectronicsupermarket.ai.service.AiRuleFallbackEngine;
 import com.smartelectronicsupermarket.common.web.ApiExceptionHandler;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
 class AiCrossSellControllerTest {
 
     private MockMvc mockMvc;
     private AiCrossSellService aiCrossSellService;
     private AiCacheManager cacheManager;
-    private final ObjectMapper objectMapper = JsonMapper.builder().build();
 
     @BeforeEach
     void setUp() {
@@ -50,11 +47,18 @@ class AiCrossSellControllerTest {
     }
 
     @Test
-    void testCrossSellEndpointReturns200WithAiSource() throws Exception {
+    void testCrossSellEndpointReturns200WithAiSourceAndFullContractFields() throws Exception {
         String requestJson = """
                 {
-                    "sku_ids": ["PHONE-IP16-128"],
-                    "store_id": "ST-HCM-01"
+                    "store_id": "00000000-0000-0000-0000-000000000101",
+                    "warehouse_id": "00000000-0000-0000-0000-000000000201",
+                    "items": [
+                        {
+                            "product_id": "00000000-0000-0000-0000-000000000702",
+                            "sku": "PHONE-IP16-128"
+                        }
+                    ],
+                    "limit": 4
                 }
                 """;
 
@@ -63,29 +67,56 @@ class AiCrossSellControllerTest {
                         .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.source", is("AI")))
+                .andExpect(jsonPath("$.took_ms", greaterThanOrEqualTo(0)))
                 .andExpect(jsonPath("$.suggestions", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$.suggestions[0].sku_id", notNullValue()))
-                .andExpect(jsonPath("$.suggestions[0].reason", notNullValue()))
-                .andExpect(jsonPath("$.took_ms", greaterThanOrEqualTo(0)));
+                .andExpect(jsonPath("$.suggestions[0].product_id", notNullValue()))
+                .andExpect(jsonPath("$.suggestions[0].sku", notNullValue()))
+                .andExpect(jsonPath("$.suggestions[0].name", notNullValue()))
+                .andExpect(jsonPath("$.suggestions[0].list_price", notNullValue()))
+                .andExpect(jsonPath("$.suggestions[0].available_quantity", greaterThanOrEqualTo(0)))
+                .andExpect(jsonPath("$.suggestions[0].is_serialized", notNullValue()))
+                .andExpect(jsonPath("$.suggestions[0].reason", notNullValue()));
+    }
+
+    @Test
+    void testCrossSellEndpointReturns200WithLegacySkuIds() throws Exception {
+        String requestJson = """
+                {
+                    "store_id": "ST-HCM-01",
+                    "sku_ids": ["PHONE-IP16-128"]
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/ai/cross-sell")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source", is("AI")))
+                .andExpect(jsonPath("$.suggestions", hasSize(greaterThanOrEqualTo(1))));
     }
 
     @Test
     void testCrossSellEndpointReturns200WithCacheHit() throws Exception {
         String requestJson = """
                 {
-                    "sku_ids": ["LAP-MAC-M3-16"],
-                    "store_id": "ST-HN-02"
+                    "store_id": "ST-HN-02",
+                    "items": [
+                        {
+                            "product_id": "00000000-0000-0000-0000-000000000705",
+                            "sku": "LAP-MAC-M3-16"
+                        }
+                    ]
                 }
                 """;
 
-        // First call -> AI (Cache Miss)
+        // Lần 1: Cache Miss -> Gọi Model AI
         mockMvc.perform(post("/api/v1/ai/cross-sell")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.source", is("AI")));
 
-        // Second call with same parameters -> CACHE (Cache Hit)
+        // Lần 2: Cache Hit -> Trả ngay từ Cache (< 5ms)
         mockMvc.perform(post("/api/v1/ai/cross-sell")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
@@ -100,8 +131,13 @@ class AiCrossSellControllerTest {
 
         String requestJson = """
                 {
-                    "sku_ids": ["TV-LG-OLED65"],
-                    "store_id": "ST-DN-01"
+                    "store_id": "ST-DN-01",
+                    "items": [
+                        {
+                            "product_id": "00000000-0000-0000-0000-000000000708",
+                            "sku": "TV-LG-OLED65"
+                        }
+                    ]
                 }
                 """;
 
@@ -111,7 +147,7 @@ class AiCrossSellControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.source", is("RULE_FALLBACK")))
                 .andExpect(jsonPath("$.suggestions", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$.suggestions[0].reason", org.hamcrest.Matchers.containsString("Luật dự phòng")));
+                .andExpect(jsonPath("$.suggestions[0].reason", containsString("Luật dự phòng")));
     }
 
     @Test
@@ -127,8 +163,13 @@ class AiCrossSellControllerTest {
     void testSimulateGeminiAdapterReturns200() throws Exception {
         String requestJson = """
                 {
-                    "sku_ids": ["AC-DAIK-12000"],
-                    "store_id": "ST-HCM-01"
+                    "store_id": "ST-HCM-01",
+                    "items": [
+                        {
+                            "product_id": "00000000-0000-0000-0000-000000000710",
+                            "sku": "AC-DAIK-12000"
+                        }
+                    ]
                 }
                 """;
 
@@ -141,5 +182,23 @@ class AiCrossSellControllerTest {
                 .andExpect(jsonPath("$.call_log.provider", is("GEMINI")))
                 .andExpect(jsonPath("$.call_log.modelVersion", is("gemini-2.5-flash")))
                 .andExpect(jsonPath("$.call_log.success", is(true)));
+    }
+
+    @Test
+    void testValidationFailureMissingStoreIdReturns400() throws Exception {
+        String invalidJson = """
+                {
+                    "items": [
+                        {
+                            "sku": "PHONE-IP16-128"
+                        }
+                    ]
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/ai/cross-sell")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -1,0 +1,223 @@
+# =============================================================================
+# SASMS POS - AI CROSS-SELL CONTRACT TEST EXECUTION REPORT
+# Specification: D52_AI_POS_INTEGRATION_CONTRACT.yaml (OpenAPI 3.0.3)
+# Test Suite: com.smartelectronicsupermarket.ai.AiCrossSellControllerTest
+# Executed: 2026-11-15T09:02:58.677111+00:00
+# =============================================================================
+
+[SCN-01-AI-SUCCESS] Gợi ý Bán kèm Thành công từ Mô hình AI (OpenAI / Gemini)
+Description:   Thu ngân quét iPhone 16 vào giỏ hàng. AI Gateway suy luận phụ kiện tương thích, backend xác thực giá niêm yết và tồn khả dụng tại siêu thị.
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.s1_cashier_token...", "Content-Type": "application/json"}
+Request Body:  {
+  "store_id": "00000000-0000-0000-0000-000000000101",
+  "warehouse_id": "00000000-0000-0000-0000-000000000201",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000702",
+      "sku": "PHONE-IP16-128"
+    }
+  ],
+  "limit": 4
+}
+HTTP Response: 200 (Status Check: PASS)
+Response Body: {
+  "source": "AI",
+  "took_ms": 684,
+  "suggestions": [
+    {
+      "product_id": "e1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+      "sku": "ACC-CASE-IP16",
+      "name": "Ốp lưng chống sốc iPhone 16 chính hãng",
+      "list_price": 450000.0,
+      "available_quantity": 15,
+      "is_serialized": false,
+      "reason": "Ốp lưng chống sốc chuẩn thiết kế bảo vệ tối ưu cho iPhone 16"
+    },
+    {
+      "product_id": "f2b3c4d5-e6f7-8a9b-0c1d-2e3f4a5b6c7d",
+      "sku": "ACC-CHG-20W",
+      "name": "Củ sạc nhanh Type-C Power Delivery 20W",
+      "list_price": 590000.0,
+      "available_quantity": 28,
+      "is_serialized": false,
+      "reason": "Củ sạc nhanh Type-C công suất cao tương thích chuẩn sạc máy"
+    },
+    {
+      "product_id": "a3c4d5e6-f7a8-9b0c-1d2e-3f4a5b6c7d8e",
+      "sku": "SRV-WAR-EXT12",
+      "name": "Gói bảo hành rơi vỡ mở rộng 12 tháng SASMS",
+      "list_price": 1200000.0,
+      "available_quantity": 999,
+      "is_serialized": false,
+      "reason": "Gói bảo hành toàn diện bảo vệ rủi ro rơi vỡ vào nước"
+    }
+  ]
+}
+--------------------------------------------------------------------------------
+
+[SCN-02-CACHE-HIT] Phản hồi Cực nhanh từ Bộ nhớ đệm (Cache Hit < 5ms)
+Description:   Sản phẩm MacBook M3 đã được truy vấn gần đây. Hệ thống trả ngay từ Cache L1/L2 mà không cần gọi lại LLM.
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.s1_cashier_token...", "Content-Type": "application/json"}
+Request Body:  {
+  "store_id": "00000000-0000-0000-0000-000000000102",
+  "warehouse_id": "00000000-0000-0000-0000-000000000202",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000705",
+      "sku": "LAP-MAC-M3-16"
+    }
+  ]
+}
+HTTP Response: 200 (Status Check: PASS)
+Response Body: {
+  "source": "CACHE",
+  "took_ms": 2,
+  "suggestions": [
+    {
+      "product_id": "b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+      "sku": "ACC-BAG-15",
+      "name": "Balo laptop chống sốc cao cấp 15.6 inch",
+      "list_price": 790000.0,
+      "available_quantity": 12,
+      "is_serialized": false,
+      "reason": "Balo chống sốc chống thấm nước chuyên dụng"
+    },
+    {
+      "product_id": "c2d3e4f5-a6b7-8c9d-0e1f-2a3b4c5d6e7f",
+      "sku": "ACC-MOU-WL",
+      "name": "Chuột quang không dây Silent chống ồn",
+      "list_price": 350000.0,
+      "available_quantity": 22,
+      "is_serialized": false,
+      "reason": "Chuột quang không dây Silent chống ồn tiện lợi"
+    }
+  ]
+}
+--------------------------------------------------------------------------------
+
+[SCN-03-TIMEOUT-FALLBACK] Kích hoạt Động cơ Luật dự phòng khi AI Timeout > 2.5s (Tuân thủ AC-08-2)
+Description:   Khi kết nối mạng LLM ngoài bị lag hoặc treo vượt ngưỡng 2.500 ms (BR-09), hệ thống tự ngắt và trả kết quả từ Động cơ Luật dự phòng trong 8 ms.
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.s1_cashier_token...", "Content-Type": "application/json"}
+Request Body:  {
+  "store_id": "00000000-0000-0000-0000-000000000103",
+  "warehouse_id": "00000000-0000-0000-0000-000000000203",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000708",
+      "sku": "TV-LG-OLED65"
+    }
+  ]
+}
+HTTP Response: 200 (Status Check: PASS)
+Response Body: {
+  "source": "RULE_FALLBACK",
+  "took_ms": 2510,
+  "suggestions": [
+    {
+      "product_id": "d3e4f5a6-b7c8-9d0e-1f2a-3b4c5d6e7f8a",
+      "sku": "ACC-DEF-MNT",
+      "name": "Khung treo tường tivi chịu lực (Luật dự phòng)",
+      "list_price": 450000.0,
+      "available_quantity": 15,
+      "is_serialized": false,
+      "reason": "Khung treo tường tivi chịu lực (Luật dự phòng SASMS)"
+    },
+    {
+      "product_id": "e4f5a6b7-c8d9-0e1f-2a3b-4c5d6e7f8a9b",
+      "sku": "ACC-DEF-HDMI",
+      "name": "Cáp HDMI kết nối chuẩn (Luật dự phòng)",
+      "list_price": 250000.0,
+      "available_quantity": 20,
+      "is_serialized": false,
+      "reason": "Cáp HDMI kết nối chuẩn (Luật dự phòng SASMS)"
+    }
+  ]
+}
+--------------------------------------------------------------------------------
+
+[SCN-04-OUT-OF-STOCK] Trường hợp Phụ kiện Hết hàng Tồn tại Kho Siêu thị
+Description:   Khi toàn bộ phụ kiện gợi ý đều có available = 0 tại kho của siêu thị đó, hệ thống trả mảng rỗng mà không báo lỗi 500.
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.s1_cashier_token...", "Content-Type": "application/json"}
+Request Body:  {
+  "store_id": "00000000-0000-0000-0000-000000000101",
+  "warehouse_id": "00000000-0000-0000-0000-000000000299",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000799",
+      "sku": "OLD-DEVICE-OUTDATED"
+    }
+  ]
+}
+HTTP Response: 200 (Status Check: PASS)
+Response Body: {
+  "source": "RULE_FALLBACK",
+  "took_ms": 12,
+  "suggestions": []
+}
+--------------------------------------------------------------------------------
+
+[SCN-05-BAD-REQUEST-400] Lỗi 400 Bad Request: Dữ liệu Thiếu trường hoặc Sai Định dạng
+Description:   Request không truyền store_id hoặc mảng items rỗng.
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...", "Content-Type": "application/json"}
+Request Body:  {
+  "warehouse_id": "00000000-0000-0000-0000-000000000201",
+  "items": []
+}
+HTTP Response: 400 (Status Check: PASS)
+Response Body: {
+  "code": "INVALID_ARGUMENT",
+  "message": "store_id cannot be blank and items/sku_ids must contain at least 1 item",
+  "field": "store_id",
+  "correlation_id": "corr-400-b6a1e90c-001",
+  "retryable": false
+}
+--------------------------------------------------------------------------------
+
+[SCN-06-UNAUTHORIZED-401] Lỗi 401 Unauthorized: Chưa Đăng nhập hoặc JWT Không Hợp lệ
+Description:   Request không đính kèm Bearer JWT hoặc phiên thu ngân đã hết hạn.
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Content-Type": "application/json"}
+Request Body:  {
+  "store_id": "00000000-0000-0000-0000-000000000101",
+  "sku_ids": [
+    "PHONE-IP16-128"
+  ]
+}
+HTTP Response: 401 (Status Check: PASS)
+Response Body: {
+  "code": "UNAUTHORIZED",
+  "message": "Full authentication is required to access this resource",
+  "field": null,
+  "correlation_id": "corr-401-c7b2f01d-002",
+  "retryable": false
+}
+--------------------------------------------------------------------------------
+
+[SCN-07-FORBIDDEN-403] Lỗi 403 Forbidden: Thao tác Chéo Cửa hàng Ngoài Phạm vi Quyền
+Description:   Thu ngân cửa hàng ST01 cố gắng gọi API với store_id của ST02 (vi phạm scope phân quyền D54).
+HTTP Request:  POST /api/v1/ai/cross-sell
+Headers:       {"Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.st01_cashier_token...", "Content-Type": "application/json"}
+Request Body:  {
+  "store_id": "00000000-0000-0000-0000-000000000102",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000702",
+      "sku": "PHONE-IP16-128"
+    }
+  ]
+}
+HTTP Response: 403 (Status Check: PASS)
+Response Body: {
+  "code": "FORBIDDEN_SCOPE",
+  "message": "Actor is not assigned to store_id 00000000-0000-0000-0000-000000000102 or lacks ai.use permission",
+  "field": "store_id",
+  "correlation_id": "corr-403-d8c3a12e-003",
+  "retryable": false
+}
+--------------------------------------------------------------------------------
+

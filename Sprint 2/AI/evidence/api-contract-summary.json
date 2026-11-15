@@ -1,0 +1,33 @@
+{
+  "contract_metadata": {
+    "title": "SASMS D52 AI Cross-sell POS Integration Contract",
+    "version": "2.0.0",
+    "openapi_spec": "Sprint 2/AI/D52_AI_POS_INTEGRATION_CONTRACT.yaml",
+    "executed_at": "2026-11-15T09:02:58.677111+00:00",
+    "sign_off": {
+      "ai_lead": "Nguyen Tien Vu",
+      "fullstack_lead": "Vu Duy Thai",
+      "architect_dba": "Tran Trung Kien",
+      "product_owner": "Nguyen Quang Huy"
+    }
+  },
+  "test_results": {
+    "total_scenarios_tested": 7,
+    "passed": 7,
+    "failed": 0,
+    "compliance_rate": "100%",
+    "maven_test_suite": "com.smartelectronicsupermarket.ai.AiCrossSellControllerTest",
+    "maven_tests_run": 7,
+    "maven_failures": 0,
+    "maven_errors": 0,
+    "maven_build_status": "SUCCESS"
+  },
+  "contract_compliance_checklist": {
+    "full_fields_in_response": true,
+    "authoritative_price_from_db": true,
+    "stock_verification_available_gt_zero": true,
+    "is_serialized_rule_applied": true,
+    "jwt_store_scope_enforced": true,
+    "timeout_2500ms_fallback_non_blocking": true
+  }
+}

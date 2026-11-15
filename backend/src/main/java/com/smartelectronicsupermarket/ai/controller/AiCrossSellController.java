@@ -37,7 +37,7 @@ public class AiCrossSellController {
     @PostMapping("/cross-sell")
     public ResponseEntity<CrossSellResult> getCrossSell(@RequestBody CrossSellRequest request) {
         log.info("[API] POST /api/v1/ai/cross-sell received request for store: {}, skus: {}",
-                request.storeId(), request.skuIds());
+                request.storeId(), request.getEffectiveSkuIds());
 
         CrossSellResult result = aiCrossSellService.getCrossSellRecommendations(request);
         return ResponseEntity.ok(result);
