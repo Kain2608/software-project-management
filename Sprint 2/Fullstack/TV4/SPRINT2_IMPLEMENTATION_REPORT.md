@@ -297,3 +297,95 @@ npm run build
 3. Thêm, đổi số lượng, xóa sản phẩm; xác nhận không thể vượt `sellable_count` đã đọc.
 4. Khi cart có dữ liệu và đủ context, kiểm tra widget AI nhận danh sách sản phẩm. Mọi đề xuất vẫn phải được Catalog/Stock xác minh lại.
 5. Không dùng demo này để tuyên bố order/payment/Serial/inventory mutation đã PASS.
+
+## 12. Cập nhật thực thi sau audit ngày 16/11/2026
+
+Phần này là trạng thái mới nhất và được ưu tiên khi có khác biệt với bằng chứng lịch sử ở các mục trước. Không có nội dung nào dưới đây là xác nhận nghiệm thu của QA hoặc PO.
+
+### 12.1 Phạm vi nhánh và bảo toàn D53
+
+- Bảy file giao diện D53 đã được sao lưu ngoài repository bằng bản sao nguyên file và patch trước khi commit.
+- Commit D53 local riêng: `4e16d8c feat(d53): refine POS QR and serial reference UI` trên nhánh `feat/tv4-d53-figma-ui`.
+- Nhánh cập nhật integration/evidence này được tạo trực tiếp từ `22a5b568df74f8841a0936773b683a457f3d02e5`, vì vậy không chứa commit D53 và không làm thay đổi Draft PR #23.
+- D53 chỉ thay shell điều hướng, bố cục và trạng thái placeholder. Không đổi URL API, JWT header, payload, checkout, payment hoặc business rule.
+
+### 12.2 Requirement → Code → Test → Evidence
+
+| Requirement | Code hiện có | Test mới nhất | Evidence và giới hạn |
+|---|---|---|---|
+| JWT → trusted actor | `SecurityConfiguration`, `JdbcActorIdentityResolver`, `TrustedActorAuthenticationToken` | Backend regression PASS | Có unit/integration cấu hình security; IdP production và login browser thật chưa chạy. |
+| Catalog search | `ProductCatalogController`, `ProductCatalogQueryService`, `PosCart` | Backend và frontend PASS | Frontend chỉ gọi khi có token và warehouse hợp lệ; `App.jsx` chưa cấp context production. |
+| Stock theo warehouse/store | `InventoryStockController`, `JdbcInventoryStockDataAccess`, `posCartApi.js` | Backend và frontend PASS | SQL kiểm `inventory.read` theo store. PostgreSQL không được chạy lại trong phiên này. |
+| Cart POS | `PosPage`, `PosCart`, `posCartModel`, `posCartContext` | Frontend PASS | Thêm/xóa/sửa số lượng, giới hạn tồn đã biết, tổng VND và stale-response guard đã test; chưa tạo order. |
+| Receipt PAID | Receipt controller/service/data và `getReceipt` | Backend và frontend PASS | Chỉ đọc receipt có sẵn; chưa có checkout/payment end-to-end để tạo order PAID. |
+| QR lookup | `QrCameraScanner`, `qrApi`, QR backend controller/service/data | Frontend và backend PASS | Đã bổ sung AbortSignal cùng generation/auth-context guard; camera/mobile thật chưa test. |
+| Serial selection | `PosDeviceSelectionService`, `JdbcPosDeviceSelectionDataAccess` | Unit test PASS | Chưa có REST Controller/DTO được duyệt; chưa nối vào cart. |
+| Checkout/payment | Chưa có luồng production hoàn chỉnh | NOT TESTED | D52/SQL/payment provider chưa được chốt; frontend không tự tạo PAID hoặc SOLD. |
+| Receipt print | `window.print()` và CSS print | Build PASS | Chỉ là browser print preview; máy in nhiệt 80mm và QR bảo hành chưa test/triển khai. |
+| AI cross-sell frontend | `CrossSellWidget`, `aiPosService` | Frontend PASS | Candidate được đối chiếu lại Catalog/Stock. AI backend/provider và security không thuộc thay đổi TV4 này. |
+
+### 12.3 Bằng chứng kiểm thử mới
+
+Thực hiện ngày 16/11/2026 trên nhánh `feat/tv4-s2-integration-evidence`:
+
+```powershell
+cd backend
+.\mvnw.cmd clean test
+
+cd ..\frontend
+npm.cmd test
+npm.cmd run build
+
+cd ..
+git diff --check
+```
+
+- Backend regression: **PASS** — `150` tests, `0` failure, `0` error, `8` skipped, `BUILD SUCCESS`.
+- Tám test skipped gồm bảy PostgreSQL integration test opt-in và một JDBC smoke test opt-in; không được tính là integration PASS mới.
+- Frontend sau QR context hardening: **PASS** — `40/40`, không fail/skip.
+- Production build: **PASS** — Vite `5.4.21`, `331` modules; bundle JS `637.55 kB`, còn cảnh báo chunk lớn hơn `500 kB`.
+- `git diff --check`: **PASS**; cảnh báo LF/CRLF không phải whitespace error.
+- Visual/mobile browser QA: **NOT RUN** vì phiên Computer Use không mở được trình duyệt; build không thay thế visual QA.
+
+### 12.4 PostgreSQL: bằng chứng lịch sử và trạng thái lần này
+
+- Bằng chứng lưu tại `database/evidence/sprint2/summary.json` ngày 13/11/2026 ghi `status: passed`, `33` assertions và cleanup fixture cô lập.
+- Evidence đã ghi hai kết nối POS độc lập, lock conflict, retry sau release, commit/rollback, stock transition và cleanup.
+- SQL hiện tại dùng `products.list_price`; nhận định lịch sử rằng artifact vẫn lỗi `p.price` không còn phản ánh source/evidence mới nhất.
+- Trong phiên 16/11/2026, Docker daemon không hoạt động nên container `tv4_s1_it_db`, volume `tv4_s1_it_pgdata` và cổng `15432` không thể được xác minh lại. Vì vậy PostgreSQL integration lần này là **NOT RUN**, không ghi PASS mới và không đụng database/volume.
+
+### 12.5 Blocker cần đúng owner xử lý
+
+| Blocker | File/hàm liên quan | Người cần xử lý/quyết định | Điều kiện gỡ blocker |
+|---|---|---|---|
+| Chưa có Serial REST contract | `PosDeviceSelectionService.lockDevice/releaseDevice`; chưa có controller | Huy/An chốt API, Kiên xác nhận DB, TV4 triển khai sau duyệt | Thống nhất resource, idempotency, status/error và permission. |
+| Checkout/order chưa chốt | D52 DRAFT và SQL order/reservation đang khác mô hình | BA/PO/Architect/DB | Chốt request/response, transaction boundary, release/timeout và optimistic conflict. |
+| VietQR/payment | Không có provider/callback production trong phạm vi TV4 | BA/Architect/PM và owner payment | Chọn provider, signature verification, idempotency, retry/refund/cancel và nguồn xác nhận PAID. |
+| AI API đang có phạm vi public/prototype | `SecurityConfiguration`, `AiCrossSellController`, endpoint simulate | Vũ (owner AI) và Architect/Security | Chốt permission, bảo vệ endpoint mutation và provider/fallback thật. TV4 không sửa module này. |
+| Login/context production | `App.jsx` chưa cấp `accessToken`, `storeId`, `warehouseId` | Owner Auth/S1-11, PM/Architect | Có IdP/JWKS/issuer/audience và trusted store/warehouse context. |
+| Máy in nhiệt 80mm và QR bảo hành | Receipt UI chỉ gọi `window.print()` | QA/PO/Architect và owner print | Chốt template/payload QR, cơ chế print và test thiết bị thật. |
+| D53 visual/mobile acceptance | Manifest/handoff/B10 checklist còn PENDING/NOT RUN | QA và PO | Review frame, mobile C–F, B10, camera và lưu bằng chứng trực quan. |
+
+### 12.6 Hướng dẫn demo an toàn
+
+1. Khởi động backend với profile PostgreSQL và cấu hình JWT đã được duyệt; không ghi secret vào source.
+2. Khởi động frontend với `VITE_API_BASE_URL=http://localhost:8080/api`.
+3. Cấp `accessToken`, `storeId`, `warehouseId` từ lớp login thật vào `PosPage`; app mặc định không hardcode các giá trị này.
+4. Tìm sản phẩm, kiểm tra request Catalog rồi Stock đúng warehouse, thêm/xóa/đổi số lượng và quan sát tổng VND.
+5. Đổi token hoặc warehouse để xác nhận cart, kết quả tìm kiếm và receipt cũ bị xóa/ẩn theo fail-closed.
+6. Với QR, bắt đầu request rồi đổi token hoặc sửa payload; response cũ phải bị abort hoặc bỏ qua.
+7. Chỉ mở receipt của order PAID có sẵn và dùng browser print preview. Không gọi đây là checkout, VietQR, e-invoice hoặc máy in nhiệt đã PASS.
+
+### 12.7 Checklist nghiệm thu còn lại
+
+- [x] Backend regression mới nhất PASS 150 tests, 8 opt-in skipped.
+- [x] Frontend tests mới nhất PASS 40/40 và build production PASS.
+- [x] Catalog/Stock/Cart/receipt và QR stale-session guard không dùng token/store/fixture hardcode.
+- [x] D53 và integration/report nằm ở hai nhánh/commit local riêng.
+- [ ] Chạy lại PostgreSQL integration trên đúng container/volume cô lập khi Docker hoạt động.
+- [ ] Tích hợp login/IdP production và test JWT → Catalog/Stock → Cart trên browser.
+- [ ] Chốt và triển khai Serial REST cùng Checkout/payment contract.
+- [ ] Test camera mobile, máy in nhiệt 80mm, QR bảo hành và concurrency qua HTTP.
+- [ ] QA/PO review và ghi evidence; không tự đánh dấu ACCEPTED.
+
+**Kết luận cập nhật:** Phần frontend độc lập đã ổn định hơn và có regression evidence mới. Sprint 2 vẫn **PARTIAL/BLOCKED** tại Serial REST, Checkout, VietQR/payment, login production, AI security và thiết bị thật; chưa đủ điều kiện nghiệm thu end-to-end.

@@ -1,7 +1,13 @@
 import { BrowserQRCodeReader } from '@zxing/browser'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { classifyLookupError, lookupQrDevice } from './qrApi.js'
+import {
+  classifyLookupError,
+  createLatestQrLookupGate,
+  createQrLookupContext,
+  isQrLookupRequestCurrent,
+  lookupQrDevice,
+} from './qrApi.js'
 import { abbreviateQrToken, validateQrPayload } from './qrPayload.js'
 import './qr-scanner.css'
 
@@ -33,6 +39,13 @@ export default function QrCameraScanner({ accessToken = null }) {
   const lastDecodedPayloadRef = useRef(null)
   const lastLookupPayloadRef = useRef(null)
   const lookupInFlightRef = useRef(false)
+  const lookupGateRef = useRef(null)
+  const lookupContextRef = useRef(createQrLookupContext(accessToken))
+
+  if (lookupGateRef.current === null) {
+    lookupGateRef.current = createLatestQrLookupGate()
+  }
+  lookupContextRef.current = createQrLookupContext(accessToken)
 
   const [cameraState, setCameraState] = useState('idle')
   const [cameraMessage, setCameraMessage] = useState('Camera chỉ được mở khi bạn bấm Bắt đầu quét.')
@@ -66,6 +79,8 @@ export default function QrCameraScanner({ accessToken = null }) {
 
   const lookupPayload = useCallback(async (payload) => {
     if (!authenticated) {
+      lookupGateRef.current.invalidate()
+      lookupInFlightRef.current = false
       setLookupState('auth-required')
       setLookupMessage('Cần đăng nhập bằng nhà cung cấp danh tính đã được cấu hình trước khi tra cứu.')
       setDevice(null)
@@ -75,33 +90,57 @@ export default function QrCameraScanner({ accessToken = null }) {
 
     lookupInFlightRef.current = true
     lastLookupPayloadRef.current = payload
+    const requestContext = createQrLookupContext(accessToken)
+    const request = lookupGateRef.current.start()
     setLookupState('loading')
     setLookupMessage('Đang tra cứu thiết bị trong phạm vi được cấp quyền…')
     setDevice(null)
 
     try {
-      const result = await lookupQrDevice(payload, accessToken)
-      if (!mountedRef.current) return
+      const result = await lookupQrDevice(payload, accessToken, request.signal)
+      if (!mountedRef.current || !isQrLookupRequestCurrent(
+        lookupGateRef.current,
+        request,
+        requestContext,
+        lookupContextRef.current,
+      )) return
       setDevice(result)
       setLookupState('success')
       setLookupMessage('Đã nhận dữ liệu thiết bị từ backend.')
     } catch (error) {
-      if (!mountedRef.current) return
+      if (!mountedRef.current || !isQrLookupRequestCurrent(
+        lookupGateRef.current,
+        request,
+        requestContext,
+        lookupContextRef.current,
+      )) return
       const classified = classifyLookupError(error)
       setLookupState(classified.state)
       setLookupMessage(classified.message)
       setDevice(null)
       lastLookupPayloadRef.current = null
     } finally {
-      lookupInFlightRef.current = false
+      if (lookupGateRef.current.isCurrent(request)) {
+        lookupInFlightRef.current = false
+      }
     }
   }, [accessToken, authenticated])
+
+  useEffect(() => {
+    lookupGateRef.current.invalidate()
+    lookupInFlightRef.current = false
+    lastLookupPayloadRef.current = null
+    setLookupState('idle')
+    setLookupMessage('')
+    setDevice(null)
+  }, [accessToken])
 
   useEffect(() => {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
       sessionRef.current += 1
+      lookupGateRef.current.invalidate()
       releaseCamera()
     }
   }, [releaseCamera])
@@ -139,6 +178,8 @@ export default function QrCameraScanner({ accessToken = null }) {
     releaseCamera()
     lastDecodedPayloadRef.current = null
     lastLookupPayloadRef.current = null
+    lookupGateRef.current.invalidate()
+    lookupInFlightRef.current = false
     setValidationResult(null)
     setLookupState('idle')
     setLookupMessage('')
@@ -258,6 +299,8 @@ export default function QrCameraScanner({ accessToken = null }) {
               id="manual-qr-payload"
               value={manualPayload}
               onChange={(event) => {
+                lookupGateRef.current.invalidate()
+                lookupInFlightRef.current = false
                 setManualPayload(event.target.value)
                 setValidationResult(null)
                 lastLookupPayloadRef.current = null
