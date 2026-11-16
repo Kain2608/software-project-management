@@ -88,4 +88,17 @@ class SecurityFailClosedIntegrationTest {
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void aiEndpointsRequireJwtExceptStatus() throws Exception {
+        mockMvc.perform(post("/api/v1/ai/cross-sell")
+                        .contentType("application/json")
+                        .content("{\"store_id\":\"00000000-0000-0000-0000-000000000101\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/ai/simulate")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/ai/status")).andExpect(status().isOk());
+    }
 }

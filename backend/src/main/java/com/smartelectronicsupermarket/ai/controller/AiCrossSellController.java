@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.smartelectronicsupermarket.ai.adapter.LlmAdapter;
 import com.smartelectronicsupermarket.ai.dto.AiStatusResponse;
+import com.smartelectronicsupermarket.ai.dto.CrossSellCandidate;
 import com.smartelectronicsupermarket.ai.dto.CrossSellRequest;
 import com.smartelectronicsupermarket.ai.dto.CrossSellResult;
 import com.smartelectronicsupermarket.ai.service.AiCrossSellService;
+import com.smartelectronicsupermarket.common.web.TrustedActorAccess;
 
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -35,11 +38,12 @@ public class AiCrossSellController {
      * FR08 - Request SKU-only AI recommendations with deterministic fallback per D52 OpenAPI specification.
      */
     @PostMapping("/cross-sell")
-    public ResponseEntity<CrossSellResult> getCrossSell(@RequestBody CrossSellRequest request) {
-        log.info("[API] POST /api/v1/ai/cross-sell received request for store: {}, skus: {}",
-                request.storeId(), request.getEffectiveSkuIds());
+    public ResponseEntity<CrossSellResult> getCrossSell(
+            @RequestBody CrossSellRequest request, Authentication authentication) {
+        log.info("[API] POST /api/v1/ai/cross-sell received request for store: {}", request.storeId());
 
-        CrossSellResult result = aiCrossSellService.getCrossSellRecommendations(request);
+        CrossSellResult result = aiCrossSellService.getCrossSellRecommendations(
+                TrustedActorAccess.actorId(authentication), request);
         return ResponseEntity.ok(result);
     }
 
@@ -61,15 +65,16 @@ public class AiCrossSellController {
     }
 
     /**
-     * Simulation and test endpoint to verify both OpenAI and Gemini adapters and return execution logs.
+     * Diagnostic endpoint: raw adapter candidates (SKU + reason only). Requires JWT and global ai.use.
      */
     @PostMapping("/simulate")
     public ResponseEntity<Map<String, Object>> simulateAdapterCall(
             @RequestParam(defaultValue = "OPENAI") String provider,
-            @RequestBody CrossSellRequest request) {
+            @RequestBody CrossSellRequest request,
+            Authentication authentication) {
 
-        aiCrossSellService.setActiveProvider(provider);
-        CrossSellResult result = aiCrossSellService.getCrossSellRecommendations(request);
+        List<CrossSellCandidate> candidates = aiCrossSellService.simulate(
+                TrustedActorAccess.actorId(authentication), provider, request.getEffectiveSkuIds());
 
         LlmAdapter.LlmCallLog callLog = "GEMINI".equalsIgnoreCase(provider)
                 ? aiCrossSellService.getLastGeminiLog()
@@ -77,7 +82,7 @@ public class AiCrossSellController {
 
         return ResponseEntity.ok(Map.of(
                 "provider_tested", provider,
-                "result", result,
+                "candidates", candidates,
                 "call_log", callLog
         ));
     }

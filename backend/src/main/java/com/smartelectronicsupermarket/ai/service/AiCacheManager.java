@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import com.smartelectronicsupermarket.ai.dto.CrossSellItem;
+import com.smartelectronicsupermarket.ai.dto.CrossSellCandidate;
 
 @Component
 public class AiCacheManager {
@@ -18,7 +18,7 @@ public class AiCacheManager {
     private final AtomicLong hitCount = new AtomicLong(0);
     private final AtomicLong missCount = new AtomicLong(0);
 
-    public List<CrossSellItem> get(String key) {
+    public List<CrossSellCandidate> get(String key) {
         CacheEntry entry = cache.get(key);
         if (entry != null && !entry.isExpired()) {
             hitCount.incrementAndGet();
@@ -33,7 +33,7 @@ public class AiCacheManager {
         return null;
     }
 
-    public void put(String key, List<CrossSellItem> items) {
+    public void put(String key, List<CrossSellCandidate> items) {
         cache.put(key, new CacheEntry(items, System.currentTimeMillis() + DEFAULT_TTL_MS));
         log.debug("[AiCache] Stored {} items in cache with key: {}", items.size(), key);
     }
@@ -54,7 +54,7 @@ public class AiCacheManager {
         return cache.size();
     }
 
-    private record CacheEntry(List<CrossSellItem> items, long expiresAt) {
+    private record CacheEntry(List<CrossSellCandidate> items, long expiresAt) {
         boolean isExpired() {
             return System.currentTimeMillis() > expiresAt;
         }

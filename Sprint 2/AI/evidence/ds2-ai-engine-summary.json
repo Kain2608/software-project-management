@@ -1,0 +1,258 @@
+{
+  "task": "S2-08 TSK-02-07 AI Recommendation Engine",
+  "deliverable": "DS2 Phan mem tang truong Sprint 2 (AI)",
+  "generated_at": "2026-11-16T09:21:38.063452+00:00",
+  "full_backend_suite": {
+    "PASS": 164,
+    "FAIL": 0,
+    "SKIPPED": 8
+  },
+  "ai_related_suites": {
+    "ai.AiCrossSellControllerTest": {
+      "tests": 13,
+      "passed": 13,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "missingAiUseForStoreReturns403ForbiddenScopeWithoutTouchingData",
+          "time_s": 1.082,
+          "status": "PASS"
+        },
+        {
+          "name": "productIdThatDoesNotMatchSkuReturns422",
+          "time_s": 0.013,
+          "status": "PASS"
+        },
+        {
+          "name": "warehouseOutsideStoreReturns403ForbiddenScope",
+          "time_s": 0.009,
+          "status": "PASS"
+        },
+        {
+          "name": "requestWithoutTrustedActorIsForbidden",
+          "time_s": 0.01,
+          "status": "PASS"
+        },
+        {
+          "name": "serializedFlagFollowsCategoryRule",
+          "time_s": 0.021,
+          "status": "PASS"
+        },
+        {
+          "name": "invalidUuidAndMissingFieldsReturn400InvalidArgument",
+          "time_s": 0.019,
+          "status": "PASS"
+        },
+        {
+          "name": "statusEndpointReturns200",
+          "time_s": 0.013,
+          "status": "PASS"
+        },
+        {
+          "name": "candidatesMissingFromDatabaseAreDroppedAndEmptyListIs200",
+          "time_s": 0.014,
+          "status": "PASS"
+        },
+        {
+          "name": "simulateRequiresGlobalAiUseAndReturnsSkuCandidatesOnly",
+          "time_s": 0.02,
+          "status": "PASS"
+        },
+        {
+          "name": "unknownCartSkuReturns422SkuNotFound",
+          "time_s": 0.009,
+          "status": "PASS"
+        },
+        {
+          "name": "secondCallServesCachedCandidatesButStillVerifiesAgainstDatabase",
+          "time_s": 0.012,
+          "status": "PASS"
+        },
+        {
+          "name": "circuitBreakerOpenUsesRuleFallbackCandidatesVerifiedInDatabase",
+          "time_s": 0.01,
+          "status": "PASS"
+        },
+        {
+          "name": "returnsProductIdPriceAndStockFromDatabaseNotFromAdapter",
+          "time_s": 0.011,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.AiSprint2EvidenceTest": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "generateSprint2Evidence",
+          "time_s": 9.75,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.data.JdbcAiCrossSellDataAccessTest": {
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "sellableQueryReadsPriceAndStockFromRealTablesScopedToWarehouse",
+          "time_s": 0.007,
+          "status": "PASS"
+        },
+        {
+          "name": "warehouseQueryChecksStoreOwnership",
+          "time_s": 0.001,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.service.AiCircuitBreakerTest": {
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "anyProbeFailureReopensImmediately",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "forceOverridesState",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "doesNotOpenBeforeWindowIsFull",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "opensWhenWindowOf20HasAtLeast50PercentFailures",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "halfOpensAfter15SecondsAndPermitsOnlyFiveProbes",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "staysClosedBelowFiftyPercentFailuresInFullWindow",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "closesAfterFiveSuccessfulProbes",
+          "time_s": 0.001,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.service.AiCrossSellServiceResilienceTest": {
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "cacheIsScopedPerWarehouse",
+          "time_s": 0.026,
+          "status": "PASS"
+        },
+        {
+          "name": "llmHangingPastTimeoutFallsBackWithinBr09Budget",
+          "time_s": 2.519,
+          "status": "PASS"
+        },
+        {
+          "name": "llmSuggestionsOutOfStockFallBackToRuleCandidatesFromDatabase",
+          "time_s": 0.015,
+          "status": "PASS"
+        },
+        {
+          "name": "breakerOpensAfterRepeatedFailuresAndStopsCallingLlm",
+          "time_s": 0.009,
+          "status": "PASS"
+        },
+        {
+          "name": "llmErrorFallsBackImmediately",
+          "time_s": 0.004,
+          "status": "PASS"
+        }
+      ]
+    },
+    "security.config.SecurityFailClosedIntegrationTest": {
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "protectedRouteWithoutTokenIsUnauthorized",
+          "time_s": 0.008,
+          "status": "PASS"
+        },
+        {
+          "name": "xActorIdHeaderCannotBypassAuthentication",
+          "time_s": 0.005,
+          "status": "PASS"
+        },
+        {
+          "name": "aiEndpointsRequireJwtExceptStatus",
+          "time_s": 0.01,
+          "status": "PASS"
+        },
+        {
+          "name": "missingJwtConfigurationDoesNotAcceptArbitraryBearerToken",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "publicPathWithWrongHttpMethodIsNotPublic",
+          "time_s": 0.003,
+          "status": "PASS"
+        },
+        {
+          "name": "exactPublicStatusGetsRemainAvailableWithoutJwtConfiguration",
+          "time_s": 0.009,
+          "status": "PASS"
+        },
+        {
+          "name": "businessEndpointsAreNeverPublicWithoutJwt",
+          "time_s": 0.006,
+          "status": "PASS"
+        }
+      ]
+    }
+  },
+  "demo_scenarios": {
+    "passed": 10,
+    "total": 10
+  },
+  "benchmark": {
+    "requests": 100,
+    "concurrency": 50,
+    "latency_ms": {
+      "min": 0,
+      "avg": 738.1,
+      "p50": 1053,
+      "p90": 1066,
+      "p95": 2510,
+      "p99": 2513,
+      "max": 2516
+    },
+    "p95_under_3000_ms": true,
+    "source_breakdown": {
+      "AI": 46,
+      "CACHE": 44,
+      "RULE_FALLBACK": 10
+    }
+  },
+  "not_verified": [
+    "PostgreSQL 16 (SQL of JdbcAiCrossSellDataAccess only checked structurally; Docker daemon was not running)",
+    "Real OpenAI/Gemini provider calls (adapters are deterministic mocks)",
+    "Redis L2 cache (in-memory cache only)",
+    "Frontend POS end-to-end with live JWT"
+  ]
+}

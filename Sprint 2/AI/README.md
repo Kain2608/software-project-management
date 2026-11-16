@@ -23,12 +23,18 @@
 | **Minh chứng Chạy Test Hợp đồng API (Log)** | Text / Log | **HOÀN THÀNH** | [api-contract-test-execution.log](file:///E:/QLDAPM/software-project-management/Sprint%202/AI/evidence/api-contract-test-execution.log) |
 | **Bộ mẫu Request/Response 7 kịch bản (JSON)** | JSON | **HOÀN THÀNH** | [sample-request-response.json](file:///E:/QLDAPM/software-project-management/Sprint%202/AI/evidence/sample-request-response.json) |
 | **Tổng hợp Kết quả Kiểm thử (JSON Summary)** | JSON | **HOÀN THÀNH** | [api-contract-summary.json](file:///E:/QLDAPM/software-project-management/Sprint%202/AI/evidence/api-contract-summary.json) |
+| **DS2 Phần mềm tăng trưởng Sprint 2 — AI Engine (S2-08)** | Markdown + Word | **CÓ — chờ video demo, PR merge, PO ký** | [DS2-phan-mem-tang-truong-ai-sprint2.md](DS2-phan-mem-tang-truong-ai-sprint2.md), [DS2_Phan_mem_tang_truong_AI_Sprint2.docx](DS2_Phan_mem_tang_truong_AI_Sprint2.docx) |
+| **Log nguồn LLM / cache / luật (`[AI-AUDIT]`)** | Log | **CÓ** (sinh từ lần chạy thật của service) | [ds2-ai-source-log.log](evidence/ds2-ai-source-log.log) |
+| **Benchmark độ trễ 100 request / 50 đồng thời** | JSON | **CÓ** (LLM mô phỏng, DB stub) | [ds2-ai-latency-benchmark.json](evidence/ds2-ai-latency-benchmark.json) |
+| **10 kịch bản demo (AI/CACHE/fallback/breaker/403/422)** | JSON | **CÓ** (10/10 PASS) | [ds2-ai-demo-scenarios.json](evidence/ds2-ai-demo-scenarios.json) |
+| **Tổng hợp kiểm thử S2-08 từ surefire** | JSON | **CÓ** | [ds2-ai-engine-summary.json](evidence/ds2-ai-engine-summary.json) |
 
 ---
 
 ## 2. Mã Nguồn & Tự Động Hóa Kiểm Thử
 1. **Controller & Service Test Suite:**
-   - [AiCrossSellControllerTest.java](file:///E:/QLDAPM/software-project-management/backend/src/test/java/com/smartelectronicsupermarket/ai/AiCrossSellControllerTest.java): Kiểm thử 7 kịch bản MockMvc tích hợp Spring Security JWT (100% PASS, 0 failures, 0 errors).
+   - [AiCrossSellControllerTest.java](file:///E:/QLDAPM/software-project-management/backend/src/test/java/com/smartelectronicsupermarket/ai/AiCrossSellControllerTest.java): 13 test MockMvc (actor JWT, 400/403/422, giá/tồn từ DB, cache, fallback, `is_serialized`, simulate). Cùng với `AiCircuitBreakerTest` (7), `AiCrossSellServiceResilienceTest` (5), `JdbcAiCrossSellDataAccessTest` (2) và `AiSprint2EvidenceTest` (sinh minh chứng DS2). Toàn bộ backend: 164 PASS, 0 FAIL, 8 SKIPPED (cần PostgreSQL).
+   - Sinh lại minh chứng DS2: đặt `SASMS_AI_EVIDENCE_DIR`, chạy `mvnw test`, rồi `python "Sprint 2/AI/scripts/generate_ds2_summary.py"` (xem DS2 mục 5.1).
 2. **Scripts Tự Động Hóa:**
    - [generate_contract_evidence.py](file:///E:/QLDAPM/software-project-management/Sprint%202/AI/scripts/generate_contract_evidence.py): Script thực thi và xuất khẩu minh chứng kiểm thử kèm bộ mẫu JSON chuẩn.
    - [convert_contract_report_to_docx.py](file:///E:/QLDAPM/software-project-management/Sprint%202/AI/scripts/convert_contract_report_to_docx.py): Script biên dịch báo cáo Markdown sang Word theo chuẩn định dạng SASMS.
