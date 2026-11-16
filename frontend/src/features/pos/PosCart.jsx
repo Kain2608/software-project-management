@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { classifyCartApiError, searchCatalogForPos } from './posCartApi.js'
 import {
@@ -8,6 +8,12 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from './posCartModel.js'
+import {
+  createLatestRequestGate,
+  createPosContext,
+  isSamePosContext,
+  shouldInvalidateCartForApiState,
+} from './posCartContext.js'
 import './posCart.css'
 
 const vnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
@@ -18,14 +24,36 @@ function cartMessage(error) {
   return 'Không thể cập nhật giỏ hàng với dữ liệu hiện tại.'
 }
 
-export default function PosCart({ accessToken, warehouseId, items, onItemsChange, message, onMessageChange }) {
+export default function PosCart({ accessToken, storeId, warehouseId, items, onItemsChange, message, onMessageChange }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searchState, setSearchState] = useState('idle')
+  const requestGate = useRef(null)
+  const resultsContext = useRef(null)
+  if (requestGate.current === null) requestGate.current = createLatestRequestGate()
   const authenticated = typeof accessToken === 'string' && accessToken.trim().length > 0
   const hasWarehouse = typeof warehouseId === 'string' && warehouseId.length > 0
   const ready = authenticated && hasWarehouse
   const total = calculateCartTotal(items)
+  const currentSearchContext = createPosContext({ accessToken, storeId, warehouseId })
+  const latestSearchContext = useRef(currentSearchContext)
+  const previousSearchContext = useRef(currentSearchContext)
+  latestSearchContext.current = currentSearchContext
+  const visibleResults = isSamePosContext(resultsContext.current, currentSearchContext) ? results : []
+
+  useEffect(() => {
+    const contextChanged = !isSamePosContext(previousSearchContext.current, currentSearchContext)
+    previousSearchContext.current = currentSearchContext
+    requestGate.current.invalidate()
+    resultsContext.current = null
+    setResults([])
+    setSearchState(ready ? 'idle' : 'auth-required')
+    if (contextChanged) {
+      onMessageChange(ready
+        ? 'Phiên, cửa hàng hoặc kho đã thay đổi. Hãy tìm lại để lấy tồn kho hiện tại.'
+        : 'Cần đăng nhập và chọn đúng kho bán hàng trước khi tìm sản phẩm.')
+    }
+  }, [accessToken, storeId, warehouseId, ready])
 
   async function search(event) {
     event.preventDefault()
@@ -34,18 +62,25 @@ export default function PosCart({ accessToken, warehouseId, items, onItemsChange
       onMessageChange('Cần đăng nhập và chọn đúng kho bán hàng trước khi tìm sản phẩm.')
       return
     }
+    const requestContext = createPosContext({ accessToken, storeId, warehouseId })
+    const request = requestGate.current.start()
     setSearchState('loading')
     onMessageChange('Đang tải danh mục và kiểm tra tồn kho…')
     try {
-      const products = await searchCatalogForPos({ query, accessToken, warehouseId })
+      const products = await searchCatalogForPos({ query, accessToken, warehouseId, signal: request.signal })
+      if (!requestGate.current.isCurrent(request) || !isSamePosContext(requestContext, latestSearchContext.current)) return
+      resultsContext.current = requestContext
       setResults(products)
       setSearchState(products.length ? 'success' : 'empty')
       onMessageChange(products.length ? `Tìm thấy ${products.length} sản phẩm.` : 'Không tìm thấy sản phẩm đang hoạt động.')
     } catch (error) {
+      if (!requestGate.current.isCurrent(request)) return
       const classified = classifyCartApiError(error)
+      resultsContext.current = null
       setResults([])
       setSearchState(classified.state)
       onMessageChange(classified.message)
+      if (shouldInvalidateCartForApiState(classified.state)) onItemsChange([])
     }
   }
 
@@ -102,9 +137,9 @@ export default function PosCart({ accessToken, warehouseId, items, onItemsChange
 
       {message && <p className={`pos-cart__message pos-cart__message--${searchState}`} aria-live="polite">{message}</p>}
 
-      {results.length > 0 && (
+      {visibleResults.length > 0 && (
         <ul className="pos-cart__results" aria-label="Kết quả tìm sản phẩm">
-          {results.map((product) => (
+          {visibleResults.map((product) => (
             <li key={product.productId}>
               <div><strong>{product.name}</strong><small>{product.sku}</small></div>
               <div><span>{vnd.format(product.unitPrice)}</span><small>Có thể bán: {product.availableQuantity}</small></div>

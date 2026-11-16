@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { classifyPosError, getPosStatus, getReceipt } from './posApi.js'
 import CrossSellWidget from './CrossSellWidget.jsx'
 import PosCart from './PosCart.jsx'
 import { addCartItem, toCrossSellCartItems } from './posCartModel.js'
+import { createPosContext, isSamePosContext, retainCartForContext } from './posCartContext.js'
 import StatusCard from '../../shared/components/StatusCard.jsx'
 
 function shortIdentifier(value) {
@@ -29,9 +30,23 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
   const [localCartItems, setLocalCartItems] = useState([])
   const [cartMessage, setCartMessage] = useState('')
   const authenticated = typeof accessToken === 'string' && accessToken.trim().length > 0
-  const controlled = Array.isArray(providedCartItems)
-  const cartItems = controlled ? providedCartItems : localCartItems
+  const controlled = Array.isArray(providedCartItems) && typeof onCartItemsChange === 'function'
+  const currentContext = createPosContext({ accessToken, storeId, warehouseId })
+  const previousContext = useRef(currentContext)
+  const storedCartItems = controlled ? providedCartItems : localCartItems
+  const cartItems = retainCartForContext(storedCartItems, previousContext.current, currentContext)
   const crossSellCartItems = useMemo(() => toCrossSellCartItems(cartItems), [cartItems])
+
+  useEffect(() => {
+    if (isSamePosContext(previousContext.current, currentContext)) return
+    previousContext.current = currentContext
+    if (controlled) onCartItemsChange([])
+    else setLocalCartItems([])
+    setCartMessage('Phiên, cửa hàng hoặc kho đã thay đổi. Giỏ cục bộ cũ đã được xóa để kiểm tra lại tồn kho.')
+    setReceipt(null)
+    setReceiptState('idle')
+    setReceiptMessage('')
+  }, [accessToken, storeId, warehouseId, controlled, onCartItemsChange])
 
   function changeCart(nextItems) {
     if (controlled) onCartItemsChange?.(nextItems)
@@ -94,6 +109,7 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
 
       <PosCart
         accessToken={accessToken}
+        storeId={storeId}
         warehouseId={warehouseId}
         items={cartItems}
         onItemsChange={changeCart}

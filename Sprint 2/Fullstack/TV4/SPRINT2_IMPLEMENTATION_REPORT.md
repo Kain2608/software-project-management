@@ -278,10 +278,16 @@ npm run build
 ```
 
 - `npm ci`: PASS, cài 92 package theo lockfile; npm báo 2 vulnerability (1 moderate, 1 high), chưa dùng `npm audit fix --force` hoặc nâng major.
-- `npm test`: PASS, 33/33 test, 0 fail, 0 skip. Test mới phủ thêm/xóa/sửa, dữ liệu không hợp lệ, tồn/giới hạn số lượng, tổng VND, JWT thiếu/hết hạn, HTTP 401/403, lỗi API, scope kho và payload cart chuyển sang AI.
-- `npm run build`: PASS, Vite 5.4.21 build 330 module. Cảnh báo còn lại: bundle JS 634.38 kB trước gzip, lớn hơn ngưỡng 500 kB; không chặn build.
+- `npm test`: PASS, 37/37 test, 0 fail, 0 skip. Test mới phủ thêm/xóa/sửa, dữ liệu không hợp lệ, tồn/giới hạn số lượng, tổng VND, JWT thiếu/hết hạn, HTTP 401/403, lỗi API, scope kho, context switching, stale response và payload cart chuyển sang AI.
+- `npm run build`: PASS, Vite 5.4.21 build 331 module. Cảnh báo còn lại: bundle JS 636.11 kB trước gzip, lớn hơn ngưỡng 500 kB; không chặn build.
 - `git diff --check`: PASS trước khi tạo commit.
 - E2E login/cart, browser responsive thật, thanh toán, Serial locking và ghi tồn: **NOT TESTED**.
+
+### Hardening context trên PR #23
+
+- Cart và kết quả tìm kiếm được gắn với bộ ba session/store/warehouse đã tạo ra dữ liệu. Đổi bất kỳ giá trị nào sẽ hiển thị rỗng ngay và xóa cart cục bộ qua effect; render bình thường với cùng context giữ nguyên dữ liệu.
+- Mỗi lượt tìm kiếm hủy request trước bằng `AbortController` và dùng generation gate. Response chỉ được cập nhật UI nếu cả generation lẫn context vẫn hiện hành.
+- HTTP 401, bao gồm token hết hạn, xóa cart cục bộ theo chính sách fail-closed. Lỗi thông thường hoặc 403 không tự biến thành thao tác payment/inventory và không giữ kết quả tìm kiếm cũ.
 
 ### Cách demo an toàn
 
