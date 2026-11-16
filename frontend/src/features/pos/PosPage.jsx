@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { classifyPosError, getPosStatus, getReceipt } from './posApi.js'
 import CrossSellWidget from './CrossSellWidget.jsx'
+import PosCart from './PosCart.jsx'
+import { addCartItem, toCrossSellCartItems } from './posCartModel.js'
 import StatusCard from '../../shared/components/StatusCard.jsx'
 
 function shortIdentifier(value) {
@@ -17,14 +19,33 @@ function formatMinor(value) {
 
 // Store/warehouse/cart must come from the real authenticated checkout flow.
 // App.jsx does not yet supply these; the AI widget remains read-only and idle until integrated.
-export default function PosPage({ accessToken = null, storeId = null, warehouseId = null, cartItems = [], onReviewSuggestion = null }) {
+export default function PosPage({ accessToken = null, storeId = null, warehouseId = null, cartItems: providedCartItems = null, onCartItemsChange = null }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [orderId, setOrderId] = useState('')
   const [receipt, setReceipt] = useState(null)
   const [receiptState, setReceiptState] = useState('idle')
   const [receiptMessage, setReceiptMessage] = useState('')
-  const authenticated = typeof accessToken === 'string' && accessToken.length > 0
+  const [localCartItems, setLocalCartItems] = useState([])
+  const [cartMessage, setCartMessage] = useState('')
+  const authenticated = typeof accessToken === 'string' && accessToken.trim().length > 0
+  const controlled = Array.isArray(providedCartItems)
+  const cartItems = controlled ? providedCartItems : localCartItems
+  const crossSellCartItems = useMemo(() => toCrossSellCartItems(cartItems), [cartItems])
+
+  function changeCart(nextItems) {
+    if (controlled) onCartItemsChange?.(nextItems)
+    else setLocalCartItems(nextItems)
+  }
+
+  function addVerifiedSuggestion(suggestion) {
+    try {
+      changeCart(addCartItem(cartItems, suggestion))
+      setCartMessage(`Đã thêm ${suggestion.name} vào giỏ cục bộ. Giá và tồn sẽ được kiểm tra lại khi tạo order.`)
+    } catch {
+      setCartMessage('Không thể thêm gợi ý vì dữ liệu không hợp lệ hoặc đã vượt tồn có thể bán.')
+    }
+  }
 
   async function checkBackend() {
     try {
@@ -68,15 +89,24 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
       </div>
 
       <div className="pos-scope-note">
-        Checkout và xác nhận thanh toán đang chờ hợp đồng Sprint 2. Màn hình này chỉ đọc hóa đơn của đơn PAID và mở hộp thoại in của trình duyệt.
+        Giỏ hàng hiện chỉ là bản nháp frontend. Checkout, giữ Serial và xác nhận thanh toán vẫn cần backend thực hiện nguyên tử.
       </div>
+
+      <PosCart
+        accessToken={accessToken}
+        warehouseId={warehouseId}
+        items={cartItems}
+        onItemsChange={changeCart}
+        message={cartMessage}
+        onMessageChange={setCartMessage}
+      />
 
       <CrossSellWidget
         accessToken={accessToken}
         storeId={storeId}
         warehouseId={warehouseId}
-        cartItems={cartItems}
-        onReviewSuggestion={onReviewSuggestion}
+        cartItems={crossSellCartItems}
+        onReviewSuggestion={addVerifiedSuggestion}
       />
 
       <form className="receipt-form" onSubmit={loadReceipt}>
