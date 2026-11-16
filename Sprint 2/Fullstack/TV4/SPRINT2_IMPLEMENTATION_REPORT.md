@@ -389,3 +389,54 @@ git diff --check
 - [ ] QA/PO review và ghi evidence; không tự đánh dấu ACCEPTED.
 
 **Kết luận cập nhật:** Phần frontend độc lập đã ổn định hơn và có regression evidence mới. Sprint 2 vẫn **PARTIAL/BLOCKED** tại Serial REST, Checkout, VietQR/payment, login production, AI security và thiết bị thật; chưa đủ điều kiện nghiệm thu end-to-end.
+
+## 13. Xác minh nhánh, backup D53 và DB ngày 16/11/2026
+
+### 13.1 Quan hệ nhánh và base PR an toàn
+
+```text
+origin/main e2db1a7
+└─ feat/tv4-s2-pos-cart 22a5b568
+   ├─ feat/tv4-d53-figma-ui 4e16d8c
+   └─ feat/tv4-s2-integration-evidence 569c72a
+```
+
+- `feat/tv4-s2-pos-cart` có đúng ba commit riêng so với `origin/main`: `09c4f57`, `db5b2c5`, `22a5b568`.
+- D53 và integration là hai nhánh anh em, cùng có merge-base `22a5b568`; không nhánh nào chứa commit riêng của nhánh còn lại.
+- Khi PR #23 còn mở, base an toàn cho D53 và integration đều là `feat/tv4-s2-pos-cart`. Không dùng D53 làm base của integration hoặc ngược lại.
+- Sau khi PR #23 merge, tạo nhánh sạch từ `origin/main` mới và chỉ cherry-pick commit riêng cần thiết. Không mở PR D53/integration nhắm `main` trước khi loại được ba commit PR #23 khỏi diff.
+
+### 13.2 Backup D53 bền vững
+
+Backup mới được lưu ngoài repository tại:
+
+`D:\SASMS_TV4_BACKUPS\D53\4e16d8c_20261116`
+
+| File | SHA-256 |
+|---|---|
+| `0001-feat-d53-refine-POS-QR-and-serial-reference-UI.patch` | `37B676DA60602AA4ECBD15798C88BC5D3AB5077D00F42B47FE02EACAC0676ED5` |
+| `d53-branch-4e16d8c.bundle` | `F664124882380193C0627F1580FD83EF2BEFA93E4A93C4BD5757BEE941E453AD` |
+| `d53-source-4e16d8c.zip` | `D34BE0ED59703EDBD013D1BF95DA2C4BB33F80B7538FB1A2E1A538D164ECDD00` |
+
+`git bundle verify` xác nhận bundle chứa đúng ref `feat/tv4-d53-figma-ui` tại `4e16d8c` và có complete history. Backup tạm cũ không bị xóa hoặc ghi đè.
+
+### 13.3 PostgreSQL integration lần kiểm tra này
+
+- Kiểm tra ban đầu ngày 16/11 là **NOT RUN** vì Docker daemon chưa hoạt động; trạng thái này được giữ trong evidence để không làm mất lịch sử.
+- Ngày 17/11 đã tạo database mới/rỗng riêng bằng `postgres:16`, container `sasms_s2_tv4_once_20261117`, volume `sasms_s2_tv4_once_pgdata_20261117`, network riêng và loopback port `15434`.
+- Trước `--apply`, truy vấn read-only xác nhận database `sasms_sprint2_validation`, owner `sasms_ci`, PostgreSQL `16.15`, `0` bảng ngoài system và chưa có schema `sasms`.
+- Validator đúng `scripts/validate_sprint2.py` chạy với repository mount read-only và evidence ngoài repo: **PASS 33 assertions**, Sprint 1 regression bên trong **PASS 76 assertions**.
+- Hai ca POS dùng PID `443/446` và `466/469`; overlap conflict `55P03`, retry sau release/rollback, commit/rollback và cleanup đều PASS.
+- Hậu kiểm xác nhận không còn user/order/device fixture, payment trigger được bật lại. Container mới dừng sạch `exit=0`; container/volume cũ không bị sử dụng.
+- Đây là bằng chứng DB cô lập, không phải HTTP/payment/UI E2E hoặc staging deployment.
+- Log/lệnh/provenance chi tiết: `Sprint 2/Fullstack/TV4/evidence/SPRINT2_DB_VERIFICATION_20261116.md`.
+
+### 13.4 Quyết định/liên hệ còn thiếu
+
+| Người phụ trách | Quyết định hoặc bằng chứng cần bổ sung |
+|---|---|
+| Nguyễn Quang Huy — BA/PO | Chốt AC/DoR, semantics cart DRAFT/tồn khả dụng, lease, Serial REST, QR bảo hành và nghiệm thu demo. |
+| Trần Trung Kiên — Architect/DBA | Xác nhận DB Sprint 2/runtime ACL, hợp đồng chọn/bỏ Serial, môi trường cô lập và staging S2-12. |
+| Nguyễn Tiến Vũ — AI Lead | Bảo vệ API AI, kiểm `ai.use`/store scope, candidate từ Catalog/Stock thật, provider/fallback và log latency. |
+| Trịnh Quốc An — PM | Chốt chiến lược PR, secret/hạ tầng/staging, CR/payment/provider và biên bản Quality Gate M3/M4. |
+| Phạm Đại Phát — QA Lead | Chạy D72/D73/D76, E2E POS/QR/receipt, máy in 80mm, mobile/camera, hai POS thật và hiệu năng p95. |
