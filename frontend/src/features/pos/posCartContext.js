@@ -16,6 +16,10 @@ export function shouldInvalidateCartForApiState(state) {
   return state === 'auth-required'
 }
 
+export function isRequestCurrentForContext(gate, request, requestContext, currentContext) {
+  return gate.isCurrent(request) && isSamePosContext(requestContext, currentContext)
+}
+
 export function createLatestRequestGate(createController = () => new AbortController()) {
   let generation = 0
   let controller = null

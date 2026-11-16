@@ -5,12 +5,13 @@ export async function getPosStatus() {
   return response.data
 }
 
-export async function getReceipt(orderId, accessToken) {
-  if (typeof accessToken !== 'string' || accessToken.length === 0) {
+export async function getReceipt(orderId, accessToken, signal, client = httpClient) {
+  if (typeof accessToken !== 'string' || accessToken.trim().length === 0) {
     throw new Error('AUTHENTICATION_REQUIRED')
   }
-  const response = await httpClient.get(`/v1/pos/orders/${encodeURIComponent(orderId)}/receipt`, {
+  const response = await client.get(`/v1/pos/orders/${encodeURIComponent(orderId)}/receipt`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
   })
   return response.data
 }

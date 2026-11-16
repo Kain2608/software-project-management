@@ -4,7 +4,13 @@ import { classifyPosError, getPosStatus, getReceipt } from './posApi.js'
 import CrossSellWidget from './CrossSellWidget.jsx'
 import PosCart from './PosCart.jsx'
 import { addCartItem, toCrossSellCartItems } from './posCartModel.js'
-import { createPosContext, isSamePosContext, retainCartForContext } from './posCartContext.js'
+import {
+  createLatestRequestGate,
+  createPosContext,
+  isRequestCurrentForContext,
+  isSamePosContext,
+  retainCartForContext,
+} from './posCartContext.js'
 import StatusCard from '../../shared/components/StatusCard.jsx'
 
 function shortIdentifier(value) {
@@ -33,8 +39,14 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
   const controlled = Array.isArray(providedCartItems) && typeof onCartItemsChange === 'function'
   const currentContext = createPosContext({ accessToken, storeId, warehouseId })
   const previousContext = useRef(currentContext)
+  const latestContext = useRef(currentContext)
+  const receiptContext = useRef(null)
+  const receiptRequestGate = useRef(null)
+  if (receiptRequestGate.current === null) receiptRequestGate.current = createLatestRequestGate()
+  latestContext.current = currentContext
   const storedCartItems = controlled ? providedCartItems : localCartItems
   const cartItems = retainCartForContext(storedCartItems, previousContext.current, currentContext)
+  const visibleReceipt = isSamePosContext(receiptContext.current, currentContext) ? receipt : null
   const crossSellCartItems = useMemo(() => toCrossSellCartItems(cartItems), [cartItems])
 
   useEffect(() => {
@@ -42,11 +54,15 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
     previousContext.current = currentContext
     if (controlled) onCartItemsChange([])
     else setLocalCartItems([])
+    receiptRequestGate.current.invalidate()
+    receiptContext.current = null
     setCartMessage('Phiên, cửa hàng hoặc kho đã thay đổi. Giỏ cục bộ cũ đã được xóa để kiểm tra lại tồn kho.')
     setReceipt(null)
     setReceiptState('idle')
     setReceiptMessage('')
   }, [accessToken, storeId, warehouseId, controlled, onCartItemsChange])
+
+  useEffect(() => () => receiptRequestGate.current.invalidate(), [])
 
   function changeCart(nextItems) {
     if (controlled) onCartItemsChange?.(nextItems)
@@ -74,19 +90,27 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
 
   async function loadReceipt(event) {
     event.preventDefault()
+    receiptRequestGate.current.invalidate()
+    receiptContext.current = null
     setReceipt(null)
     if (!authenticated) {
       setReceiptState('auth-required')
       setReceiptMessage('Cần phiên JWT hợp lệ trước khi đọc hóa đơn.')
       return
     }
+    const requestContext = createPosContext({ accessToken, storeId, warehouseId })
+    const request = receiptRequestGate.current.start()
     setReceiptState('loading')
     setReceiptMessage('Đang tải dữ liệu hóa đơn đã thanh toán…')
     try {
-      setReceipt(await getReceipt(orderId, accessToken))
+      const loadedReceipt = await getReceipt(orderId, accessToken, request.signal)
+      if (!isRequestCurrentForContext(receiptRequestGate.current, request, requestContext, latestContext.current)) return
+      receiptContext.current = requestContext
+      setReceipt(loadedReceipt)
       setReceiptState('success')
       setReceiptMessage('Đã tải bản xem trước. Đây không phải bằng chứng hóa đơn điện tử đã phát hành.')
     } catch (requestError) {
+      if (!isRequestCurrentForContext(receiptRequestGate.current, request, requestContext, latestContext.current)) return
       const classified = classifyPosError(requestError)
       setReceiptState(classified.state)
       setReceiptMessage(classified.message)
@@ -143,18 +167,18 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
 
       {receiptMessage && <p className={`receipt-message receipt-message--${receiptState}`}>{receiptMessage}</p>}
 
-      {receipt && (
+      {visibleReceipt && (
         <article className="receipt-preview" aria-label="Bản xem trước hóa đơn">
           <header>
             <div><strong>SASMS</strong><span>HÓA ĐƠN BÁN HÀNG</span></div>
-            <small>Đơn: {shortIdentifier(receipt.order_id)}</small>
+            <small>Đơn: {shortIdentifier(visibleReceipt.order_id)}</small>
           </header>
           <dl>
-            <div><dt>Thanh toán lúc</dt><dd>{new Date(receipt.paid_at).toLocaleString('vi-VN')}</dd></div>
-            <div><dt>Tổng tiền</dt><dd>{formatMinor(receipt.total_minor)}</dd></div>
+            <div><dt>Thanh toán lúc</dt><dd>{new Date(visibleReceipt.paid_at).toLocaleString('vi-VN')}</dd></div>
+            <div><dt>Tổng tiền</dt><dd>{formatMinor(visibleReceipt.total_minor)}</dd></div>
           </dl>
           <ul>
-            {receipt.items.map((item) => (
+            {visibleReceipt.items.map((item) => (
               <li key={item.device_id}>
                 <span>{shortIdentifier(item.sku_id)} · {item.serial_masked}</span>
                 <strong>{formatMinor(item.price_minor)}</strong>
