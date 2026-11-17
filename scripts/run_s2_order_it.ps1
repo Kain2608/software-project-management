@@ -23,20 +23,51 @@ SELECT pg_terminate_backend(pid) FROM pg_stat_activity
 DROP ROLE IF EXISTS $appLogin;
 DROP ROLE IF EXISTS $adminLogin;
 "@
-    $cleanupSql | & docker exec -i $containerName psql -v ON_ERROR_STOP=1 -U sasms_owner -d sasms
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Failed to remove exact ephemeral TV4 Sprint 2 integration logins.'
+    $previousErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $cleanupOutput = $cleanupSql | & docker exec -i $containerName psql -v ON_ERROR_STOP=1 -U sasms_owner -d sasms 2>&1
+        $cleanupExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorPreference
+    }
+    if ($cleanupExitCode -ne 0) {
+        throw "Failed to remove exact ephemeral TV4 Sprint 2 integration logins: `n$($cleanupOutput | Out-String)"
     }
 }
 
-$env:SASMS_IT_EPHEMERAL_APP_PASSWORD = New-HexSecret
-$env:SASMS_IT_EPHEMERAL_ADMIN_PASSWORD = New-HexSecret
+# 1. Track original environment variables to guarantee clean restoration in finally
+$trackedVars = @(
+    'SASMS_IT_EPHEMERAL_APP_PASSWORD',
+    'SASMS_IT_EPHEMERAL_ADMIN_PASSWORD',
+    'SASMS_S2_PG_IT_ENABLED',
+    'SASMS_DB_URL',
+    'SASMS_DB_USERNAME',
+    'SASMS_DB_PASSWORD',
+    'SASMS_IT_ADMIN_USERNAME',
+    'SASMS_IT_ADMIN_PASSWORD'
+)
+$originalEnv = @{}
+foreach ($var in $trackedVars) {
+    $originalEnv[$var] = [System.Environment]::GetEnvironmentVariable($var, [System.EnvironmentVariableTarget]::Process)
+}
+
+$appPassword = New-HexSecret
+$adminPassword = New-HexSecret
+
+$env:SASMS_IT_EPHEMERAL_APP_PASSWORD = $appPassword
+$env:SASMS_IT_EPHEMERAL_ADMIN_PASSWORD = $adminPassword
 $env:SASMS_S2_PG_IT_ENABLED = 'true'
 $env:SASMS_DB_URL = 'jdbc:postgresql://127.0.0.1:15433/sasms'
 $env:SASMS_DB_USERNAME = $appLogin
-$env:SASMS_DB_PASSWORD = $env:SASMS_IT_EPHEMERAL_APP_PASSWORD
+$env:SASMS_DB_PASSWORD = $appPassword
 $env:SASMS_IT_ADMIN_USERNAME = $adminLogin
-$env:SASMS_IT_ADMIN_PASSWORD = $env:SASMS_IT_EPHEMERAL_ADMIN_PASSWORD
+$env:SASMS_IT_ADMIN_PASSWORD = $adminPassword
+
+$surefireXmlPath = Join-Path $repoRoot 'backend\target\surefire-reports\TEST-com.smartelectronicsupermarket.Sprint2OrderPostgreSqlIntegrationTest.xml'
+if (Test-Path $surefireXmlPath) {
+    Remove-Item $surefireXmlPath -Force
+}
 
 $testExitCode = 1
 $provisioned = $false
@@ -57,19 +88,31 @@ try {
             Remove-EphemeralLogins
         }
     } finally {
-        Remove-Item Env:SASMS_IT_EPHEMERAL_APP_PASSWORD -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_IT_EPHEMERAL_ADMIN_PASSWORD -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_S2_PG_IT_ENABLED -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_DB_URL -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_DB_USERNAME -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_DB_PASSWORD -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_IT_ADMIN_USERNAME -ErrorAction SilentlyContinue
-        Remove-Item Env:SASMS_IT_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+        foreach ($var in $trackedVars) {
+            $oldVal = $originalEnv[$var]
+            [System.Environment]::SetEnvironmentVariable($var, $oldVal, [System.EnvironmentVariableTarget]::Process)
+        }
     }
 }
 
+# 2. Assert Maven exit code
 if ($testExitCode -ne 0) {
-    throw "Sprint 2 Order PostgreSQL integration test failed with exit code $testExitCode."
+    throw "Sprint 2 Order PostgreSQL integration test failed with Maven exit code $testExitCode."
 }
 
-Write-Host 'Sprint 2 Order PostgreSQL integration test completed successfully; ephemeral logins were removed.'
+# 3. Assert Surefire XML results: must be exactly 7 tests run, 0 failures, 0 errors, 0 skipped
+if (-not (Test-Path $surefireXmlPath)) {
+    throw "Surefire XML report was not generated at expected location: $surefireXmlPath"
+}
+
+[xml]$surefireXml = Get-Content $surefireXmlPath
+$tests = [int]$surefireXml.testsuite.tests
+$failures = [int]$surefireXml.testsuite.failures
+$errors = [int]$surefireXml.testsuite.errors
+$skipped = [int]$surefireXml.testsuite.skipped
+
+if ($tests -ne 7 -or $failures -ne 0 -or $errors -ne 0 -or $skipped -ne 0) {
+    throw "Surefire verification failed: expected exactly 7 tests run, 0 failures, 0 errors, 0 skipped; but got tests=$tests, failures=$failures, errors=$errors, skipped=$skipped."
+}
+
+Write-Host "Sprint 2 Order PostgreSQL integration test completed successfully: $tests tests passed (0 failures, 0 errors, 0 skipped); ephemeral logins were removed and all environment variables were restored."
