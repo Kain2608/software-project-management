@@ -488,15 +488,17 @@ cd backend
 # Frontend Test Suite & Build
 cd ..\frontend
 npm.cmd test
-# Kết quả: 40 tests PASS, 0 fail, 0 skip
+# Kết quả: 46 tests PASS, 0 fail, 0 skip
+# (Bao gồm 6 regression tests mới trong authContext.test.js chứng minh loại bỏ hoàn toàn việc đọc token từ URL query string, fail-closed khi không có IdP, và bảo vệ chống rò rỉ token)
 npm.cmd run build
-# Kết quả: Vite 5.4.21 production build SUCCESS (331 modules)
+# Kết quả: Vite 5.4.21 production build SUCCESS (332 modules)
 ```
 
 - Không có lỗi `git diff --check`.
 - Không sửa schema/migration/SQL của Kiên.
 - Không sửa AI backend của Vũ.
 - Không tự đánh dấu đơn hàng thành `PAID` hay `SOLD`.
+- Hoàn toàn không đọc JWT/accessToken từ URL query string; không lưu token vào log; không dùng demo-token giả lập xác thực.
 
 ### 14.4 Bảng trạng thái nghiệm thu Sprint 2 TV4
 
@@ -521,7 +523,41 @@ npm.cmd run build
 | **Quy trình Thanh toán & Đổi trạng thái** | D34 FR-06 / D40: Chỉ chuyển `PAID` khi có xác nhận tiền về (giao dịch ngân hàng/thẻ/tiền mặt). | Trigger `guard_order_child` (V004): Chỉ cho phép tạo `payments` khi đơn `RESERVED`; không thể sửa payment `CAPTURED`. | **Nhất quán**: Không tự động đánh dấu `PAID` khi chỉ hiển thị mã QR VietQR. Phải có webhook/IPN xác nhận hoặc thao tác thu ngân. |
 | **Phân quyền vai trò (RBAC)** | D34 FR-01: 9 vai trò chuẩn (`CASHIER`, `SALES_STAFF`, `CATALOG_MANAGER`, `STORE_MANAGER`, ...). | V005 định nghĩa các vai trò D34; `CASHIER` có quyền `sales.checkout` và `payments.read`. | **Nhất quán**: REST Serial API và Receipt API yêu cầu quyền `sales.checkout` / `sales.read` gắn chặt với `store_id` của đơn hàng. |
 
-### 15.2 Ma trận 5 Quyết định cần BA / Architect / PM phê duyệt
+### 15.2 Chi tiết Đặc tả Hợp đồng REST API Order-First (Đề xuất chuẩn hóa)
+
+Mô hình Order-First chuẩn hóa gồm 6 bước khép kín, ánh xạ trực tiếp với lifecycle CSDL V004:
+
+```
+[POS Cart] --> (1) Tạo DRAFT Order --> (2) Khóa Serial (10m lease) --> (3) Reserve Order --> (4) Khởi tạo Payment (PENDING) --> (5) Webhook IPN (CAPTURED) --> (6) Complete Sale (SOLD)
+```
+
+1. **`POST /api/v1/pos/orders` (Tạo đơn hàng DRAFT)**:
+   - **Input**: `{ store_id, warehouse_id, items: [{ product_id, quantity, unit_price }] }`.
+   - **Xử lý**: Tạo bản ghi `sales_orders` với `status = 'DRAFT'`, `channel = 'POS'`. Tạo các dòng `sales_order_items`. Lúc này `hold_expires_at` là `NULL` (chưa kích hoạt lease).
+   - **Quyền yêu cầu**: `sales.checkout` tại `store_id`.
+
+2. **`POST /api/v1/pos/orders/{orderId}/items/{itemId}/devices` (Khóa thiết bị theo Serial)**:
+   - **Input**: `{ serial: "SN12345678" }`.
+   - **Xử lý**: Gọi hàm CSDL `sasms.find_and_lock_device_for_pos`. Tại lần khóa đầu tiên, CSDL tự động gán `hold_expires_at = clock_timestamp() + 10 minutes`. Kiểm tra thiết bị `IN_STOCK` tại kho của đơn, khóa dòng bằng `FOR UPDATE NOWAIT`, chèn vào `order_devices` với `active = true`.
+   - **Mã lỗi chuẩn**: `55P03` $\rightarrow$ 409 `DEVICE_LOCKED`, `P0002` $\rightarrow$ 404 `NOT_FOUND`, `23514` (hết hạn lease) $\rightarrow$ 422 `VALIDATION_FAILED`.
+
+3. **`DELETE /api/v1/pos/orders/{orderId}/devices/{deviceId}` (Giải phóng thiết bị khỏi giỏ)**:
+   - **Xử lý**: Gọi hàm CSDL `sasms.release_device_lock`. Kiểm tra đơn còn `DRAFT`, cập nhật `order_devices.active = false` để trả thiết bị về trạng thái sẵn sàng cho quầy khác.
+
+4. **`POST /api/v1/pos/orders/{orderId}/reserve` (Khóa tổng thể đơn hàng để chuẩn bị thanh toán)**:
+   - **Xử lý**: Gọi hàm CSDL `sasms.reserve_order`. Kiểm tra `hold_expires_at > clock_timestamp()`. Chuyển trạng thái đơn sang `RESERVED`, cập nhật trạng thái thiết bị trong bảng `devices` thành `RESERVED`. Không gia hạn thêm thời gian giữ hàng.
+
+5. **`POST /api/v1/pos/orders/{orderId}/payments/initiate` & Webhook xác thực**:
+   - **Khởi tạo**: Tạo bản ghi thanh toán `sasms.payments` với `status = 'PENDING'`. Render VietQR động kèm mã đơn và số tiền. **Lưu ý bảo mật: Hiển thị VietQR KHÔNG đồng nghĩa với đơn đã thanh toán! Đơn vẫn giữ nguyên `PENDING`.**
+   - **Webhook xác thực (`POST /api/v1/pos/payments/webhook`)**: Nhận callback từ cổng thanh toán/ngân hàng, xác thực chữ ký số HMAC-SHA256, kiểm tra tính lũy kế (idempotency). Cập nhật `sasms.payments.status = 'CAPTURED'`. Nhờ trigger `guard_order_child`, giao dịch thanh toán PENDING đã gửi đi được bảo vệ giữ hàng kể cả khi phản hồi ngân hàng vượt quá 10 phút.
+
+6. **`POST /api/v1/pos/orders/{orderId}/complete` (Hoàn tất giao dịch bán lẻ)**:
+   - **Xử lý**: Gọi hàm CSDL `sasms.complete_sale`. Kiểm tra tổng tiền đã thu `sum(amount) >= total_amount`. Chuyển `sales_orders.status = 'COMPLETED'`, cập nhật thiết bị thành `SOLD`, ghi nhận phiếu xuất kho, sinh chứng từ hóa đơn và đẩy event ra outbox.
+
+7. **Cơ chế Hủy / Hết hạn tự động (Sweeper / Expire)**:
+   - Nếu sau 10 phút khách hàng không thanh toán và không có khoản thanh toán nào ở trạng thái `PENDING`/`CAPTURED`, hàm `sasms.expire_order_reservation` hoặc background sweeper sẽ gọi `sasms.cancel_order` để hủy đơn và giải phóng toàn bộ thiết bị về `IN_STOCK`.
+
+### 15.3 Ma trận 5 Quyết định cần BA / Architect / PM phê duyệt
 
 | STT | Quyết định cần chốt | Các bên liên quan | Tác động kỹ thuật & Phương án khuyến nghị | Trạng thái |
 |---|---|---|---|---|
@@ -531,7 +567,7 @@ npm.cmd run build
 | **DEC-S2-04** | Nguyên tắc xác nhận thanh toán `PAID` | Huy (BA), Kiên (DBA), An (PM) | VietQR chỉ là phương tiện hiển thị. Chuyển `PAID` bắt buộc qua Webhook ký số của cổng thanh toán hoặc xác nhận thu ngân có audit log. | **ĐỀ XUẤT CHẤP THUẬN** |
 | **DEC-S2-05** | Phê duyệt V003–V005 và cấp quyền runtime role | Kiên (DBA), An (PM) | Chạy migration V003–V005 trên Staging và `GRANT EXECUTE ON FUNCTION sasms.find_and_lock_device_for_pos` cho role `sasms_app`. | **CHỜ DBA THỰC THI** |
 
-### 15.3 Hướng dẫn Demo Sprint 2 thực tế
+### 15.4 Hướng dẫn Demo Sprint 2 thực tế
 
 1. **Khởi động Backend (Spring Boot)**:
    ```powershell
@@ -553,7 +589,7 @@ npm.cmd run build
    ```
 
 3. **Kịch bản Demo**:
-   - **Kịch bản 1 (Fail-Closed mặc định)**: Mở trình duyệt không truyền tham số. Topbar hiển thị `CHƯA KẾT NỐI IdP / KHO`. Mọi thao tác tìm kiếm hay giỏ hàng đều yêu cầu phiên an toàn, không rò rỉ dữ liệu.
-   - **Kịch bản 2 (Truyền phiên qua URL / Storage)**: Mở `http://localhost:5173?storeId=00000000-0000-4000-8000-000000000010&warehouseId=00000000-0000-4000-8000-000000000011&token=mock-jwt`. Topbar chuyển sang `PHIÊN ĐÃ CẤU HÌNH`. Giỏ hàng cho phép tra cứu Catalog, kiểm tra tồn kho realtime, thêm sản phẩm và tự động chặn vượt tồn kho khả dụng.
-   - **Kịch bản 3 (Gợi ý AI)**: Khi giỏ có sản phẩm, widget AI hiển thị danh sách gợi ý chéo; người dùng bấm kiểm tra để đối chiếu tồn kho trước khi đưa vào giỏ.
+   - **Kịch bản 1 (Fail-Closed mặc định)**: Mở trình duyệt không cấu hình phiên. Topbar hiển thị `CHƯA KẾT NỐI IdP / KHO (FAIL-CLOSED)`. Mọi thao tác tìm kiếm hay giỏ hàng đều an toàn ở trạng thái chưa xác thực, không phát sinh request trái phép.
+   - **Kịch bản 2 (Phiên xác thực bộ nhớ / IdP OIDC Provider)**: Khi tích hợp với IdP/OIDC thực hoặc test runner cung cấp cấu hình session trong bộ nhớ (`authSession`), topbar hiển thị `PHIÊN ĐÃ CẤU HÌNH`. **Chính sách an toàn tuyệt đối**: SASMS nghiêm cấm truyền `token` qua URL query parameters (`?token=...`) nhằm ngăn chặn rò rỉ token qua lịch sử trình duyệt, HTTP Referer và proxy log (OWASP Top 10 A02/A07). Hàm `rejectUrlSuppliedCredentials` tự động phát hiện và từ chối kích hoạt nếu người dùng cố ý đưa token lên URL.
+   - **Kịch bản 3 (Gợi ý AI)**: Khi giỏ có sản phẩm, widget AI hiển thị danh sách gợi ý chéo; người dùng bấm kiểm tra để đối chiếu tồn kho thực trước khi đưa vào giỏ.
    - **Kịch bản 4 (In biên nhận 80mm)**: Tra cứu đơn hàng đã thanh toán (PAID) và bấm "Mở bản xem trước in". Hộp thoại in của trình duyệt hiển thị phiếu in cuộn 80mm chuẩn nhiệt (72mm nội dung, phân cách nét đứt, ẩn mọi thanh điều hướng).
