@@ -8,7 +8,7 @@
 | Ngày / nhánh | 07/11/2026; `DB` |
 | Trạng thái | Đã soạn phần hỗ trợ DB để review; chưa có xác nhận nghiệp vụ hoặc chữ ký |
 
-Tài liệu bổ sung phần bàn giao cụ thể còn thiếu, giữ nguyên [D51](../D51-thiet-ke-co-so-du-lieu.md), [D57](../D57-luoc-do-va-kiem-thu.md) và SQL đã có. D34/FRS_V2 và D40–D42/BPMN chưa có file trong repo để hoàn thiện trực tiếp. Các yêu cầu dưới đây là đề xuất kỹ thuật có truy vết, để Huy đưa vào tài liệu do Huy phụ trách; không đổi trạng thái workbook thành đã duyệt.
+Tài liệu bổ sung phần bàn giao cụ thể còn thiếu, giữ nguyên [D51](../D51-thiet-ke-co-so-du-lieu.md), [D57](../D57-luoc-do-va-kiem-thu.md) và SQL đã có. D34/FRS_V2, D35 và D40–D42/BPMN của BA hiện đã có trong Sprint 0/BA. Hợp đồng hiện hành dùng BR-01/03 và SER-01…10: V003 raw/case/Luhn/multi-IMEI, V004 lease/PENDING, V005 vai trò. Các bảng bên dưới giữ truy vết baseline S0; không sửa tài liệu BA hoặc đổi trạng thái workbook thành đã duyệt.
 
 ## 1. Nội dung review FRS từ phía DB
 

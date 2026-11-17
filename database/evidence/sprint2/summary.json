@@ -1,90 +1,118 @@
 {
-  "started_at_utc": "2026-11-13T16:14:15.325433+00:00",
+  "started_at_utc": "2026-11-17T01:04:47.662983+00:00",
   "status": "passed",
   "checks": {
-    "captured payment guard initially enabled": {
+    "migration ledger presence": {
       "passed": true,
-      "seconds": 0.0646
+      "seconds": 0.0503
+    },
+    "migration version before current upgrade": {
+      "passed": true,
+      "seconds": 0.0569
+    },
+    "legacy payload fixture before V003": {
+      "passed": true,
+      "seconds": 0.0802
     },
     "table names": {
       "passed": true,
-      "seconds": 0.0875
+      "seconds": 0.0377
     },
     "seed snapshot": {
       "passed": true,
-      "seconds": 0.232
+      "seconds": 0.0601
+    },
+    "legacy receipt retry after V003": {
+      "passed": true,
+      "seconds": 0.0489
+    },
+    "legacy source preserved without invented raw data": {
+      "passed": true,
+      "seconds": 0.0441
+    },
+    "exact legacy upgrade fixture cleanup": {
+      "passed": true,
+      "seconds": 0.0636
+    },
+    "captured payment guard initially enabled": {
+      "passed": true,
+      "seconds": 0.0422
     },
     "atomic Sprint2 extension apply": {
       "passed": true,
-      "seconds": 0.1112
+      "seconds": 0.079
     },
     "Sprint2 extension reapply": {
       "passed": true,
-      "seconds": 0.099
+      "seconds": 0.0687
     },
     "Sprint2 runtime ACL authorization and stock lifecycle": {
       "passed": true,
-      "seconds": 0.1514
+      "seconds": 0.1216
+    },
+    "D34 D35 identifier and lease regression": {
+      "passed": true,
+      "seconds": 0.1275
     },
     "commit independent POS fixtures": {
       "passed": true,
-      "seconds": 0.1234
+      "seconds": 0.0599
     },
     "committed realtime stock": {
       "passed": true,
-      "seconds": 0.0805
+      "seconds": 0.0392
     },
     "commit initial allocation count": {
       "passed": true,
-      "seconds": 0.0808
+      "seconds": 0.0455
     },
     "authorized POS1 release": {
       "passed": true,
-      "seconds": 0.1376
+      "seconds": 0.0511
     },
     "POS2 retry after release": {
       "passed": true,
-      "seconds": 0.1108
+      "seconds": 0.046
     },
     "exactly one committed active draft owner": {
       "passed": true,
-      "seconds": 0.0667
+      "seconds": 0.0369
     },
     "winning POS2 reserve commit": {
       "passed": true,
-      "seconds": 0.1224
+      "seconds": 0.0646
     },
     "winning POS2 captured payment and sale commit": {
       "passed": true,
-      "seconds": 0.0938
+      "seconds": 0.051
     },
     "unique committed checkout side effects": {
       "passed": true,
-      "seconds": 0.0927
+      "seconds": 0.0388
     },
     "commit exact synthetic UUID cleanup": {
       "passed": true,
-      "seconds": 0.125
+      "seconds": 0.0596
     },
     "rollback independent POS fixtures": {
       "passed": true,
-      "seconds": 0.1204
+      "seconds": 0.0514
     },
     "rollback initial allocation count": {
       "passed": true,
-      "seconds": 0.1063
+      "seconds": 0.0382
     },
     "POS2 retry after rollback": {
       "passed": true,
-      "seconds": 0.0997
+      "seconds": 0.0438
     },
     "rollback exact synthetic UUID cleanup": {
       "passed": true,
-      "seconds": 0.1237
+      "seconds": 0.059
     },
     "captured payment guard restored": {
       "passed": true,
-      "seconds": 0.073
+      "seconds": 0.0361
     }
   },
   "scope": "isolated PostgreSQL behavior, ACL and two POS connections; no API, browser, remote Staging deployment or health claim",
@@ -93,8 +121,8 @@
       "case": "POS1_commit",
       "independent_pos_connections": 2,
       "pos_backend_pids": [
-        28700,
-        22168
+        1186,
+        1190
       ],
       "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
       "overlap_55P03_rejections": 1,
@@ -130,8 +158,8 @@
       "case": "POS1_rollback",
       "independent_pos_connections": 2,
       "pos_backend_pids": [
-        33476,
-        14500
+        1233,
+        1238
       ],
       "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
       "overlap_55P03_rejections": 1,
@@ -165,12 +193,20 @@
     }
   ],
   "source_sha256": {
-    "scripts/validate_sprint2.py": "b31c398cd5d9edc028b6a5e1bdac628d9a7d579c763ba9bf21c500ab3c7566f0",
+    "scripts/validate_sprint2.py": "559eb44e3bfdece453402fe55ca52aff5f806d24a2532e9d66bd450d0cf7b52f",
     "scripts/validate_db.py": "79d28cbd7859615551eae68f80c4c781449f35064737d038b7ea3c9f391b3841",
-    "scripts/validate_sprint1.py": "05abaa691781fff21b95abc13e534b46385cc8846f12d5f373541a6cfe5ecdea",
-    ".github/workflows/sprint2-staging.yml": "3557c9db25354b70647f2de48e31f4ad51b6471fa08088a680f3f8f2d2714d87",
-    "database/sprint2/realtime_stock_and_locking.sql": "e2b93fd3115ef2c5432b5fc5898dc96a8c561d83aae639566f3050fda93ffdf5",
-    "database/tests/sprint2/test_sprint2_concurrency_and_stock.sql": "db4cdb3ff9004191310e1fdc1509ab5fcd405da119fe8a4aa27a7f4aa6849bfc"
+    "scripts/validate_sprint1.py": "8276f6003f0bd9185006a8c0b3ed146edc325d3099019ae52730545aa570c57b",
+    ".github/workflows/sprint2-staging.yml": "27dc386443dc7900646aa719317f8570fbefeccaf592ad93b4f3362d01ba2bf6",
+    "database/sprint2/realtime_stock_and_locking.sql": "ed3fd83611bac54773d1382f1dbf21d96626acf1eecaba800d7714f9bdb10b48",
+    "database/tests/sprint2/test_sprint2_concurrency_and_stock.sql": "a1646558515c5c0f0995e9486cc89d1ea8ef642330f13cad140880bbb71b004d",
+    "scripts/migrate_db.py": "ee902e931d8c6d5f3ff7c61544c84fad6017da98f0ad7edd81269401f34c24b6",
+    "scripts/provision_d35_rules.sql": "12a7001b58c713fe40c9122b46c681f8278e6eb39d6ab96a01c0fae824c80d82",
+    "database/tests/sprint2/identifiers_and_leases.sql": "bc6fdf35a94a77d280449356930d1e0928783f974a75bd21cfa56b30098f43c7",
+    "database/migrations/V001__catalog_and_iam.sql": "4ebbb59ad4b8bee50c16e26becabe1ec2fab5d69e44ad5a613a049f6583d3f71",
+    "database/migrations/V002__inventory_batches_and_identifiers.sql": "48038d23eaaf418d49e8a840a71faed2f59b4f8350089dee2f9f3566524a020e",
+    "database/migrations/V003__scoped_device_identifiers.sql": "8e98e7b0d52b6c8776cff404b5cc5669e5b0724095bcc652ecd24e8a97e450f0",
+    "database/migrations/V004__pos_lease_lifecycle.sql": "f27c1e0ee9b1d64c54aad9f47bb49d44b184e0240bd73479be8e3b3b959969a4",
+    "database/migrations/V005__frs_business_roles.sql": "717d236e06cd17a7fe10578a8d312792ac6129b4d6c8692d0e014b76cb627272"
   },
   "prior_sprints": {
     "sprint1_status": "passed",
@@ -187,17 +223,25 @@
       "applied_migrations": 2
     }
   },
+  "current_upgrade": {
+    "version": 5,
+    "business_tables": 41,
+    "legacy_payload_retry_verified": true,
+    "historical_raw_not_invented": true,
+    "migration_reapply_verified": true
+  },
   "ci_failure_detection": {
     "sql_file_nonzero_exit": 3,
     "later_sql_not_executed": true,
     "assertion_failure_propagated": true
   },
   "assertions": 33,
+  "identifier_lease_assertions": 43,
   "fixtures_cleaned": true,
   "fixture_cleanup": {
     "owner_only_exact_synthetic_uuids": true,
     "captured_payment_guard_disabled_only_during_cleanup_transaction": true,
     "captured_payment_guard_restored": true
   },
-  "finished_at_utc": "2026-11-13T16:14:31.669631+00:00"
+  "finished_at_utc": "2026-11-17T01:05:01.260183+00:00"
 }

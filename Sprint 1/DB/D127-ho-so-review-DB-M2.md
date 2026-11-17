@@ -5,7 +5,7 @@
 | Phụ trách phần hồ sơ | Trần Trung Kiên — Architect / DBA |
 | Sprint / mốc trong nguồn | Sprint 1, 27/09–10/10/2026; M2 dự kiến 10/10/2026 |
 | Ngày chuẩn bị hồ sơ | 07/11/2026 |
-| Nhánh | `Kien` |
+| Nhánh | `DB`; bản gốc `Kien` giữ provenance |
 | Trạng thái | Hồ sơ kỹ thuật để review; chưa phải quyết định thông qua M2 của PM/PO |
 
 ## 1. Phạm vi và căn cứ
@@ -29,8 +29,8 @@
 
 | Mục | Kết quả cần đối chiếu |
 |---|---|
-| PostgreSQL / môi trường | 16.15, Windows x64, database kiểm thử cô lập; phạm vi DB, không có claim HTTP/camera/provider |
-| Hash nguồn và thời gian chạy | 07/11/2026, 11:57:57–11:58:12 (UTC+7); timestamp UTC và SHA-256 tại [summary.json](../../database/evidence/sprint1/summary.json) |
+| PostgreSQL / môi trường | 16.16, container Linux riêng, database kiểm thử cô lập; phạm vi DB, không có claim HTTP/camera/provider |
+| Hash nguồn và thời gian chạy | 17/11/2026; regression snapshot V002; timestamp UTC và SHA-256 tại [summary.json](../../database/evidence/sprint1/summary.json) |
 | Regression baseline | 56 assertions ràng buộc/lifecycle và 7 assertions ACL đạt trước nâng cấp |
 | Nạp mới và nâng cấp dữ liệu có sẵn | Đạt: dựng baseline rồi nâng cấp khi có dữ liệu; giữ 112 dòng của 37 bảng cũ, gồm thiết bị nhập trước upgrade |
 | Chạy migration lần hai / checksum | Hai migration áp dụng; reapply no-op; checksum bị đổi bị từ chối; ca lỗi làm rollback toàn bộ DDL và ledger của các migration chờ |
@@ -49,9 +49,9 @@
 
 | Mã | Nội dung cần chốt | Chủ sở hữu cần xác nhận |
 |---|---|---|
-| M2-DB01 | D34/FRS_V2 và tiêu chí chấp nhận chính thức cho US-01..03/EN-01 chưa có trong repo | Huy / PO |
-| M2-DB02 | Quy tắc hãng D35 có nguồn/xác nhận chưa có; fallback chỉ là kiểm tra kỹ thuật | Huy, đại diện kho, PM |
-| M2-DB03 | Tên/quyền của 9 business role là phương án đề xuất; global catalog cần assignment global | Huy, Kiên, PM |
+| M2-DB01 | D34 đã có; đối chiếu AC chính thức với ứng dụng và QA, không suy toàn hệ thống từ test DB | Huy / PO |
+| M2-DB02 | D35 BA đã có; V003 dùng generic/explicit SKU profile, multi-IMEI và Luhn; QA retest đúng source | Huy, đại diện kho, PM |
+| M2-DB03 | D34 chốt chín role canonical; V005 giữ alias lịch sử, không tự cấp ADMIN quyền nghiệp vụ; API catalog cần scope phù hợp | Huy, Kiên, PM |
 | M2-DB04 | Actor JWT phải được backend xác thực; không tin actor hoặc scope từ request body | Thái |
 | M2-DB05 | Chưa có chứng cứ Staging/PR merge cho phiên bản mới | Kiên, Thái, người quản trị môi trường |
 | M2-DB06 | Test DB không thay báo cáo 35 case kho/QR, E2E hoặc số đo camera <1s | Phát, Thái, Huy |

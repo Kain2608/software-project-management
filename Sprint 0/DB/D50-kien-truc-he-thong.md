@@ -7,7 +7,7 @@
 | Phiên bản | 1.1 — Bổ sung môi trường FE/BE và phân tách tài khoản DB runtime (Kiên xác nhận) |
 | Ngày lập thực tế | 07/11/2026 (Cập nhật: 11/11/2026) |
 | Kỳ Sprint theo phân công | 12–25/09/2026; không dùng ngày này làm ngày ký giả định |
-| Trạng thái | Đã cập nhật & xác nhận: vị trí root FE/BE, baseline Java 26 + Spring Boot 4.1.1 và quyền DB runtime sasms_app |
+| Trạng thái | Đối chiếu source hiện hành 17/11/2026: Java25/Spring Boot4.1.1, FE/BE tại root, runtime sasms_app; không thay biên bản ký |
 
 ## 1. Cơ sở và giới hạn thiết kế
 
@@ -159,7 +159,7 @@ Việc đặt tại root tránh phân mảnh mã nguồn theo từng thư mục 
 Chốt baseline công nghệ chính thức theo hiện trạng mã nguồn đã được kiểm chứng bằng thực nghiệm:
 
 - **Backend (BE):**
-  - **Runtime & SDK:** **Java 26** (OpenJDK / Oracle JDK 26, bytecode level 70.0). Giữ nguyên theo source hiện có để bảo toàn tính toàn vẹn của bằng chứng kiểm thử tự động Sprint 0 và Sprint 1.
+  - **Runtime & SDK:** Java **25** theo backend/pom.xml hiện hành. Hồ sơ Fullstack trước ghi Java26 cần người sở hữu đồng bộ; bằng chứng build cũ không tự xác nhận source mới.
   - **Framework:** **Spring Boot 4.1.1** (sử dụng các starter: `spring-boot-starter-webmvc`, `spring-boot-starter-jdbc`, `spring-boot-starter-security`, `spring-boot-starter-oauth2-resource-server`).
   - **Công cụ build:** Apache Maven 3.9+ thông qua Maven Wrapper (`./mvnw` trên Linux/macOS, `mvnw.cmd` trên Windows).
   - **Quản lý cấu hình & CSDL:** PostgreSQL JDBC Driver (`org.postgresql:postgresql`). Biến môi trường Datasource gồm `SASMS_DB_URL`, `SASMS_DB_USERNAME`, `SASMS_DB_PASSWORD`. Thiết lập `spring.sql.init.mode=never` (không để Spring Boot tự ý DDL/khởi tạo CSDL).
@@ -207,18 +207,18 @@ Theo dõi độ trễ query/checkout, số kết nối, transaction chờ khóa/
 
 | Mã | Việc cần chốt | Người phối hợp | Điều kiện đóng |
 | --- | --- | --- | --- |
-| ARC-01 | D34 FRS và D22 chưa có | Huy, Thái, PM | Liên kết baseline và review ảnh hưởng D50/D51 |
+| ARC-01 | D34/D35 và D22 đã có | Huy, Thái, Kiên, PM | Đối chiếu BR-01/03, SER-01…10 và vai trò; V003…V005 xử lý DB, tích hợp/triển khai cần người sở hữu xác nhận |
 | ARC-02 | Sáu module toàn hệ thống và demo kho/POS | Huy, PM, Sponsor | Phạm vi từng Sprint và chấp nhận phần nào đã được ký |
 | ARC-03 | Máy in nhiệt 80 mm trong D33 và HTML/PDF theo D08 | Huy, Thái, PM | Quyết định phạm vi + model/giao tiếp thử nếu dùng máy in |
 | ARC-04 | Chín vai trò, phạm vi cửa hàng, phê duyệt giao dịch | Huy, PM | Ma trận D54 được xác nhận |
 | ARC-05 | QR/Serial theo hãng, giữ hàng, thanh toán, kiểm kê | Huy, trưởng kho, thu ngân | Trả lời KS41–KS46 và D35; cập nhật ràng buộc |
-| ARC-06 | Backend/Frontend baseline, tài khoản runtime DB sasms_app, cloud, backup, RPO/RTO và SLA | Thái, Kiên, PM | **ĐÃ CHỐT:** Đặt `backend/` và `frontend/` tại root; BE dùng Java 26 + Spring Boot 4.1.1; FE dùng React + Vite; kết nối backend dùng login thuộc quyền `sasms_app` (không dùng owner). Cloud/PITR chờ hoàn thiện Staging |
+| ARC-06 | Source FE/BE và runtime | Thái, Kiên, PM | Source hiện hành Java25/Spring Boot4.1.1, React/Vite, FE/BE tại root; LOGIN thuộc sasms_app. Toolchain ứng dụng và Cloud/PITR cần người sở hữu cập nhật/phê duyệt theo phiên bản |
 | ARC-07 | Mâu thuẫn mã tài liệu: workbook gọi D05 Charter, repo D05 là Scope, D06 là Charter | PM | Danh mục tài liệu thống nhất, không đổi tên mất dấu nguồn |
 
 Review cần kiểm tra: các miền có chủ sở hữu; kho/POS có transaction atomic và chống lặp; thiết bị không bán trùng; provider lỗi không chặn bán hàng; security mặc định từ chối; SQL/DBML/D51 khớp nhau; log chạy thử có thật; các giả định còn mở được ghi nhận. D50 không thay thế biên bản Quality Gate M1.
 
-| Người review / ký | Phạm vi | Trạng thái | Ngày / bằng chứng |
+| Trạng thái | Đối chiếu source hiện hành 17/11/2026: Java25/Spring Boot4.1.1, FE/BE tại root, runtime sasms_app; không thay biên bản ký |
 | --- | --- | --- | --- |
-| Trần Trung Kiên | Kiến trúc, dữ liệu, baseline FE/BE & quyền DB runtime | ĐÃ XÁC NHẬN | 11/11/2026 (Chấp thuận A1 root repo, B1 Java 26/Spring Boot 4.1.1, C2 sasms_app login) |
+| Trần Trung Kiên | Kiến trúc, dữ liệu và quyền DB runtime | Cập nhật kỹ thuật | 17/11/2026; đối chiếu source, không phải chữ ký nghiệm thu mới |
 | Vũ Duy Thái — Dev Lead | Khả năng hiện thực, triển khai | Chờ review/ký | Đã đề xuất và kiểm chứng kỹ thuật tại bàn giao TV4 |
 | Trịnh Quốc An — PM | Phạm vi, vận hành, mốc M1 | Chờ review/ký | Đã chấp thuận A1, B1, C2 ngày 07/11/2026 |

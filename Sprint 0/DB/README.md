@@ -19,7 +19,7 @@ Sprint theo bảng phân công: **12/09–25/09/2026**; mốc M1: **25/09/2026**
 | S0-24 — Môi trường DB | Bộ cài và hướng dẫn | [database/README.md](../../database/README.md), [seed.sql](../../database/seed.sql) |
 | S0-18 — Kiểm chứng | Bộ kiểm tra và kết quả chạy | [constraints.sql](../../database/tests/constraints.sql), [validate_db.py](../../scripts/validate_db.py), [validation.log](../../database/evidence/validation.log) |
 | S0-27 — Đóng góp review M1 | Hồ sơ review của Kiên | [D126-ho-so-review-M1.md](D126-ho-so-review-M1.md) |
-| Đối chiếu phần còn thiếu | Phụ lục tiếp tục trên nhánh DB | [Bộ bổ sung Sprint 0](bo-sung/README.md), [biên mục hash](bo-sung/doi-chieu-sprint-0.json) |
+| Đối chiếu phần còn thiếu | Phụ lục tiếp tục trên nhánh DB | [Bộ bổ sung Sprint 0](bo-sung/README.md) |
 
 Tên mã tài liệu D50/D51/D54/D57 là đầu ra của bảng phân công. SQL là nguồn triển khai; DBML và ERD phải phản ánh cùng một phiên bản SQL. Chỉ coi kiểm tra là đạt khi có log chạy thực tế tương ứng; đường dẫn tới bộ kiểm tra không tự nó chứng minh rằng kiểm tra đã chạy thành công.
 

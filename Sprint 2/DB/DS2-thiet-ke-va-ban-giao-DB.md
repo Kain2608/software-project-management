@@ -1,82 +1,51 @@
 # DS2 — Thiết kế và bàn giao DB Sprint 2
 
-Phụ trách: **Trần Trung Kiên — Architect / DBA**. Kế hoạch 11/10–24/10/2026; rà soát 13/11/2026. Phần DB cho S2-03, S2-06 và S2-12; hỗ trợ S2-08/S2-15/S2-14. Đây là đóng góp kỹ thuật cho DS2, chưa phải nghiệm thu toàn ứng dụng.
+Trần Trung Kiên — Architect / DBA, cập nhật **17/11/2026**, nhánh DB. Phạm vi S2-03/S2-06, hỗ trợ S2-08/S2-12 theo [phân công](inputs/phan-cong-sprint-2.csv); không ký thay chủ trì DS2/BA/PM/QA.
 
-## 1. Baseline và căn cứ
+## Căn cứ liên nhóm
 
-Kế thừa [schema Sprint 0](../../database/schema.sql) gồm 37 bảng và [V001/V002 Sprint 1](../../database/migrations) nâng lên 39 bảng nghiệp vụ. Sprint 2 bổ sung view, index, function và quyền gọi; không đổi tên cột `products.list_price`, không sửa các migration đã ghi checksum. Ledger `sasms_meta.schema_migrations` thuộc runner Sprint 1; file SQL Sprint 2 hiện là extension áp dụng riêng, chưa nằm trong ledger đó.
-
-Hợp đồng quyền theo [DS1](../../Sprint%201/DB/DS1-thiet-ke-va-ban-giao-DB.md) và [D54](../../Sprint%200/DB/D54-bao-mat-phan-quyen.md): backend xác thực token, ánh xạ `users.id`, truyền actor tin cậy; SQL kiểm actor active, permission và scope. `sasms_app` là group runtime của backend, không cấp cho trình duyệt và không thay RLS.
-
-## 2. S2-03 — Chọn và giải phóng Serial
-
-Nguồn thực thi: [realtime_stock_and_locking.sql](../../database/sprint2/realtime_stock_and_locking.sql). Client không được truyền actor tùy ý, ghi trạng thái thiết bị hoặc tự đặt giá bán.
-
-| Hàm | Hợp đồng |
+| Chủ trì / nguồn | Hợp đồng áp dụng cho DB |
 |---|---|
-| `find_and_lock_device_for_pos(store uuid, order uuid, item uuid, serial text, actor uuid) → uuid` | Yêu cầu `sales.checkout` tại cửa hàng; đơn DRAFT đúng store/kho, item đúng đơn/sản phẩm; Serial trim/uppercase; khóa hàng thiết bị và gắn lựa chọn active |
-| `release_device_lock(order uuid, device uuid, actor uuid) → boolean` | Kiểm `sales.checkout` theo **store của đơn đọc từ DB**; đơn phải DRAFT; trả true khi bỏ lựa chọn active, false khi không có lựa chọn active; không đổi trực tiếp trạng thái RESERVED/SOLD |
-| `reserve_order(order uuid, actor uuid) → numeric` | Hàm baseline kiểm tập device active/số lượng và chuyển RESERVED; backend vẫn phải kiểm quyền, scope và đường gọi |
-| `complete_sale(order uuid, actor uuid) → uuid` | Hàm baseline yêu cầu thanh toán hợp lệ, chuyển SOLD, ghi movement/audit/outbox và invoice nội bộ DRAFT trong transaction |
+| Huy — [D34 FRS](../../Sprint%200/BA/D34_FRS_V2_SASMS.docx), [D35](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx) | Chín vai trò, Serial raw/case/128, multi-IMEI/Luhn; POS10m/ONLINE30m và PENDING |
+| Thái — [Fullstack S1](../../Sprint%201/Fullstack/TV4/SPRINT1_IMPLEMENTATION_REPORT.md), [S2](../Fullstack/TV4/SPRINT2_IMPLEMENTATION_REPORT.md), [AI POS](../Fullstack/TV4/S2-09_AI_POS_FRONTEND_INTEGRATION.md) | Giữ chữ ký SQL, trusted actor, transaction, mapping SQLSTATE; không tự coi cart/payment/lock REST E2E đã xong |
+| Vũ — [D55](../../Sprint%200/AI/D55-thiet-ke-ai-prompt-rag-cache-fallback.md), [DS1](../../Sprint%201/AI/DS1-phan-mem-tang-truong-ai-sprint1.md), [D52](../AI/D52-hop-dong-tich-hop-ai-pos-sprint2.md) | Product/giá/tồn thật, không PII; cache cross-sell5m, kiểm kho, không suy tương thích phụ kiện |
+| Phát — [D71](../../Sprint%201/Tester/D71_Bo_Test_Case_Kho_QR_SASMS_v1.2.docx), [D75](../../Sprint%201/Tester/D75_Bao_cao_kiem_thu_Sprint_1_SASMS.docx), [D80](../../Sprint%201/Tester/D80_So_loi_Bug_Log_SASMS.docx) | Unique/checksum/rollback/concurrency; retest thực tế, không lấy test DB đóng bug hoặc thay D76/D79 |
+| An — D21/D22, workbook, [D122 dự thảo](../../Sprint%201/BA/D122_Sprint_Review_Retrospective_1_SASMS_DU_THAO.docx) | Tách kiểm kỹ thuật khỏi PR/merge, Staging, baseline và nghiệm thu |
 
-Khóa hàng thiết bị dùng `FOR UPDATE NOWAIT`: khi phiên thứ nhất chưa kết thúc transaction, phiên thứ hai bị `55P03`. Sau commit, lựa chọn active của đơn DRAFT còn hạn 15 phút tính từ `sales_orders.created_at` tiếp tục chặn đơn khác. Đây là thời hạn từ lúc tạo đơn, không phải 15 phút kể từ lần quét cuối; chọn vào đơn đã hết hạn bị `23514`. Không có worker tự hủy đơn/thanh toán. Sau rollback của phiên giữ, phiên khác có thể thử lại.
+## Mô hình và nâng cấp
 
-`SELECT FOR UPDATE` chỉ bảo vệ trong transaction hiện tại; liên kết `order_devices` bảo vệ lựa chọn sau commit. Không giữ transaction trong khi thu ngân thao tác UI hoặc gọi AI/payment qua mạng. Mọi đường chỉnh giỏ/giữ/hủy phải theo hợp đồng backend; quyền DML và các hàm POS baseline còn yêu cầu kiểm quyền ở service. Hai function Sprint 2 chưa harden mọi đường ghi của toàn hệ thống.
+Giữ nguyên S0 37 bảng/V001-V002 39 bảng. V003 thêm device_identifiers/product_identifier_profiles; V004 thêm deadline và guard vòng đời; V005 đồng bộ role BA. Hiện hành **41 bảng, 5 migration**; [DBML](../../database/sprint2/schema.dbml), [ERD](../../database/sprint2/erd.mmd), [từ điển](../../database/sprint2/data-dictionary.md) sinh từ catalog thật. Xem [runbook](../../database/sprint2/README.md), [D35 DB](../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md).
 
-| SQLSTATE | Ý nghĩa tích hợp |
-|---|---|
-| `42501` | Actor thiếu quyền/inactive/sai scope hoặc runtime chưa được cấp EXECUTE; phân biệt lỗi người dùng với lỗi cấu hình server |
-| `P0002` | Không tìm thấy đơn/item/device phù hợp |
-| `23514` | Sai trạng thái, quan hệ, đơn hết hạn chọn hoặc thiết bị không còn bán được |
-| `55P03` | Hàng đang bị khóa hoặc Serial thuộc giỏ nháp khác còn hạn; API trả xung đột có ý nghĩa |
+Owner/migrator chạy toàn bộ migrations, runtime S1 rồi extension S2; không sửa migration/checksum cũ hoặc nạp lại baseline/seed vào DB đã nâng cấp. `--target-version 2` chỉ phục vụ regression lịch sử, không hạ cấp DB.
 
-Backend dùng bind parameter và trả kết quả sau COMMIT. Nếu mất phản hồi lúc commit, đối soát đơn/lựa chọn theo scope trước retry. Mã HTTP/envelope phải được Thái chốt trong D52; SQLSTATE không phải endpoint HTTP đã triển khai.
+## S2-03 — Chọn, giữ và thanh toán
 
-## 3. S2-06 — Tồn kho và nguồn giá
+find_and_lock_device_for_pos giữ chữ ký store/order/item/serial/actor RETURNS uuid. Serial chỉ trim, phân biệt hoa/thường. Kiểm active actor/sales.checkout/store/warehouse/product/DRAFT, khóa NOWAIT, đối thủ nhận 55P03.
 
-View `sasms.v_realtime_inventory` có một hàng cho **sản phẩm active × kho thuộc store active**. Schema không có `warehouses.is_active`; chỉ lọc `products.is_active` và `stores.is_active`. Giá vật lý là **`p.list_price`**, chiếu thành **`price`** để giữ hợp đồng đầu ra view/fallback và DTO giá. API phải lọc store/kho được phép; view không tự lọc theo actor.
+Lần giữ đầu tạo hold_expires_at theo giờ server: **POS10 phút, ONLINE30 phút**; quét lại/reserve không gia hạn. Cart cũ khi nâng cấp giữ deadline bảo thủ từ created_at vì không biết thời điểm quét gốc. Guard kiểm cả ghi order_devices và reserve; cart A hết hạn không thể chiếm lease B mới. DRAFT chưa đổi tồn trạng thái; RESERVED mới giảm IN_STOCK.
 
-| Trường | Ý nghĩa theo SQL hiện có |
-|---|---|
-| `available_stock` | Số device `IN_STOCK`; lựa chọn giỏ DRAFT chưa gọi reserve vẫn được tính ở đây |
-| `reserved_stock` | Số device `RESERVED` |
-| `sold_stock` | Số device `SOLD` còn mang warehouse ID đó |
-| `total_physical_stock` | Tên trường kế thừa, thực tế là tổng **bản ghi device** tại kho, gồm SOLD/các trạng thái khác; không phải lượng hàng vật lý đang nằm trong kho |
+release_device_lock chỉ bỏ lựa chọn DRAFT, kiểm quyền theo store của đơn. reserve_order/complete_sale/cancel_order giữ chữ ký và kiểm quyền trước cả retry; tiền CAPTURED phải bằng tổng, audit/movement/outbox/invoice DRAFT không ghi lặp.
 
-Vì vậy `available_stock > 0` không cam kết mọi Serial đang chọn được: function khóa Serial còn kiểm lựa chọn DRAFT và quyền. Sau `reserve_order`, available giảm/reserved tăng; sau `complete_sale`, reserved giảm/sold tăng. Hai kết nối phải kiểm thay đổi đã commit và rollback không làm lộ thay đổi chưa commit.
+expire_order_reservation(order,actor) hủy/giải phóng DRAFT/RESERVED đã quá deadline, **không có PENDING/CAPTURED**; retry không release lần hai. Worker gọi hàm thuộc ứng dụng/vận hành, chưa có scheduler chỉ từ SQL. Trước khởi tạo payment phải có reservation còn hạn. PENDING không tự release theo TTL/manual cancel; callback đã xác minh có thể chốt sau deadline. Adapter đối soát/quản lý sau15 phút thuộc tích hợp, không suy thất bại theo đồng hồ.
 
-Đây là view thường, đọc dữ liệu theo snapshot PostgreSQL. Ở READ COMMITTED, truy vấn mới sau commit thấy thay đổi đã commit; transaction dùng snapshot cũ có thể tiếp tục thấy dữ liệu cũ. Không có phép đo “0 ms”, cam kết độ trễ UI hoặc cache ngoài DB từ đặc tính này. Yêu cầu workbook là số tồn đổi trong vài giây sau bán; QR/POS/AI phải đo toàn đường ứng dụng.
+V003 giữ raw/case/IMEI phụ/checksum. imei2 hiện là trường JSON SQL; DTO HTTP cần Fullstack cập nhật riêng. Không đổi hãng DEMO hoặc bịa raw lịch sử.
 
-Index theo `(warehouse_id, product_id, status)`, `(serial, warehouse_id)` và lựa chọn active hỗ trợ truy vấn. Hiệu năng phụ thuộc dữ liệu/kế hoạch thực thi; các ngưỡng DB 10–15 ms trong bản cũ chưa có bằng chứng và không được ghi như kết quả đạt.
+## S2-06 — Tồn và snapshot
 
-## 4. Hỗ trợ S2-08 — Candidate fallback cho AI
+v_realtime_inventory theo SKU active/kho/store active, giá products.list_price AS price. available_stock=IN_STOCK, reserved_stock=RESERVED, sold_stock=SOLD; DRAFT chưa giảm số tồn này. Tồn sổ D34=available+reserved. total_physical_stock là tên tương thích đếm toàn bộ bản ghi kể cả SOLD, không dùng làm tồn sổ/kiểm đếm vật lý.
 
-`get_cross_sell_fallback_rules(product uuid, store uuid, limit integer DEFAULT 5)` trả `recommended_product_id`, `sku`, `product_name`, `price`, `available_stock`, `recommendation_reason`. Function lấy giá từ view, lọc sản phẩm khác source và còn IN_STOCK trong store, xếp ưu tiên cùng brand/tồn/giá. Một sản phẩm có thể xuất hiện ở nhiều kho; consumer phải hiểu phạm vi từng hàng, không giả định product ID duy nhất.
+Snapshot PostgreSQL sau commit không chứng minh UI zero-lag. Fullstack đã có API stock dùng stock_availability và receipt; DB không tự đổi controller hoặc coi cart/payment E2E đã hoàn thành. Index hỗ trợ query không thay benchmark toàn đường QR/POS/AI.
 
-Đây là heuristic candidate, chưa có bảng luật tương thích phụ kiện đã được Huy/Vũ phê duyệt. Cùng brand/category không tự chứng minh cáp, sạc hoặc phụ kiện tương thích. Không mô tả kết quả là “chỉ phụ kiện chính hãng phù hợp”. Dịch vụ/gói bảo hành không có device cũng không tự xuất hiện như hàng kho trong view này.
+## S2-08 — Fallback và AI
 
-Theo [D55](../../Sprint%200/AI/D55-thiet-ke-ai-prompt-rag-cache-fallback.md), [DS1 AI](../../Sprint%201/AI/DS1-phan-mem-tang-truong-ai-sprint1.md) và `AiCacheManager`, cache cross-sell hiện dùng **5 phút**, timeout mục tiêu **2.500 ms** trước fallback. TTL 24 giờ trong thiết kế dành cho tóm tắt thông số, không áp dụng mặc định cho cross-sell. Bảng `ai_recommendations` không có đầy đủ store/cache key hoặc quyền ghi runtime để trở thành DB cache đang chạy. Không có số liệu chứng minh giảm 60% token.
+get_cross_sell_fallback_rules giữ sáu cột đầu ra; limit1–10, lọc IN_STOCK, **gộp theo product, tổng tồn store**, tie-break product ID trước LIMIT, không lặp SKU vì nhiều warehouse. Consumer kiểm kho cụ thể theo D52, active/giá/tồn trước hiển thị/thêm giỏ/checkout.
 
-`AiCrossSellService`/`AiRuleFallbackEngine` hiện chưa gọi function DB Sprint 2. Thái/Vũ cần nối candidate thật, loại inactive/sai scope, kiểm lại giá/tồn khi hiển thị và khi thêm giỏ, dùng luật tương thích được duyệt và đo nguồn AI/CACHE/RULE_FALLBACK. Không đưa PII/secret hoặc payment vào prompt/cache/log.
+Brand/category chỉ là heuristic, không xác nhận phụ kiện tương thích/chính hãng. Backend kiểm ai.use/store/JWT. Engine Java hiện chưa gọi candidate SQL; phần DB không tự sửa adapter/provider. Cache cross-sell5 phút, không coi ai_recommendations là DB cache có writer hoặc báo token saving khi chưa đo.
 
-## 5. CI, quyền thực thi và kiểm chứng
+## Quyền, kiểm chứng và nghiệm thu
 
-Owner/migrator áp dụng DDL và ACL. Ba function mới và view thu hồi quyền từ `PUBLIC`/`sasms_reader`; `sasms_app` được EXECUTE/SELECT theo allowlist khi group đã được provision. Chạy runtime Sprint 1 trước extension. Quyền EXECUTE không thay kiểm quyền nghiệp vụ; credential app vẫn thuộc backend tin cậy.
+PUBLIC/reader không gọi hàm ghi mới; app dùng LOGIN thuộc sasms_app, không owner. Registry/profile/audit không ghi trực tiếp. V005 có chín role canonical; alias cũ giữ lịch sử, ADMIN không tự duyệt hoàn tiền.
 
-[Validator](../../scripts/validate_sprint2.py) dùng `psql` với `ON_ERROR_STOP=1`, kiểm exit code, ACL/authorization và điều phối hai tiến trình/kết nối có backend PID khác nhau. Ca commit phải có một người giữ và người thua `55P03`; ca rollback cho phép người còn lại giữ sau rollback; kiểm đúng liên kết active và delta tồn sau reserve/sale.
+[Validator](../../scripts/validate_sprint2.py) chạy regression S0/S1 tại V002 trước nâng cấp, retry legacy, checksum/no-op, SQL/ACL/D34/D35 và hai kết nối POS commit/rollback. [Summary](../../database/evidence/sprint2/summary.json)/[log](../../database/evidence/sprint2/validation.log) ghi kết quả thật/hash. Trên DB đã nâng cấp, regression S1 cần DB riêng; không dùng test uppercase V002 đánh giá V003.
 
-Đối chiếu [summary/log Sprint 2](../../database/evidence/sprint2) với lần chạy và source hash tương ứng. SQL một `DO` block chạy tuần tự không chứng minh hai kết nối đồng thời. Regression Sprint 0/1 bảo vệ schema, migration và nhập kho cũ; evidence của commit cũ không xác nhận code mới.
-
-Workflow và trạng thái Staging xem [D22](D22-ke-hoach-moi-truong-va-CICD-sprint2.md). Kết quả local/CI DB và readiness không phải log deploy remote.
-
-## 6. Bàn giao liên nhóm
-
-| Người chủ trì | Phần cần tiếp nhận / xác nhận |
-|---|---|
-| Thái — Fullstack | D52 endpoint chọn/bỏ Serial/tồn, actor từ JWT, transaction/commit, mapping lỗi; POS hiện mới có `/api/pos/status` với `SKELETON_READY` |
-| Vũ — AI | Candidate/giá/tồn DB, luật tương thích, cache 5 phút, fallback thật và log nguồn/latency; chưa đồng nhất heuristic SQL với engine ứng dụng |
-| Phát — QA | D72/D73/D76, quyền và hai kết nối, E2E bán/in/QR; D79 cho p95/50 request |
-| Huy — BA/PO | AC/DoR, semantics tồn khả dụng/giỏ DRAFT, phạm vi lease, luật phụ kiện và demo nghiệm thu |
-| An — PM | Hạ tầng/secret/phát hành S2-12, biên bản D128/D129, CR/token/EVM; không dùng readiness làm deploy thành công |
-
-PR/merge, demo ứng dụng, báo cáo tải, Staging thật và chữ ký thuộc đầu ra cần bổ sung của người sở hữu. Tài liệu này không ký thay họ.
+Test DB không thay video POS, JWT/HTTP, D76/D79/load, Staging, PR/merge hoặc chữ ký PO. Readiness vẫn NOT_DEPLOYED đến khi có deploy thật và người sở hữu xác nhận.

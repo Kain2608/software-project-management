@@ -1,107 +1,40 @@
-# D54 — Thiết kế bảo mật và ma trận phân quyền
+# D54 — Bảo mật và phân quyền DB
 
-| Thuộc tính | Giá trị |
-| --- | --- |
-| Công việc | S0-21 — Bảo mật và phân quyền theo 9 vai trò |
-| Phụ trách | Trần Trung Kiên — Architect / DBA |
-| Phiên bản / ngày lập thực tế | 1.0 / 07/11/2026 |
-| Trạng thái | Đề xuất để review; chưa có chữ ký Kiên/PM |
-| Liên quan | [D50](D50-kien-truc-he-thong.md), D51, D57; D33 KS35–KS36 |
+Trần Trung Kiên — Architect / DBA; cập nhật **17/11/2026** theo [D34 FRS BA](../BA/D34_FRS_V2_SASMS.docx), FR-01 và “Tác nhân và quyền được chốt”. SQL S0 là snapshot lịch sử; hiện hành bổ sung qua V001/V004/[V005](../../database/migrations/V005__frs_business_roles.sql).
 
-## 1. Cơ sở và mức độ hoàn thành
+## Chín vai trò nghiệp vụ
 
-Bảng phân công yêu cầu ma trận **9 vai trò**, nhưng repo chưa có D34 FRS, danh sách chính thức 9 vai trò hoặc kết quả phỏng vấn KS35–KS36. Chín vai trò bên dưới là **phương án đề xuất**, dùng để thiết kế và tạo seed có thể review. Chưa có ứng dụng/API thực thi quyền trong đầu ra Sprint 0 DB; seed RBAC không tự trở thành cơ chế kiểm soát truy cập.
+| Vai trò | Cho phép | Giới hạn |
+|---|---|---|
+| ADMIN | Cấp/khóa tài khoản, gán quyền, audit quản trị | Không tự duyệt đổi trả/hoàn tiền hoặc checkout; cần gán thêm vai trò nghiệp vụ có chủ đích |
+| CATALOG_MANAGER | SKU, thông số, giá và profile định danh | Không sửa giao dịch xác nhận hoặc xác nhận tiền |
+| WAREHOUSE_STAFF | Nhập/tra thiết bị trong phạm vi được giao | Không sửa thanh toán hoặc bán hàng |
+| CASHIER | POS, tiền mặt, in/in lại, gợi ý | Không duyệt hoàn/đổi hoặc cấp quyền |
+| SALES_STAFF | Tra danh mục/tồn và tư vấn | Không ghi PAID |
+| DISPATCHER | Lập/đổi lịch đơn PAID | Không sửa thu tiền hoặc thay kỹ thuật viên ghi kết quả |
+| TECHNICIAN | Việc được phân công, kết quả và bảo hành đủ điều kiện | Không duyệt đổi trả hoặc thay lịch ngoài quyền |
+| CUSTOMER_SERVICE | Tra hồ sơ, nhận yêu cầu, bảo hành | Không tự duyệt hoàn tiền |
+| STORE_MANAGER | Duyệt ngoại lệ/đổi trả, mở bán lại sau kiểm tra, báo cáo | Theo siêu thị được giao; không mặc định quản trị IAM/catalog toàn chuỗi |
 
-Các bảng `users`, `roles`, `permissions`, `user_roles`, `role_permissions` mô hình hóa quyền nghiệp vụ. PostgreSQL login/runtime role là lớp khác; không tạo chín PostgreSQL superuser hoặc chia sẻ tài khoản DB với nhân viên.
+V005 giữ role/assignment cũ để không mất lịch sử. WAREHOUSE/SALES là alias is_legacy của WAREHOUSE_STAFF/SALES_STAFF; quyền cũ chỉ thu hẹp theo allowlist, không phục hồi grant đã thu hồi. ANALYST nằm ngoài chín role D34, giữ lịch sử nhưng không có quyền tự động; quản trị review và gán lại có chủ đích. Ba mã legacy không phải ba business role BA mới phê duyệt.
 
-## 2. Chín vai trò nghiệp vụ đề xuất
+## Scope và credential
 
-| Mã | Vai trò | Phạm vi mặc định đề xuất |
-| --- | --- | --- |
-| `ADMIN` | Quản trị hệ thống | Cấu hình tài khoản/quyền toàn hệ thống; dùng tài khoản riêng cho việc quản trị |
-| `STORE_MANAGER` | Quản lý cửa hàng | Dữ liệu thuộc cửa hàng được giao; duyệt điều chỉnh và hoàn tiền |
-| `WAREHOUSE` | Nhân viên kho | Kho được giao thuộc cửa hàng; nhập kho, tra cứu thiết bị, lập kiểm kê |
-| `CASHIER` | Thu ngân | Đơn và thanh toán ở cửa hàng làm việc; checkout; không tự duyệt hoàn tiền |
-| `SALES` | Nhân viên bán hàng | Danh mục, tư vấn và đơn nháp tại cửa hàng; không xác nhận tiền |
-| `DISPATCHER` | Điều phối giao/lắp | Đơn cần giao ở cửa hàng phụ trách; lịch, phân công và trạng thái giao |
-| `TECHNICIAN` | Kỹ thuật viên | Chỉ nhiệm vụ được phân công và thông tin liên hệ cần thiết |
-| `CUSTOMER_SERVICE` | Chăm sóc khách hàng / bảo hành | Hồ sơ bảo hành/đổi trả được giao hoặc cửa hàng phụ trách |
-| `ANALYST` | Phân tích / báo cáo | Chỉ số tổng hợp và dữ liệu đã che định danh trong phạm vi được giao |
+has_permission(actor,permission,store) yêu cầu user active, permission và store hợp lệ. Scope NULL chỉ nhận assignment toàn chuỗi; không nới helper vì consumer thiếu store. Catalog API cần hợp đồng đọc phù hợp người dùng cửa hàng.
 
-Nhân viên có thể được gán nhiều vai trò sau review; quyền là hợp các quyền được cấp trong phạm vi hợp lệ, không được cộng dồn để mở rộng cửa hàng ngoài phân công. Tài khoản không hoạt động hoặc không có vai trò hợp lệ luôn bị từ chối.
+Hàm catalog/nhập lô/chọn/release/reserve/complete/cancel/expire kiểm quyền SQL hiện hành. Backend vẫn xác thực JWT/session, ánh xạ trusted actor và lọc phạm vi đối tượng/DTO. DB không xác thực JWT hoặc có RLS toàn hệ thống chỉ bằng seed role. UUID actor do client gửi không chứng minh danh tính.
 
-## 3. Ma trận hành động
+- sasms_app/sasms_reader là group NOLOGIN, không superuser/CREATEDB/CREATEROLE/BYPASSRLS. Backend dùng LOGIN riêng thuộc sasms_app; không dùng owner hoặc đưa credential vào browser.
+- Owner/migrator áp DDL sau backup/thử nâng cấp. App dùng allowlist; không trực tiếp sửa stock/status/total, registry/profile hoặc audit.
+- PUBLIC bị thu hồi EXECUTE; reader chỉ đọc catalog/tồn tổng hợp, không customer/payment/audit. Runtime không tự phê duyệt profile.
+- CAPTURED bất biến, tổng tiền xác nhận bằng tổng đơn; dùng quy trình hoàn tiền riêng. PENDING không tự giải phóng theo TTL, phải đối soát theo D34 BR-03.
+- Audit/movement/outbox cùng transaction. Có quyền/bảng không chứng minh đã hoàn thành workflow hậu bán/phân công.
 
-Ký hiệu: `✓` = quyền trong phạm vi đã gán; `D` = được lập yêu cầu/nháp, không được duyệt; `A` = chỉ tài nguyên được phân công; `R` = chỉ dữ liệu đọc được giới hạn; `—` = từ chối. Cột quản trị bao gồm quyền kỹ thuật đề xuất; thao tác nghiệp vụ nhạy cảm vẫn phải có audit và review độc lập, không dùng quyền quản trị hằng ngày để bỏ qua kiểm soát.
+Kiểm [ACL baseline](../../database/tests/runtime_acl.sql), [SQL Sprint 2](../../database/tests/sprint2/test_sprint2_concurrency_and_stock.sql), [D34/D35 regression](../../database/tests/sprint2/identifiers_and_leases.sql) và [summary](../../database/evidence/sprint2/summary.json). Có ca riêng cho chín role canonical, ADMIN không tự duyệt hoàn tiền và CATALOG_MANAGER không checkout. Test DB không thay JWT/HTTP/E2E hoặc chữ ký PO.
 
-| Hành động / mã quyền đề xuất | ADMIN | STORE_MANAGER | WAREHOUSE | CASHIER | SALES | DISPATCHER | TECHNICIAN | CUSTOMER_SERVICE | ANALYST |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Xem danh mục — `catalog.read` | ✓ | ✓ | ✓ | ✓ | ✓ | R | R | ✓ | R |
-| Sửa danh mục / giá — `catalog.write` | ✓ | ✓ | — | — | — | — | — | — | — |
-| Xem tồn / Serial — `inventory.read` | ✓ | ✓ | ✓ | ✓ | ✓ | R | A | R | R |
-| Nhận hàng — `inventory.receive` | ✓ | ✓ | ✓ | — | — | — | — | — | — |
-| Lập kiểm kê / yêu cầu điều chỉnh | ✓ | ✓ | D | — | — | — | — | — | — |
-| Duyệt điều chỉnh — `inventory.adjust` | ✓ | ✓ | — | — | — | — | — | — | — |
-| Xem đơn — `sales.read` | ✓ | ✓ | R | ✓ | ✓ | A | A | R | R |
-| Lập đơn nháp | ✓ | ✓ | — | ✓ | D | — | — | — | — |
-| Checkout — `sales.checkout` | ✓ | ✓ | — | ✓ | — | — | — | — | — |
-| Duyệt hủy/ngoại lệ — `sales.approve` | ✓ | ✓ | — | — | — | — | — | — | — |
-| Tra soát thanh toán — `payments.read` | ✓ | ✓ | — | ✓ | — | — | — | R | R |
-| Đề nghị hoàn tiền | ✓ | ✓ | — | D | — | — | — | D | — |
-| Duyệt/thực hiện hoàn — `payments.refund` | ✓ | ✓ | — | — | — | — | — | — | — |
-| Điều phối giao/lắp — `logistics.manage` | ✓ | ✓ | — | — | — | ✓ | — | — | — |
-| Cập nhật nhiệm vụ — `logistics.execute` | ✓ | ✓ | — | — | — | ✓ | A | — | — |
-| Tiếp nhận bảo hành — `warranty.manage` | ✓ | ✓ | — | — | — | — | A | ✓ | — |
-| Xem báo cáo — `reports.read` | ✓ | ✓ | — | — | — | — | — | — | R |
-| Gợi ý AI — `ai.use` | ✓ | ✓ | — | ✓ | ✓ | — | — | ✓ | — |
-| Quản trị tài khoản/quyền — `iam.manage` | ✓ | — | — | — | — | — | — | — | — |
-| Đọc audit — `audit.read` | ✓ | R | — | — | — | — | — | — | — |
-| Xóa/sửa audit đã ghi | — | — | — | — | — | — | — | — | — |
+Các kiểm soát thiết kế dưới đây tiếp tục là yêu cầu bàn giao cho ứng dụng/vận hành; không ghi chúng thành tính năng đã triển khai chỉ từ migration DB.
 
-Các dòng lập nháp/yêu cầu là hợp đồng ứng dụng đề xuất, cần thêm permission riêng nếu được tách endpoint; không hiểu quyền đọc là quyền tạo nháp. Tập mã seed cuối cùng cần đối chiếu D57 khi triển khai. Phân quyền đọc có `R`/`A` cần DTO/view che trường và bộ lọc đối tượng; không cấp trực tiếp toàn bảng cho vai trò nghiệp vụ.
-
-### Kiểm tra phạm vi ở mỗi request
-
-Backend lấy user và vai trò từ session/token đã xác minh; không tin `role`, `store_id` hay `user_id` do client gửi như bằng chứng quyền. Với tài nguyên có ID, truy vấn phải bao gồm cửa hàng/kho/nhiệm vụ được phép, kể cả API chi tiết, tìm kiếm, xuất file và tác vụ nền. Không tìm thấy trong phạm vi trả phản hồi không tiết lộ dữ liệu ngoài phạm vi.
-
-`user_roles.store_id` cho phép gán vai trò theo từng cửa hàng và nhiều cửa hàng cho một user. Giá trị `NULL` được đề xuất chỉ cho quyền toàn hệ thống đã được quản trị cấp có chủ ý; backend phải quy định rõ vai trò nào được dùng scope này, không mặc định mọi `NULL` đều được xem toàn chuỗi. Schema chưa mô hình hóa phân công chi tiết đến từng kho hoặc thời hạn ủy quyền; các nhu cầu đó cần migration sau review. Chưa có chính sách RLS hoặc API kiểm tra phạm vi thì không tuyên bố chống truy cập chéo cửa hàng đã hoàn thành.
-
-Tạo/sửa vai trò chỉ cho `ADMIN`, có audit người cấp, người nhận, quyền thay đổi và lý do. Thu hồi quyền phải làm mất hiệu lực cache/session theo thiết kế ứng dụng. Quyền mới mặc định chưa cấp cho bất kỳ vai trò nào cho đến khi ma trận được review.
-
-### Phân tách trách nhiệm
-
-Người lập yêu cầu điều chỉnh/hoàn tiền không tự duyệt chính yêu cầu đó. Ghi `requested_by`, `approved_by`, thời điểm và lý do trong mô hình workflow trước khi bật chức năng này; nếu D57 chưa có đầy đủ trường/ràng buộc thì đây là yêu cầu Sprint sau, không phải bảo đảm DB hiện có. Nhà quản trị không được trực tiếp sửa payment đã hoàn tất để “sửa số”; dùng bút toán/trạng thái bù trừ có liên kết giao dịch gốc.
-
-## 4. Tài khoản DB và ranh giới tin cậy
-
-| Tài khoản / group role đề xuất | Quyền | Cách sử dụng |
-| --- | --- | --- |
-| Owner/migrator | Tạo schema, DDL, migration trong database SASMS | Chỉ pipeline migration/DBA; không gắn vào ứng dụng |
-| Runtime ứng dụng | Kết nối; `USAGE` schema; DML cần thiết; gọi hàm nghiệp vụ được cho phép | Không superuser, không `CREATEDB`/`CREATEROLE`, không owner |
-| Worker | Đọc/cập nhật hàng outbox được claim; ghi kết quả tích hợp theo nhu cầu | Tách credential khi có worker độc lập |
-| Reporting | Chỉ đọc view báo cáo đã lọc PII | Không đọc password hash, raw audit payload hay bảng khách hàng đầy đủ |
-| Backup | Quyền cần cho công cụ backup đã chọn | Secret riêng, hạn chế nguồn kết nối |
-
-Tên group role/quyền SQL thực tế lấy từ script cấp quyền D57. Không chạy lệnh `GRANT ALL` cho `PUBLIC`; thu hồi quyền tạo ở schema và quyền thực thi hàm nhạy cảm không cần thiết. Thiết lập `search_path` cố định trong hàm đặc quyền; ưu tiên invoker, chỉ dùng definer khi đã review và khóa owner/schema. Không đặt mật khẩu mẫu thật hoặc thông tin kết nối Prod trong repo.
-
-Chỉ backend tin cậy giữ credential runtime. Khi runtime có DML rộng trong một schema, DB chưa thể tự biết nhân viên nào được gọi bảng nào; authorization phải do backend thực hiện và được kiểm thử. Để tăng bảo vệ, có thể thu hẹp sang hàm nghiệp vụ hoặc RLS với cơ chế đặt ngữ cảnh đáng tin cậy sau review; không bật RLS hình thức rồi mặc định rằng connection pool đã an toàn.
-
-### Quyền SQL hiện thực trong Sprint 0
-
-[database/runtime-roles.sql](../../database/runtime-roles.sql) là bước provisioning tùy chọn cho DBA trên cluster thử nghiệm cô lập; schema/seed không tạo tài khoản đăng nhập. Script tạo hai group role `NOLOGIN`, không có superuser, tạo database/role, replication hoặc bypass RLS:
-
-| Group role | Quyền hiện có | Giới hạn |
-| --- | --- | --- |
-| `sasms_app` | Đọc bảng/view SASMS; thêm đơn nháp bằng danh sách cột cho phép; sửa dòng đơn, liên kết thiết bị và payment; gọi bốn hàm nhận/giữ/bán/hủy | Không được trực tiếp ghi thiết bị, biến động, audit, outbox, hóa đơn hoặc trạng thái/tổng tiền đơn; các hàm đặc quyền ghi các dữ liệu này trong transaction |
-| `sasms_reader` | Đọc `brands`, `categories`, `products`, `product_images`, `stock_availability` | Chỉ danh mục và số tồn tổng hợp; không phải role báo cáo đầy đủ, không được đọc bảng khách hàng/payment/audit |
-
-Quyền `INSERT` vào `sales_orders` chỉ cấp cho `id`, `code`, `idempotency_key`, `store_id`, `warehouse_id`, `customer_id`, `channel`, `created_by`. Runtime không được truyền `status`, `total_amount`, `paid_at` hoặc `created_at`; trạng thái khởi tạo dùng mặc định `DRAFT`, số tiền/trạng thái kết thúc chỉ do hàm nghiệp vụ thay đổi. Không thay bằng quyền `INSERT` toàn bảng vì có thể tạo đơn giả ở trạng thái `RESERVED`/`PAID` để bỏ qua bước giữ hàng.
-
-DBA cấp group role phù hợp cho LOGIN bí mật riêng của backend; LOGIN đó không được đồng thời là owner/migrator hoặc thuộc role khác có quyền ghi rộng. Quyền PostgreSQL được cộng dồn: script này không thu hồi mọi quyền/membership cũ của role đã tồn tại. Trước khi tái sử dụng tên role ở cluster khác, DBA phải rà soát các quyền hiện hữu; không xem script là công cụ tự làm sạch quyền cũ. Worker chưa có role triển khai trong baseline, cần migration riêng khi được xây dựng.
-
-Các hàm nhận `p_actor` do backend truyền; chúng bảo đảm FK actor tồn tại và ghi dấu vết, chưa xác minh user đang đăng nhập, trạng thái hoạt động, vai trò hoặc scope. Backend phải xác minh các điều kiện đó trước khi gọi. Nhân viên và trình duyệt không được giữ credential `sasms_app`.
-
-## 5. Xác thực, dữ liệu và bí mật
+## Xác thực, dữ liệu và bí mật
 
 - Mật khẩu lưu hash chậm có salt do thư viện ứng dụng phù hợp tạo; đề xuất Argon2id, thông số đo theo hạ tầng và review trước triển khai. Không dùng MD5/SHA đơn thuần hoặc mật khẩu rõ. Seed không tạo tài khoản đăng nhập dùng chung với mật khẩu công khai.
 - Session phía server hoặc token có thời hạn ngắn; refresh/revocation và logout phải có thiết kế rõ ở tầng ứng dụng. Cookie dùng `HttpOnly`, `Secure`, `SameSite` phù hợp; chống CSRF nếu xác thực bằng cookie. Đổi mật khẩu/khóa tài khoản thu hồi phiên.
@@ -114,7 +47,7 @@ Các hàm nhận `p_actor` do backend truyền; chúng bảo đảm FK actor t�
 
 SQL dùng tham số binding, không ghép chuỗi từ input. Mã QR/Serial được chuẩn hóa theo D51 trước so sánh; dữ liệu trong QR vẫn là input không tin cậy. Provider error và nội dung LLM không được thực thi thành SQL, mã lệnh hoặc lệnh quản trị.
 
-## 6. Audit và chống sửa sai giao dịch
+## Audit và chống sửa sai giao dịch
 
 Audit nghiệp vụ ghi actor, hành động, loại/ID tài nguyên, thời điểm, correlation ID và phần thay đổi đã lọc khi thực hiện đăng nhập nhạy cảm, thay đổi quyền, nhập/xuất/điều chỉnh kho, checkout, hủy, hoàn tiền, sửa hồ sơ và xuất dữ liệu. Nên ghi cùng transaction của thay đổi để tránh thay đổi đã commit nhưng audit mất.
 
@@ -122,7 +55,7 @@ Không ghi password/hash, access token, secret, số thẻ hoặc toàn bộ pay
 
 `inventory_movements` là lịch sử biến động; số tồn suy ra theo trạng thái/liên kết thiết bị hoặc projection có đối soát, tránh cho phép sửa tổng tồn độc lập không lưu nguồn. Chống bán trùng bằng transaction/khóa và ràng buộc DB; chống callback/checkout lặp bằng idempotency có kiểm tra payload, không chỉ nút bấm UI.
 
-## 7. Rủi ro và cách kiểm chứng
+## Rủi ro và cách kiểm chứng
 
 | Rủi ro | Kiểm soát thiết kế | Kiểm chứng cần có |
 | --- | --- | --- |
@@ -135,22 +68,3 @@ Không ghi password/hash, access token, secret, số thẻ hoặc toàn bộ pay
 | Khôi phục DB phát sinh gửi lặp | Tắt worker, đối soát payment/outbox trước mở lại | Diễn tập restore ở môi trường cô lập và ghi kết quả |
 
 Các kiểm thử DB thực hiện được nằm trong bộ D57 và log chạy thật. Các hàng liên quan API, provider, mã hóa hạ tầng, MFA, RLS, restore Prod hoặc scope nhiều cửa hàng là tiêu chí bàn giao cho đội triển khai, chưa được xác nhận chỉ bằng schema/seed.
-
-## 8. Checklist review và ký duyệt
-
-| Hạng mục | Trạng thái tại lúc lập |
-| --- | --- |
-| Ma trận đủ 9 vai trò để review | Đã soạn, tên vai trò đề xuất |
-| Phân biệt RBAC nghiệp vụ và SQL role | Đã mô tả |
-| D34 và xác nhận KS35–KS36 | Chưa có trong repo |
-| So khớp permission seed D57 | Đã đối chiếu 9 vai trò / 17 mã quyền với ma trận; scope/che trường vẫn do backend thực hiện |
-| Phân quyền endpoint/scope, MFA, provider webhook | Chưa có ứng dụng để kiểm chứng |
-| Review chính sách dữ liệu và lưu giữ | Chờ BA/PM/chủ dữ liệu |
-| Chữ ký Kiên và PM | Chưa có |
-
-| Người review / ký | Nội dung | Trạng thái | Ngày / bằng chứng |
-| --- | --- | --- | --- |
-| Trần Trung Kiên | Schema, quyền DB, ranh giới bảo mật | Chờ review/ký | Chưa có |
-| Vũ Duy Thái | Thực thi authorization, session, API | Chờ review | Chưa có |
-| Nguyễn Quang Huy | Xác nhận vai trò và nghiệp vụ | Chờ review | Chưa có |
-| Trịnh Quốc An — PM | Ma trận quyền và phân tách trách nhiệm | Chờ review/ký | Chưa có |

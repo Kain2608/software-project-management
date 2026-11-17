@@ -1,6 +1,6 @@
 # D128 — Đóng góp kỹ thuật DB cho Quality Gate M3
 
-Mốc kế hoạch: **20/10/2026, 15:30–16:30**. Người chuẩn bị phần DB: **Trần Trung Kiên**. Rà soát: 13/11/2026. Đây là hồ sơ đầu vào; **biên bản D128 chính thức do Trịnh Quốc An chủ trì**, có trưởng bộ phận liên quan ký theo workbook.
+Mốc kế hoạch: **20/10/2026, 15:30–16:30**. Người chuẩn bị phần DB: **Trần Trung Kiên**. Cập nhật kỹ thuật: 17/11/2026. Đây là hồ sơ đầu vào; **biên bản D128 chính thức do Trịnh Quốc An chủ trì**, có trưởng bộ phận liên quan ký theo workbook.
 
 ## Phạm vi và minh chứng
 
@@ -13,7 +13,7 @@ Mốc kế hoạch: **20/10/2026, 15:30–16:30**. Người chuẩn bị phần 
 | S2-12: Staging tự động | Workflow kiểm DB và readiness; báo `NOT_DEPLOYED` | Chưa có deploy/health thật |
 | Không còn P1/P2 | Phát tổng hợp D76/D80 theo lần verify | Không suy từ vài test DB thành toàn ứng dụng không lỗi |
 
-Lần kiểm local **13/11/2026, 23:14:15–23:14:31 (UTC+7), PostgreSQL 16.15**: Sprint 2 **33 assertions đạt**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**. Hai ca tranh Serial có cặp PID **28700/22168** và **33476/14500**; đối thủ bị `55P03` khi transaction giữ còn mở, sau release/rollback giữ lại được. [Summary](../../database/evidence/sprint2/summary.json) và [log](../../database/evidence/sprint2/validation.log) có source hash và kết quả cleanup/trigger được khôi phục.
+Lần kiểm local **17/11/2026, PostgreSQL16.16**: Sprint 2 **33 assertions + 43 D34/D35 đạt**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**. Hai ca tranh Serial có cặp PID **1186/1190** và **1233/1238**; đối thủ bị `55P03` khi transaction giữ còn mở, sau release/rollback giữ lại được. [Summary](../../database/evidence/sprint2/summary.json) và [log](../../database/evidence/sprint2/validation.log) có source hash và kết quả cleanup/trigger được khôi phục.
 
 [Failure probes CLI](../../database/evidence/sprint2/ci-failure-probes.json) xác nhận lỗi SQL và assertion đều trả nonzero/summary failed; chưa có run CI remote hoặc deployment mới.
 

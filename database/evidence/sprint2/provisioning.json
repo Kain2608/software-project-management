@@ -1,0 +1,17 @@
+{
+  "executed_at_utc": "2026-11-17T01:09:22.885496+00:00",
+  "status": "passed",
+  "scope": "isolated cloned database, synthetic approval only",
+  "missing_approval_exit": 3,
+  "exact_repeat_noop": true,
+  "results": {
+    "profile_count": 1,
+    "demo_brand": "Hãng DEMO",
+    "other_sku_untouched": true
+  },
+  "source_sha256": {
+    "scripts/provision_d35_rules.sql": "12a7001b58c713fe40c9122b46c681f8278e6eb39d6ab96a01c0fae824c80d82",
+    "database/migrations/V003__scoped_device_identifiers.sql": "8e98e7b0d52b6c8776cff404b5cc5669e5b0724095bcc652ecd24e8a97e450f0",
+    "database/migrations/V005__frs_business_roles.sql": "717d236e06cd17a7fe10578a8d312792ac6129b4d6c8692d0e014b76cb627272"
+  }
+}

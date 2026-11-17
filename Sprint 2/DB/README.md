@@ -1,6 +1,6 @@
 # Sprint 2 — Phần DB của Trần Trung Kiên
 
-Kỳ kế hoạch: **11/10–24/10/2026**, chủ đề POS tại quầy và AI gợi ý; phạm vi US-04, US-05, US-06 (Should), US-07. Mốc kế hoạch M3: 20/10, M4: 24/10. Ngày rà soát thực tế: **13/11/2026**; không hồi tố ngày thực hiện hoặc chữ ký.
+Kỳ kế hoạch: **11/10–24/10/2026**, chủ đề POS tại quầy và AI gợi ý; phạm vi US-04, US-05, US-06 (Should), US-07. Mốc kế hoạch M3: 20/10, M4: 24/10. Ngày rà soát thực tế: **17/11/2026**; không hồi tố ngày thực hiện hoặc chữ ký.
 
 ## Phân công và phạm vi bàn giao
 
@@ -20,7 +20,6 @@ Kiên hỗ trợ S2-08 do **Nguyễn Tiến Vũ** chủ trì (AI), S2-15 do **Tr
 |---|---|
 | [DS2 — Thiết kế và bàn giao DB](DS2-thiet-ke-va-ban-giao-DB.md) | SQL/API, quyền, trạng thái tồn và giới hạn tích hợp |
 | [D22 — Môi trường và CI/CD](D22-ke-hoach-moi-truong-va-CICD-sprint2.md) | CI báo lỗi đúng; readiness và phần Staging còn chờ |
-| [Rà soát Sprint 2](RA-SOAT-SPRINT2.md) | Bốn lỗi cần sửa, căn cứ từ sprint trước và phần bàn giao liên nhóm |
 | [D128 — Đóng góp DB cho M3](D128-ho-so-review-DB-M3.md) | Checklist kỹ thuật; không thay biên bản PM ký |
 | [D129 — Đóng góp DB cho M4](D129-ho-so-review-DB-M4.md) | Checklist tồn kho/AI; không thay báo cáo tải D79 |
 | [Runbook DB Sprint 2](../../database/sprint2/README.md) | Cài đặt, chạy test, demo và đọc evidence |
@@ -30,7 +29,7 @@ Kiên hỗ trợ S2-08 do **Nguyễn Tiến Vũ** chủ trì (AI), S2-15 do **Tr
 
 ## Trạng thái nghiệm thu
 
-Kiểm local **13/11/2026** đã đạt **33 assertions Sprint 2**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**, cùng hai ca tranh Serial commit/rollback trên PostgreSQL **16.15**. Xem [kết quả và giới hạn](RA-SOAT-SPRINT2.md), [summary](../../database/evidence/sprint2/summary.json) và [failure probes CLI](../../database/evidence/sprint2/ci-failure-probes.json). Chưa có run GitHub Actions mới hoặc deploy Staging trong hồ sơ này.
+Kiểm local **17/11/2026** đã đạt **33 assertions S2 + 43 D34/D35**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**, cùng hai ca tranh Serial commit/rollback trên PostgreSQL **16.16**. Xem [hợp đồng và giới hạn](DS2-thiet-ke-va-ban-giao-DB.md), [summary](../../database/evidence/sprint2/summary.json) và [failure probes CLI](../../database/evidence/sprint2/ci-failure-probes.json). Chưa có run GitHub Actions mới hoặc deploy Staging trong hồ sơ này.
 
 Nguồn phân công ghi trạng thái tại **05/11/2026**, không phải kết quả test của phiên bản hiện tại. Dấu chọn DoR/DoD chỉ được cập nhật khi có minh chứng và người xác nhận.
 

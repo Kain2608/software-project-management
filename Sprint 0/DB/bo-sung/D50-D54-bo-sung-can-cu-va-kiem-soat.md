@@ -8,9 +8,9 @@ Nhánh tiếp tục công việc: **`DB`**. Bản D50/D54 trước được tạ
 |---|---|---|
 | D22 chưa có, ARC-01 cần bổ sung kế hoạch môi trường | Đã có [D22 tiền Sprint](../../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md), [ma trận môi trường](../../../infra/environment-matrix.json) và [runbook](../../../infra/README.md) | Dùng làm căn cứ triển khai Dev, review Staging/Prod và quy trình phát hành; không tiếp tục ghi D22 là tài liệu chưa tìm thấy |
 | Backup/restore cần diễn tập | Đã có [40 kiểm tra logical restore](../../../Ti%E1%BB%81n%20Sprint/DB/evidence/environment-summary.json) và [snapshot CI](../../../Ti%E1%BB%81n%20Sprint/DB/evidence/ci-runs.json) ở lần bổ sung sau | Đây là bằng chứng bổ sung tháng 11, không đổi thành kết quả đã có ở M1 tháng 9 |
-| D34/FRS_V2 chưa có | Vẫn không tìm thấy bản FRS trong repo sau khi cập nhật | Dùng D05/D06 và các quyết định thiết kế đã đánh dấu đề xuất; BA đối chiếu FRS trước ký baseline |
+| D34/FRS_V2 | Đã có D34 và D35 BA | Dùng BR-01/03, SER-01…10 và chín vai trò BA; V003…V005 hiện thực phần DB, không suy regex toàn hãng |
 | Microservices và môi trường triển khai | D50 đã có sơ đồ bối cảnh, thành phần, sequence checkout và lộ trình tách dịch vụ | Giữ nội dung; PostgreSQL dùng chung ở nền DB, các dịch vụ độc lập vẫn là kiến trúc mục tiêu |
-| Môi trường FE/BE và cấu trúc source | Đã có source skeleton tại root `backend/` và `frontend/` | Kiên xác nhận đặt tại root (A1), giữ baseline Java 26 + Spring Boot 4.1.1 (B1), FE React/Vite |
+| Môi trường FE/BE và cấu trúc source | Đã có source skeleton tại root `backend/` và `frontend/` | Source hiện hành tại root, Java25/Spring Boot4.1.1, React/Vite; hồ sơ TV4 cũ Java26 cần đồng bộ, không hồi tố phê duyệt B1 |
 | Tài khoản DB kết nối ứng dụng backend | [database/runtime-roles.sql](../../../database/runtime-roles.sql) tạo group role `sasms_app` | Kiên xác nhận bắt buộc dùng login thuộc `sasms_app` (C2), tuyệt đối không dùng `sasms_owner` cho runtime |
 
 Các đường dẫn ở phần Sprint 0 thể hiện baseline **37 bảng**. Sprint 1 dùng [hai migration](../../../database/migrations) để nâng lên **39 bảng**; không thay ERD/SQL Sprint 0 bằng mô hình mới rồi gắn nhãn là bản gốc.
@@ -21,10 +21,10 @@ Môi trường Dev có cấu hình thực thi và CI có run thật. Ma trận m
 
 | Lớp | Baseline Sprint 0 đã có | Bổ sung hoặc giới hạn cần người nhận hiểu |
 |---|---|---|
-| Chín vai trò nghiệp vụ | D54 và seed có 9 role/17 permission, phạm vi cửa hàng/nhiệm vụ, nguyên tắc từ chối mặc định | Danh sách vẫn là đề xuất vì nguồn yêu cầu số lượng 9 nhưng chưa cung cấp danh sách được BA/PM ký |
+| Chín vai trò nghiệp vụ | D54 và seed có 9 role/17 permission, phạm vi cửa hàng/nhiệm vụ, nguyên tắc từ chối mặc định | D34 đã chốt chín vai trò; V005 thêm CATALOG_MANAGER/WAREHOUSE_STAFF/SALES_STAFF và giữ alias cũ; ADMIN không tự có quyền nghiệp vụ |
 | Quyền PostgreSQL | `sasms_app` và `sasms_reader` là group role NOLOGIN; runtime không trực tiếp sửa tồn, tổng/trạng thái đơn hoặc audit | Credential thuộc backend tin cậy; quyền đọc rộng của backend không tự lọc người dùng cuối theo cửa hàng |
 | Hàm Sprint 0 | Bốn hàm nhập/giữ/bán/hủy cùng transaction và audit; actor phải tham chiếu user tồn tại | Actor là ngữ cảnh backend đã xác thực; bản này chưa tự kiểm active user/RBAC cho toàn bộ nghiệp vụ |
-| Nâng cấp Sprint 1 | Có helper `has_permission`/`assert_permission`, catalog revision và batch import kiểm active/scope | Đây là phần hiện thực sau Sprint 0; các hàm POS ngoài phạm vi hardening đó vẫn cần backend kiểm quyền |
+| Nâng cấp Sprint 1 | Có helper `has_permission`/`assert_permission`, catalog revision và batch import kiểm active/scope | Đây là phần hiện thực sau Sprint 0; V004 kiểm active/scope cho reserve/complete/cancel/expire; backend tiếp tục xác thực JWT và scope request |
 | Dấu vết và tích hợp | Audit/movement/outbox ghi cùng transaction; runtime không được sửa/xóa các bảng được bảo vệ | Worker/provider, correlation ID xuyên API và log ngoài DB chưa thành dịch vụ hoàn chỉnh chỉ từ schema |
 
 Không đổi ma trận bằng việc thêm quyền mặc định hoặc cấp tài khoản đăng nhập để làm đẹp checklist. Việc gán/thu hồi quyền thực tế phải do người có thẩm quyền thực hiện, audit và kiểm phạm vi. D57 được giữ nguyên theo trạng thái “ĐÃ CÓ” trong workbook.

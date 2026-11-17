@@ -1,6 +1,6 @@
 # DB Sprint 2 — Serial POS, tồn kho và quyền runtime
 
-Phần DB của Kiên cho S2-03/S2-06, hỗ trợ AI S2-08 và kiểm chứng S2-12. Kế thừa PostgreSQL **16**, Python **3.10+**, client `psql`, baseline Sprint 0 và V001/V002 Sprint 1. Xem [DS2 DB](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md) và [rà soát liên nhóm](../../Sprint%202/DB/RA-SOAT-SPRINT2.md).
+Phần DB của Kiên cho S2-03/S2-06, hỗ trợ AI S2-08 và kiểm chứng S2-12. Kế thừa PostgreSQL **16**, Python **3.10+**, client `psql`, baseline S0, V001/V002 S1 và V003…V005 hiện hành (41 bảng). Xem [DS2 DB](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md) và [hợp đồng liên nhóm](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md).
 
 ## Nâng cấp database đã có Sprint 1
 
@@ -13,7 +13,7 @@ psql -X --dbname $env:DATABASE_URL -v ON_ERROR_STOP=1 -f database/sprint1/runtim
 psql -X --dbname $env:DATABASE_URL -v ON_ERROR_STOP=1 -f database/sprint2/realtime_stock_and_locking.sql
 ```
 
-File Sprint 2 bọc DDL/ACL trong transaction và chạy lại được; không ghi vào ledger V001/V002. Giữ source hash đã kiểm cho lần phát hành; không sửa migration cũ đã áp dụng. Không nạp lại `schema.sql`/`seed.sql` trên DB có dữ liệu/nâng cấp. Group runtime phải được provision trước extension để nhận grant allowlist; nếu thêm group sau đó, chạy lại extension bằng owner.
+Extension Sprint 2 bọc DDL/ACL trong transaction và chạy lại được; cần áp V001…V005 trước. Năm migration có ledger/checksum, extension được quản lý theo source hash. Giữ source hash đã kiểm cho lần phát hành; không sửa migration cũ đã áp dụng. Không nạp lại `schema.sql`/`seed.sql` trên DB có dữ liệu/nâng cấp. Group runtime phải được provision trước extension để nhận grant allowlist; nếu thêm group sau đó, chạy lại extension bằng owner.
 
 ## Kiểm chứng trên database thử mới, cô lập
 
@@ -46,7 +46,13 @@ File [test_sprint2_concurrency_and_stock.sql](../tests/sprint2/test_sprint2_conc
 
 - View có một hàng theo product active/kho thuộc store active; bảng warehouse không có cột `is_active`. `price` là alias của cột vật lý `list_price`; không thêm cột `products.price`.
 - `available_stock` đếm IN_STOCK, gồm Serial được chọn trong DRAFT nhưng chưa reserve. `reserved_stock` đếm RESERVED, `sold_stock` đếm SOLD. `total_physical_stock` là tổng bản ghi device kể cả SOLD, không phải lượng hàng vật lý tại kho.
-- Chọn Serial dùng NOWAIT và lease DRAFT 15 phút từ lúc tạo đơn; release lấy store từ đơn để kiểm `sales.checkout`. Backend xác thực/ánh xạ actor và kiểm scope mọi đường đọc/ghi; SQL không xác thực JWT hay có RLS toàn hệ thống.
-- Fallback SQL là heuristic candidate còn IN_STOCK theo store, chưa là luật tương thích phụ kiện đã duyệt, chưa nối vào engine Java. Cache cross-sell hiện 5 phút theo D55/`AiCacheManager`.
+- Chọn Serial dùng NOWAIT và deadline từ lần giữ đầu POS 10 phút / ONLINE 30 phút, không gia hạn khi quét/reserve; release lấy store từ đơn để kiểm `sales.checkout`. Backend xác thực/ánh xạ actor và kiểm scope mọi đường đọc/ghi; SQL không xác thực JWT hay có RLS toàn hệ thống.
+- Fallback SQL gộp một hàng theo product, tổng IN_STOCK trong store và limit 1–10; là heuristic candidate, chưa là luật tương thích phụ kiện đã duyệt, chưa nối vào engine Java. Cache cross-sell hiện 5 phút theo D55/`AiCacheManager`.
 - [Demo](demo.sql) chỉ đọc dữ liệu mô phỏng baseline trong transaction rồi rollback; không tạo phiên POS, payment, in hóa đơn hoặc gọi LLM.
-- Tồn được đọc theo snapshot; kiểm query sau commit không chứng minh UI zero-lag hoặc p95 AI/50 request. POS backend hiện còn status skeleton.
+- Tồn được đọc theo snapshot; kiểm query sau commit không chứng minh UI zero-lag hoặc p95 AI/50 request. Cart/payment/lock REST và hiệu năng E2E còn thuộc tích hợp ứng dụng.
+
+## Hợp đồng D34/D35 hiện hành
+
+V003 giữ Serial raw/case-sensitive, 1–128, Luhn và IMEI phụ; V004 bảo vệ lease/reservation/PENDING; V005 có chín role BA (alias cũ giữ lịch sử, ADMIN không tự duyệt hoàn tiền). Xem D35 DB và DS2. Worker gọi expire_order_reservation chỉ giải phóng đơn hết hạn không có PENDING/CAPTURED; adapter/quản lý phải đối soát trước khi xác nhận thất bại.
+
+Mô hình hiện hành: [DBML](schema.dbml), [ERD](erd.mmd), [từ điển](data-dictionary.md). Kiểm catalog bằng `python scripts/generate_db_artifacts.py --dsn $env:DATABASE_URL --expected-tables 41 --output-dir database/sprint2 --schema-label "Sprint 2" --check`. Không dùng artifact V002 39 bảng để kiểm schema mới.

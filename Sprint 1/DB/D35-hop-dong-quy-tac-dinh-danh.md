@@ -1,74 +1,38 @@
-# D35 — Hợp đồng DB cho quy tắc Serial/IMEI
+# D35 — Hợp đồng DB cho Serial/IMEI
 
-**Phần Kiên hỗ trợ S1-02 của BA Huy; phiên bản 1.1 (Cập nhật ngày 11/11/2026: Tiếp nhận & đồng bộ hồ sơ D35 chính thức của BA).** Tài liệu mô tả cách DB lưu/áp dụng quy tắc định danh theo đặc tả chính thức của BA.
+Phần Trần Trung Kiên — Architect / DBA, cập nhật **17/11/2026** trên nhánh `DB`. Căn cứ chính là [D35 BA](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx), SER-01…10 và BSL BA 01, [D34 FRS](../../Sprint%200/BA/D34_FRS_V2_SASMS.docx) BR-01; đối chiếu [D71](../Tester/D71_Bo_Test_Case_Kho_QR_SASMS_v1.2.docx), [D80](../Tester/D80_So_loi_Bug_Log_SASMS.docx) và [bàn giao Fullstack](../Fullstack/TV4/SPRINT1_IMPLEMENTATION_REPORT.md).
 
-## 1. Nguồn và tình trạng
+## Quy tắc hiện hành
 
-[Workbook](inputs/phan-cong-sprint-1.xlsx), sheet “Phân chia công việc” dòng 6 và “Theo người” dòng 15/25, giao Huy chốt quy tắc riêng Sony, Samsung, LG, Apple… với nguồn hãng/đại lý và xác nhận trưởng kho; Kiên hỗ trợ phần DB.
+| Dữ liệu | Hợp đồng DB theo BA |
+|---|---|
+| Serial | Bắt buộc, giữ raw; trim hai đầu tạo normalized, **phân biệt hoa/thường**, giữ số 0, dấu và khoảng trắng nội bộ; 1–128 ký tự, cấm control characters |
+| IMEI | Chuỗi 15 chữ số và **Luhn tại DB**; không dùng IMEISV/EID thay IMEI |
+| Nhiều IMEI | Một device có IMEI slot 1/2; UNIQUE(kind,normalized_value) chặn trùng giữa thiết bị và chéo slot, kể cả thiết bị đã bán |
+| Profile | Theo product_id/SKU cụ thể; GENERIC, SONY_TV_7, APPLE_SERIAL_IMEI |
+| Sony TV | Chỉ SKU được cấu hình/duyệt mới bắt 7 chữ số; SKU khác cùng hãng vẫn generic |
+| Samsung/LG/Apple Serial | Theo kiểm tra chung/tem; không suy regex hoặc độ dài toàn hãng |
+| QR | SASMS:DEVICE:<qr_token>, không chứa khách hàng hoặc secret |
+| Sửa mã | Không sửa đè/xóa lịch sử sau giao dịch; cần quản lý, lý do, audit và thay đổi có kiểm soát. Chưa có API chỉnh mã quản lý |
 
-**Hiện trạng tiếp nhận hồ sơ:** BA Nguyễn Quang Huy đã chính thức hoàn thiện tài liệu [Sprint 0/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx) (ngày 07/11/2026) với 5 nguồn đối chiếu chính thức:
-- `SRC-01`: Sony Support (How to find model name and serial number — bài viết 00248421).
-- `SRC-02`: Samsung Support (How to find model and serial number).
-- `SRC-03`: LG Support (How to check model and serial numbers).
-- `SRC-04`: Apple Support (Find serial number, EID or IMEI).
-- `SRC-05`: GSMA TS.06 version 22 mục 5 và 5.1.5 (IMEI Allocation & Luhn algorithm).
+[V003](../../database/migrations/V003__scoped_device_identifiers.sql) thêm device_identifiers và product_identifier_profiles, đưa DB lên **41 bảng**; V004 xử lý lease, V005 đồng bộ vai trò BA. S0 37 bảng/V002 39 bảng giữ nguyên lịch sử/checksum; [artifact hiện hành](../../database/sprint2) được sinh riêng.
 
-Hồ sơ CSDL Sprint 1 của Kiên ([V002](../../database/migrations/V002__inventory_batches_and_identifiers.sql)) đã tạo sẵn bảng `sasms.identifier_rules` và trigger `sasms.validate_device_identifiers()` hoàn toàn tương thích để tiếp nhận toàn bộ các rule này.
+Cột devices.serial/imei giữ tương thích consumer cũ; registry lưu cả hai IMEI. serial_raw/imei_raw và registry.raw_value giữ đầu vào mới. Không thể khôi phục raw trước đây đã upper-case: migration giữ nguyên mã cũ, raw NULL và legacy_unverified, không tự chứng nhận Luhn lịch sử. Cần đối soát tem/chứng từ trong quy trình quản lý.
 
-## 2. Quy tắc kỹ thuật chung hiện dùng
+## Nhập lô và retry
 
-| Thuộc tính | Xử lý DB | Phần chưa được suy diễn |
-|---|---|---|
-| Serial | Trim hai đầu, chữ hoa, không khoảng trắng bên trong, dài 1–100; duy nhất toàn chuỗi | Không coi đây là regex chính thức của từng hãng hoặc model |
-| IMEI | Có thể NULL theo quy tắc áp dụng; nếu có, đúng 15 chữ số và duy nhất | Kiểm tra độ dài 15 số bằng SQL regex; thuật toán Luhn do Backend Service kiểm tra trước khi ghi |
-| SKU | Mã catalog riêng, trim/chữ hoa, tối đa 64, không khoảng trắng; duy nhất | Không dùng SKU thay Serial của từng thiết bị |
-| Token QR | UUID định danh của thiết bị; payload chuẩn `SASMS:DEVICE:<qr_token>` | Không xem mọi QR của nhà cung cấp đều có cùng payload; không chứa PII/secret |
+Giữ chữ ký receive_device_batch(receipt_item_id,request_key,devices_json,trusted_actor_id) RETURNS uuid[]. JSON SQL nhận serial, imei và imei2 tùy chọn. Ví dụ dữ liệu thử:
 
-Canonical hóa phải diễn ra trước kiểm tra trùng và trước lưu payload của batch. Serial chỉ khác hoa/thường hoặc khoảng trắng hai đầu không trở thành hai thiết bị. Phần tử sai hoặc trùng trong cùng một lô làm rollback toàn lô.
-
-## 3. Cấu hình theo hãng
-
-`identifier_rules` trong [V002](../../database/migrations/V002__inventory_batches_and_identifiers.sql) lưu quy tắc theo hãng và phiên bản, mặc định chưa active. Rule chỉ được active khi có `source_reference`, `approved_by`, `approved_at` theo các ràng buộc SQL.
-
-Khi chưa kích hoạt rule riêng cho một hãng, hàm nhập kho sẽ áp dụng bộ kiểm tra kỹ thuật chung (fallback). Khi rule của hãng được kích hoạt (`is_active = true`), trigger `sasms.validate_device_identifiers` sẽ tự động đối chiếu `serial` theo `serial_pattern` và bắt buộc có `imei` nếu `imei_required = true`.
-
-## 4. Bảng quy tắc theo hãng đã được BA chốt (D35)
-
-| Hãng / phạm vi áp dụng | Tài liệu nguồn & Profile BA | Quy tắc Serial (Pattern) | IMEI bắt buộc / định dạng | Người & ngày xác nhận | Trạng thái kỹ thuật |
-|---|---|---|---|---|---|
-| **Sony TV** (SKU tivi demo) | Profile `SONY_TV_7`; Nguồn `SRC-01` (Sony Support) | Đúng 7 chữ số: `^[0-9]{7}$` | Không bắt buộc (`imei_required = false`) | Huy (BA) chốt 07/11/2026; Kiên (DBA) xác nhận | **ĐÃ DUYỆT — SẴN SÀNG KÍCH HOẠT** |
-| **Samsung** (Gia dụng & TV) | Profile `SAMSUNG_GENERIC`; Nguồn `SRC-02` (Samsung) | Ký tự chữ/số: `^[A-Z0-9]{11,15}$` (theo SER-01..05) | Tùy chọn; nếu có đúng 15 chữ số | Huy (BA) chốt 07/11/2026; Kiên (DBA) xác nhận | **ĐÃ DUYỆT — SẴN SÀNG KÍCH HOẠT** |
-| **LG** (Gia dụng & TV) | Profile `LG_GENERIC`; Nguồn `SRC-03` (LG Support) | Ký tự chữ/số: `^[0-9]{3}[A-Z]{4}[0-9]{5}$` | Tùy chọn; nếu có đúng 15 chữ số | Huy (BA) chốt 07/11/2026; Kiên (DBA) xác nhận | **ĐÃ DUYỆT — SẴN SÀNG KÍCH HOẠT** |
-| **Apple** (iPhone / iPad) | Profile `APPLE_SERIAL_IMEI`; Nguồn `SRC-04, SRC-05` | Ký tự chữ/số: `^[A-Z0-9]{10,12}$` | **Bắt buộc** (`imei_required = true`); 15 chữ số + Luhn | Huy (BA) chốt 07/11/2026; Kiên (DBA) xác nhận | **ĐÃ DUYỆT — SẴN SÀNG KÍCH HOẠT** |
-
-### 4.1 Lệnh SQL Provisioning kích hoạt Rule cho Demo / Staging
-
-Khi triển khai môi trường hoặc chuẩn bị nghiệm thu M2, DBA thực thi nạp rule có phê duyệt bằng tài khoản quản trị:
-
-```sql
--- Ví dụ nạp và kích hoạt quy tắc Sony TV 7 chữ số (gắn brand_id tương ứng):
-INSERT INTO sasms.identifier_rules (
-    brand_id, version, serial_pattern, imei_required,
-    source_reference, approved_by, approved_at, is_active
-) VALUES (
-    (SELECT id FROM sasms.brands WHERE name ILIKE '%Sony%' OR id = '00000000-0000-4000-8000-000000000020' LIMIT 1),
-    1, '^[0-9]{7}$', false,
-    'D35_Quy_tac_Serial_IMEI_SASMS.docx; SRC-01 Sony Support 00248421',
-    (SELECT id FROM sasms.users WHERE email = 'admin@sasms.local' OR id = '00000000-0000-4000-8000-000000000001' LIMIT 1),
-    now(), true
-);
+```json
+[{"serial":"  001abc XYZ-1  ","imei":"490154203237518","imei2":"356938035643809"}]
 ```
 
-## 5. Hợp đồng với Dev / QA
+Kiểm 1–500 phần tử, inventory.receive theo store, PO/receipt/quantity, profile/checksum/unique. Một lỗi rollback cả lô và movement/audit/outbox. Cùng key, actor, receipt và normalized payload đúng thứ tự trả cùng ID; đổi hoa/thường là đổi payload. Ledger V002 cũ retry theo đúng canonical lịch sử, không tạo hiệu ứng lặp.
 
-Thái dùng hàm nhập DB `sasms.receive_device_batch` thay vì chỉ kiểm regex tại UI. Client có thể kiểm sớm để hỗ trợ nhập liệu nhưng DB kiểm tra lại trước COMMIT. Mọi request lấy actor từ phiên được xác thực và đúng quyền kho/cửa hàng. API cần trả lỗi theo trường và vị trí phần tử mà không lộ SQL, dữ liệu ngoài phạm vi hoặc secret.
+imei2 là mở rộng **SQL DB**; DTO HTTP hiện có cần người sở hữu Fullstack cập nhật trước khi nhập IMEI phụ qua UI. Backend vẫn xác thực JWT, scope và ánh xạ lỗi, không gửi actor do client tự chọn vào SQL.
 
-QA kiểm thử tối thiểu: canonical hóa, Serial/IMEI trùng giữa SKU, trùng trong cùng lô, hai phiên nhập cùng định danh, giá trị thiếu/sai kiểu, rule chưa duyệt không được áp dụng, rule đã duyệt từ chối sai định dạng và toàn lô rollback khi một phần tử lỗi. Đây là đóng góp DB cho D71/D75.
+## Cấu hình profile
 
-Bộ **76 assertions Sprint 1** đã kiểm chứng các trường hợp này trên PostgreSQL 16.15 thật, bao gồm cả ca hai phiên cùng Serial/IMEI trên hai PO độc lập.
+[Provisioning](../../scripts/provision_d35_rules.sql) yêu cầu đủ product_id, profile_code, requires_imei, approved_by, approved_at, source_reference từ hồ sơ phê duyệt thật. Thiếu tham số dừng lỗi; approver phải active và có catalog.write toàn chuỗi. Không đổi hãng DEMO, không tự đặt user demo/ngày hiện tại hoặc áp regex toàn hãng. Chạy lại đúng hồ sơ là no-op; cấu hình khác cần thay đổi version đã review. identifier_rules V002 giữ làm lịch sử, không được suy thành profile mới.
 
-| Xác nhận | Người cần review | Trạng thái |
-|---|---|---|
-| Nội dung và nguồn quy tắc hãng | Huy (BA), Kiên (DBA) | **ĐÃ XÁC NHẬN** (Khớp hồ sơ D35 ngày 11/11/2026) |
-| Cách cấu hình và kiểm tra DB | Kiên (DBA), Thái (Dev Lead) | **ĐÃ XÁC NHẬN** (Hàm batch V002 + trigger validation) |
-| Mức đủ để nghiệm thu M2 | Huy (BA), PM An | **SẴN SÀNG** cho Quality Gate M2 |
+[SQL regression](../../database/tests/sprint2/identifiers_and_leases.sql) và [validator](../../scripts/validate_sprint2.py) kiểm raw/case/biên/Luhn/multi-slot/rollback/retry/profile/lịch sử và lease. Đọc [summary theo hash nguồn](../../database/evidence/sprint2/summary.json). Kết quả DB không tự đóng bug D80 hoặc thay chữ ký BA/PM/QA.

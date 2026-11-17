@@ -1,5 +1,8 @@
 # SASMS — Quản lý siêu thị điện máy thông minh
 
+DB hiện hành theo D34/D35 BA: **41 bảng, V001…V005**, Serial raw/phân biệt hoa-thường, IMEI phụ/Luhn, giữ hàng POS10m/ONLINE30m và chín role canonical. [Chạy nâng cấp/kiểm chứng](database/sprint2/README.md), [hợp đồng liên nhóm](Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md). Snapshot S0/S1 giữ nguyên để truy vết.
+
+
 Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Kiên cho tiền Sprint, Sprint 0, Sprint 1 và Sprint 2. Nhãn `Kien` trong các hồ sơ trước là provenance của lần tạo bản gốc. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
 
 **Tiền Sprint:** KD-10 — kế hoạch thiết bị D21, môi trường và CI/CD D22; đóng góp kỹ thuật cho KD-02/04/09.
@@ -11,7 +14,7 @@ Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Ki�
 
 **Sprint 2:** khóa chọn/giải phóng Serial POS, tồn theo kho/cửa hàng, quyền function và hai kết nối tranh Serial. CI kiểm DB và báo readiness; Staging thật còn chờ triển khai.
 
-- [Bộ bàn giao DB Sprint 2](Sprint%202/DB/README.md) · [Đối chiếu sprint trước và hồ sơ nhóm](Sprint%202/DB/RA-SOAT-SPRINT2.md)
+- [Bộ bàn giao DB Sprint 2](Sprint%202/DB/README.md) · [Đối chiếu sprint trước và hồ sơ nhóm](Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md)
 - [Chạy nâng cấp, kiểm thử và demo Sprint 2](database/sprint2/README.md)
 
 **Sprint 1:** migration danh mục/SKU, Serial/IMEI, nhập kho theo lô có chống xử lý lặp và kiểm quyền user/role theo cửa hàng.

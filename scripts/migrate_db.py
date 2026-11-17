@@ -100,7 +100,8 @@ def read_migrations(directory: Path) -> list[dict]:
     return sorted(migrations, key=lambda item: item['version'])
 
 
-def build_sql(migrations: list[dict], lock_timeout: int, statement_timeout: int) -> str:
+def build_sql(migrations: list[dict], lock_timeout: int, statement_timeout: int,
+              target_version: int | None = None) -> str:
     expected = ',\n'.join(f"({m['version']},{literal(m['name'])},{literal(m['checksum'])})" for m in migrations)
     chunks = [f"""
 BEGIN;
@@ -140,6 +141,8 @@ BEGIN
 END $verify$;
 """]
     for migration in migrations:
+        if target_version is not None and migration['version'] > target_version:
+            continue
         # Delimiter depends on content; verify it cannot close the quoted payload.
         delimiter = '$payload_' + migration['checksum'][:20] + '$'
         if delimiter in migration['source']:
@@ -174,11 +177,15 @@ def main() -> int:
     parser.add_argument('--dsn', default=os.environ.get('DATABASE_URL'))
     parser.add_argument('--migrations-dir', type=Path, default=ROOT/'database/migrations')
     parser.add_argument('--status', action='store_true')
+    parser.add_argument('--target-version', type=int,
+                        help='Apply up to this version for historical regression; never downgrades')
     parser.add_argument('--lock-timeout-seconds', type=int, default=10)
     parser.add_argument('--statement-timeout-seconds', type=int, default=120)
     args = parser.parse_args()
     if args.lock_timeout_seconds < 1 or args.statement_timeout_seconds < 1:
         parser.error('Timeouts must be positive seconds')
+    if args.target_version is not None and args.target_version < 1:
+        parser.error('--target-version must be positive')
     command = [args.psql, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose', '-P', 'pager=off']
     if args.dsn:
         command += ['--dbname', args.dsn]
@@ -195,7 +202,8 @@ def main() -> int:
                 return 0
             sql = 'SELECT version,filename,checksum,applied_at FROM sasms_meta.schema_migrations ORDER BY version;'
         else:
-            sql = build_sql(migrations, args.lock_timeout_seconds, args.statement_timeout_seconds)
+            sql = build_sql(migrations, args.lock_timeout_seconds, args.statement_timeout_seconds,
+                            args.target_version)
         result = subprocess.run(command + ['-f', '-'], input=sql, capture_output=True, text=True,
                                 encoding='utf-8', env=env, timeout=args.statement_timeout_seconds * (len(migrations)+2))
         for stream, content in [(sys.stdout, result.stdout), (sys.stderr, result.stderr)]:

@@ -65,7 +65,7 @@ DECLARE
     v_order_item sasms.sales_order_items;
     v_clean_serial text;
 BEGIN
-    v_clean_serial := upper(btrim(p_serial));
+    v_clean_serial := btrim(p_serial);
 
     -- Verify actor authorization
     PERFORM sasms.assert_permission(p_actor_id, 'sales.checkout', p_store_id);
@@ -85,9 +85,11 @@ BEGIN
             USING ERRCODE = '23514';
     END IF;
 
-    -- The existing draft lease is anchored to the order creation time, not the
-    -- latest scan. Do not let an old cart acquire a lease that already expired.
-    IF v_order.created_at <= statement_timestamp() - interval '15 minutes' THEN
+    -- A server-side deadline starts at the first hold (POS 10m / ONLINE 30m).
+    -- Repeated scans and reserve never extend an existing deadline.
+    PERFORM sasms.assert_live_order_lease(p_order_id);
+    SELECT * INTO STRICT v_order FROM sasms.sales_orders WHERE id=p_order_id;
+    IF v_order.hold_expires_at <= clock_timestamp() THEN
         RAISE EXCEPTION 'Draft order % has expired; create a new POS cart', p_order_id
             USING ERRCODE = '23514';
     END IF;
@@ -131,7 +133,7 @@ BEGIN
           AND od.active = true 
           AND od.order_id <> p_order_id
           AND so.status = 'DRAFT'
-          AND so.created_at > (statement_timestamp() - interval '15 minutes')
+          AND coalesce(so.hold_expires_at,so.created_at+sasms.order_hold_duration(so.channel)) > clock_timestamp()
     ) THEN
         RAISE EXCEPTION 'Device with serial % is temporarily locked by another active POS terminal',
             v_clean_serial
@@ -211,6 +213,9 @@ SET search_path = pg_catalog, sasms AS $$
 DECLARE
     v_base_product sasms.products;
 BEGIN
+    IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 10 THEN
+        RAISE EXCEPTION 'Limit must be between 1 and 10' USING ERRCODE='23514';
+    END IF;
     SELECT * INTO STRICT v_base_product 
     FROM sasms.products 
     WHERE id = p_product_id;
@@ -221,7 +226,7 @@ BEGIN
         v.sku,
         v.product_name,
         v.price,
-        v.available_stock,
+        sum(v.available_stock)::bigint,
         CASE 
             WHEN p.category_id = v_base_product.category_id THEN 'Sản phẩm cùng danh mục còn tồn kho'
             WHEN p.brand_id = v_base_product.brand_id THEN 'Sản phẩm cùng thương hiệu còn tồn kho'
@@ -232,10 +237,12 @@ BEGIN
     WHERE v.store_id = p_store_id
       AND v.product_id <> p_product_id
       AND v.available_stock > 0
+    GROUP BY v.product_id,v.sku,v.product_name,v.price,p.category_id,p.brand_id
     ORDER BY 
         (p.brand_id = v_base_product.brand_id) DESC,
-        v.available_stock DESC,
-        v.price ASC
+        sum(v.available_stock) DESC,
+        v.price ASC,
+        v.product_id ASC
     LIMIT p_limit;
 END;
 $$;
@@ -256,6 +263,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION
             sasms.find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid),
             sasms.release_device_lock(uuid,uuid,uuid),
+            sasms.expire_order_reservation(uuid,uuid),
             sasms.get_cross_sell_fallback_rules(uuid,uuid,integer)
         TO sasms_app;
     END IF;
@@ -264,6 +272,7 @@ BEGIN
         REVOKE ALL ON FUNCTION
             sasms.find_and_lock_device_for_pos(uuid,uuid,uuid,text,uuid),
             sasms.release_device_lock(uuid,uuid,uuid),
+            sasms.expire_order_reservation(uuid,uuid),
             sasms.get_cross_sell_fallback_rules(uuid,uuid,integer)
         FROM sasms_reader;
     END IF;

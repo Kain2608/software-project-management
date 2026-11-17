@@ -47,6 +47,8 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/validate_sprint2.py --apply --evidence-dir /tmp/sasms-sprint2-evidence
+      - name: Check current DBML ERD and dictionary
+        run: python scripts/generate_db_artifacts.py --dsn "dbname=sasms_sprint2_validation" --expected-tables 41 --output-dir database/sprint2 --schema-label "Sprint 2" --check
       - name: Preserve actual validation evidence on success or failure
         if: always()
         uses: actions/upload-artifact@v4

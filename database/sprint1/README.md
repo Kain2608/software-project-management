@@ -1,5 +1,8 @@
 # DB Sprint 1 — nâng cấp từ Sprint 0
 
+> Bản S1 dưới đây là snapshot V001/V002, **39 bảng**. Hiện hành V003…V005 có **41 bảng**, Serial raw/case-sensitive, IMEI/Luhn/multi-slot và role BA; dùng D35 DB/runbook Sprint 2. validate_sprint1 kiểm tới V002; không dùng uppercase cũ làm hợp đồng mới.
+
+
 Phần DB của Kiên: S1-03 (danh mục/SKU), S1-06 (Serial/IMEI) và S1-10 (users/roles). Xem [bộ bàn giao](../../Sprint%201/DB/README.md) để đối chiếu phân công và phần hỗ trợ Dev/BA.
 
 ## Nâng cấp database hiện có
@@ -9,7 +12,7 @@ Yêu cầu PostgreSQL 16, Python 3.10+, client `psql` và kết nối owner/migr
 ```powershell
 # Database này đã có schema.sql, seed.sql và runtime-roles.sql của Sprint 0.
 python scripts/migrate_db.py --dsn $env:DATABASE_URL --status
-python scripts/migrate_db.py --dsn $env:DATABASE_URL
+python scripts/migrate_db.py --dsn $env:DATABASE_URL --target-version 2
 psql -X --dbname $env:DATABASE_URL -v ON_ERROR_STOP=1 -f database/sprint1/runtime-roles.sql
 python scripts/migrate_db.py --dsn $env:DATABASE_URL --status
 ```

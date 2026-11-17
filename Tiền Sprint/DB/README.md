@@ -21,7 +21,7 @@
 | Cổng khởi động | [Hồ sơ phần Kiên cho D132](D132-ho-so-kien-cho-cong-khoi-dong.md) | Hồ sơ chuẩn bị review; chưa phải biên bản thông qua gate |
 | Minh chứng kỹ thuật | [Thư mục evidence](evidence) | Log/summary và snapshot CI thực tế; ngày thực chạy không đổi thành ngày phê duyệt tháng 9 |
 
-Đã kiểm chứng trên PostgreSQL 16.15: **40 kiểm tra đạt**, gồm backup/restore mới riêng tư, dữ liệu 39 bảng và ledger khớp, đối chiếu catalog/ACL, replay không nhân bản và các ca từ chối overwrite/checksum. [Summary](evidence/environment-summary.json) và [log](evidence/environment-validation.log) có thời gian/hash nguồn; [snapshot CI](evidence/ci-runs.json) ghi đúng commit của các run GitHub. [Runbook](../../infra/README.md) có lệnh tái lập.
+Kiểm kỹ thuật ngày **17/11/2026** trên PostgreSQL **16.16**: **41 kiểm tra đạt**, gồm backup/restore riêng tư, dữ liệu **41 bảng / 5 migration** và ledger khớp, đối chiếu catalog/ACL, replay không nhân bản và các ca từ chối overwrite/checksum. [Summary](evidence/environment-summary.json) và [log](evidence/environment-validation.log) có thời gian/hash nguồn; [snapshot CI](evidence/ci-runs.json) ghi đúng commit của các run GitHub. [Runbook](../../infra/README.md) có lệnh tái lập.
 
 ## 2. Căn cứ và truy vết
 

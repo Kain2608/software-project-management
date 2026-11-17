@@ -71,9 +71,9 @@ BEGIN
            '00000000-0000-4000-8000-000000000011','POS',actor);
     INSERT INTO sasms.sales_order_items(id,order_id,product_id,quantity,unit_price)
     VALUES(item,ord,'00000000-0000-4000-8000-000000000030',1,1000);
-    INSERT INTO sasms.sales_orders(id,code,store_id,warehouse_id,channel,created_by,created_at)
+    INSERT INTO sasms.sales_orders(id,code,store_id,warehouse_id,channel,created_by,created_at,hold_expires_at)
     VALUES(old_order,'S2-EXPIRED-'||suffix,'00000000-0000-4000-8000-000000000010',
-           '00000000-0000-4000-8000-000000000011','POS',actor,now()-interval '16 minutes');
+           '00000000-0000-4000-8000-000000000011','POS',actor,now()-interval '11 minutes',now()-interval '1 minute');
     INSERT INTO sasms.sales_order_items(id,order_id,product_id,quantity,unit_price)
     VALUES(old_item,old_order,'00000000-0000-4000-8000-000000000030',1,1000);
     PERFORM set_config('s2.actor',actor::text,true);
@@ -114,7 +114,7 @@ BEGIN
         'SELECT sasms.find_and_lock_device_for_pos(%L,%L,%L,%L,%L)',store,
         current_setting('s2.old_order'),current_setting('s2.old_item'),serial,actor),'23514');
     PERFORM pg_temp.assert_true('runtime app locks normalized Serial',
-        sasms.find_and_lock_device_for_pos(store,ord,item,'  '||lower(serial)||'  ',actor)=dev);
+        sasms.find_and_lock_device_for_pos(store,ord,item,'  '||serial||'  ',actor)=dev);
     PERFORM pg_temp.assert_true('same cart selection is idempotent',
         sasms.find_and_lock_device_for_pos(store,ord,item,serial,actor)=dev
         AND (SELECT count(*) FROM sasms.order_devices WHERE order_id=ord AND active)=1);

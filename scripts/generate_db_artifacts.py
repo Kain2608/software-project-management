@@ -57,10 +57,10 @@ def typestr(value: str) -> str:
             'character varying': 'varchar'}.get(value, value).replace('character varying(', 'varchar(')
 
 
-def render(tables: list[dict], output_dir: Path | None = None) -> dict[Path, str]:
+def render(tables: list[dict], output_dir: Path | None = None, schema_label: str = 'Sprint 1') -> dict[Path, str]:
     count = len(tables)
     model_note = ('D57 rebuilt 37-table Sprint 0 proposal.' if output_dir is None
-                  else f'Sprint 1 upgraded schema, {count} business tables; migration history excluded.')
+                  else f'{schema_label} upgraded schema, {count} business tables; migration history excluded.')
     dbml = ["// Generated from PostgreSQL catalogs; do not edit by hand.",
             "Project SASMS {", "  database_type: 'PostgreSQL'",
             "  Note: '" + model_note + " SQL controls CHECKs, partial indexes, NULLS NOT DISTINCT, generated columns, triggers and routines.'", "}", ""]
@@ -70,7 +70,7 @@ def render(tables: list[dict], output_dir: Path | None = None) -> dict[Path, str
                   "Mọi khóa ngoại dùng NO ACTION mặc định; không xóa dây chuyền chứng từ. "
                   "Các CHECK, index và cột sinh được ghi dưới từng bảng.", ""]
     if output_dir is not None:
-        dictionary[0] = '# Sprint 1 — Từ điển dữ liệu sau migration'
+        dictionary[0] = f'# {schema_label} — Từ điển dữ liệu sau migration'
         dictionary[2] = dictionary[2].replace('`schema.sql`', '`schema.sql` + `database/migrations/*.sql`')
     relationships = []
     for table in tables:
@@ -144,6 +144,7 @@ def main() -> int:
     parser.add_argument('--check', action='store_true', help='Fail if committed artifacts differ from live schema')
     parser.add_argument('--expected-tables', type=int, default=37)
     parser.add_argument('--output-dir', type=Path, help='Separate artifacts directory for upgraded schemas; baseline defaults remain unchanged')
+    parser.add_argument('--schema-label', default='Sprint 1')
     args = parser.parse_args()
     if args.expected_tables != 37 and args.output_dir is None:
         parser.error('--output-dir is required for upgraded schemas to preserve Sprint 0 artifacts')
@@ -158,7 +159,7 @@ def main() -> int:
         return 1
     mismatches = []
     output_dir = (ROOT/args.output_dir).resolve() if args.output_dir is not None else None
-    for path, content in render(tables, output_dir).items():
+    for path, content in render(tables, output_dir, args.schema_label).items():
         if args.check:
             if not path.exists() or path.read_text(encoding='utf-8') != content:
                 mismatches.append(str(path.relative_to(ROOT)))

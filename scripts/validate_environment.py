@@ -48,8 +48,12 @@ class Drill:
         self.actor = str(uuid.uuid4())
         self.request_key = str(uuid.uuid4())
         self.serials = ['ENV-' + self.suffix.upper() + '-01', 'ENV-' + self.suffix.upper() + '-02']
+        prefix = '77' + str(uuid.uuid4().int)[-12:]
+        checksum = sum((lambda n: n-9 if n>9 else n)(int(ch)*(2 if index%2 == 0 else 1))
+                       for index,ch in enumerate(prefix+'0',1))
+        imei = prefix + str((-checksum)%10)
         self.payload = [{'serial': self.serials[0], 'imei': None},
-                        {'serial': self.serials[1], 'imei': '77' + str(uuid.uuid4().int)[-13:]}]
+                        {'serial': self.serials[1], 'imei': imei}]
         self.fixture_created = False
 
     def redact(self, value: str) -> str:
@@ -184,11 +188,12 @@ SELECT json_build_object(
             self.command('upgrade dedicated source', [sys.executable, str(ROOT/'scripts/migrate_db.py'),
                          '--psql', self.args.psql, '--dsn', self.args.source_dsn])
             self.psql('provision Sprint1 runtime', file='database/sprint1/runtime-roles.sql')
+            self.psql('provision Sprint2 extension', file='database/sprint2/realtime_stock_and_locking.sql')
         elif not exists:
             raise RuntimeError('Source schema is absent; use --apply only for an empty isolated database')
         count = self.json_result(self.psql('upgraded source shape', "SELECT json_build_object('tables',(SELECT count(*) FROM information_schema.tables WHERE table_schema='sasms' AND table_type='BASE TABLE'),'migrations',(SELECT count(*) FROM sasms_meta.schema_migrations));"))
-        if count != {'tables': 39, 'migrations': 2}:
-            raise RuntimeError('Expected the current 39-table, 2-migration test source')
+        if count != {'tables': 41, 'migrations': 5}:
+            raise RuntimeError('Expected the current 41-table, 5-migration test source')
         self.summary['source_shape'] = count
 
     def fixtures(self):
@@ -197,7 +202,7 @@ SELECT json_build_object(
 BEGIN;
 INSERT INTO sasms.users(id,email,full_name,is_active)
  VALUES('{self.actor}','environment-{self.suffix}@example.invalid','Synthetic environment drill actor',true);
-INSERT INTO sasms.user_roles(user_id,role_code,store_id) VALUES('{self.actor}','ADMIN',NULL);
+INSERT INTO sasms.user_roles(user_id,role_code,store_id) VALUES('{self.actor}','WAREHOUSE_STAFF',NULL);
 SELECT to_json(sasms.receive_device_batch('{RECEIPT_ITEM}','{self.request_key}','{payload}'::jsonb,'{self.actor}'));
 COMMIT;
 """
@@ -249,7 +254,8 @@ COMMIT;
     def validate(self):
         source_paths = [Path('scripts/validate_environment.py'), Path('scripts/db_ops.py'),
                         Path('scripts/migrate_db.py'), Path('database/schema.sql'), Path('database/seed.sql'),
-                        Path('database/runtime-roles.sql'), Path('database/sprint1/runtime-roles.sql')]
+                        Path('database/runtime-roles.sql'), Path('database/sprint1/runtime-roles.sql'),
+                        Path('database/sprint2/realtime_stock_and_locking.sql')]
         source_paths += [p.relative_to(ROOT) for p in sorted((ROOT/'database/migrations').glob('V*.sql'))]
         self.summary['source_sha256'] = {p.as_posix(): sha256(ROOT/p) for p in source_paths}
         self.connection_guards()
@@ -329,7 +335,7 @@ COMMIT;
                 raise RuntimeError('Synthetic tamper test did not restore its own archive bytes')
             if self.fingerprint('original source after backup restore and refusal probes') != original:
                 raise RuntimeError('Backup/restore operations changed original source data')
-            self.summary['restore_drill'] = {'business_tables': 39, 'migration_ledger_compared': True,
+            self.summary['restore_drill'] = {'business_tables': 41, 'migration_ledger_compared': True,
                 'data_and_schema_match': True, 'schema_catalog_sha256': original_catalog,
                 'runtime_retry_same_device_ids': True, 'runtime_retry_no_extra_effects': True,
                 'public_connect_disabled': True, 'source_unchanged_by_backup_restore': True,

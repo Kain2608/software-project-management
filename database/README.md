@@ -1,5 +1,8 @@
 # Chạy DB SASMS — PostgreSQL 16
 
+> Các bước baseline bên dưới phục vụ snapshot Sprint0. Triển khai hiện hành dùng [runbook Sprint2](sprint2/README.md): V001…V005,41 bảng, raw/case/Luhn/multi-IMEI, deadline POS10m/ONLINE30m và vai trò D34. Không nạp lại schema/seed lên DB đã nâng cấp.
+
+
 Đây là DB baseline Sprint 0 của Kiên: 37 bảng, dữ liệu mô phỏng, 4 giao dịch DB, bộ kiểm tra và artifacts ERD. Xem [D51](../Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md) và [D57](../Sprint%200/DB/D57-luoc-do-va-kiem-thu.md) trước khi tích hợp.
 
 Để làm việc với **Sprint 1**, xem [hướng dẫn nâng cấp](sprint1/README.md). Không nạp lại `schema.sql`, chạy lại seed quyền baseline hoặc dùng validator Sprint 0 trên DB đã nâng cấp; dùng migration runner và `validate_sprint1.py` theo hướng dẫn mới.
