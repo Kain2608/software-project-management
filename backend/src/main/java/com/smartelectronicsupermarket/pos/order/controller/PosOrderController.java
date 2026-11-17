@@ -1,6 +1,5 @@
 package com.smartelectronicsupermarket.pos.order.controller;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import com.smartelectronicsupermarket.common.web.TrustedActorAccess;
@@ -45,22 +44,21 @@ public class PosOrderController {
             throw new IllegalArgumentException("request is required");
         }
 
-        String rawHeaderKey = (idempotencyKeyHeader != null && !idempotencyKeyHeader.isBlank())
-                ? idempotencyKeyHeader
-                : xIdempotencyKeyHeader;
-
-        UUID derivedHeaderUuid = parseOrDeriveIdempotencyKey(rawHeaderKey);
-
-        // If client provided idempotency key in header but not body, merge it
-        CreatePosOrderRequest effectiveRequest = request;
-        if (request.idempotencyKey() == null && derivedHeaderUuid != null) {
-            effectiveRequest = new CreatePosOrderRequest(
-                    request.storeId(),
-                    request.warehouseId(),
-                    request.customerId(),
-                    derivedHeaderUuid,
-                    request.items());
+        // Precedence: Idempotency-Key (RFC standard) > X-Idempotency-Key (legacy) > body idempotency_key
+        Object effectiveKey = request.rawIdempotencyKey();
+        if (xIdempotencyKeyHeader != null) {
+            effectiveKey = xIdempotencyKeyHeader;
         }
+        if (idempotencyKeyHeader != null) {
+            effectiveKey = idempotencyKeyHeader;
+        }
+
+        CreatePosOrderRequest effectiveRequest = new CreatePosOrderRequest(
+                request.storeId(),
+                request.warehouseId(),
+                request.customerId(),
+                effectiveKey,
+                request.items());
 
         UUID actorId = TrustedActorAccess.actorId(authentication);
         return service.createDraftOrder(effectiveRequest, actorId);
@@ -72,17 +70,5 @@ public class PosOrderController {
             Authentication authentication) {
         UUID actorId = TrustedActorAccess.actorId(authentication);
         return service.reserveOrder(orderId, actorId);
-    }
-
-    public static UUID parseOrDeriveIdempotencyKey(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        String trimmed = raw.trim();
-        try {
-            return UUID.fromString(trimmed);
-        } catch (IllegalArgumentException e) {
-            return UUID.nameUUIDFromBytes(trimmed.getBytes(StandardCharsets.UTF_8));
-        }
     }
 }

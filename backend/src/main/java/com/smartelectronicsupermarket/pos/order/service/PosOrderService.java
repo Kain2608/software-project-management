@@ -1,6 +1,7 @@
 package com.smartelectronicsupermarket.pos.order.service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,7 +21,6 @@ import com.smartelectronicsupermarket.pos.order.dto.PosOrderItemRequest;
 import com.smartelectronicsupermarket.pos.order.dto.PosOrderItemResponse;
 import com.smartelectronicsupermarket.pos.order.dto.PosOrderResponse;
 import com.smartelectronicsupermarket.pos.order.dto.ReservePosOrderResponse;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,22 +80,19 @@ public class PosOrderService {
             }
         }
 
-        // Validate idempotency if key provided
-        UUID idempotencyKey = request.idempotencyKey();
-        if (idempotencyKey != null) {
-            Optional<PosOrderRecord> existing = dataAccess.findOrderByIdempotencyKey(idempotencyKey);
-            if (existing.isPresent()) {
-                PosOrderRecord existingOrder = existing.get();
-                List<PosOrderItemRecord> existingItems = dataAccess.findOrderItems(existingOrder.id());
-                if (matchesPayload(existingOrder, existingItems, request)) {
-                    return toOrderResponse(existingOrder, existingItems);
-                } else {
-                    throw new ResourceConflictException(
-                            "Idempotency key reused with a different payload: " + idempotencyKey);
-                }
+        // Validate and resolve idempotency key scoped by store and actor
+        UUID idempotencyKey = resolveIdempotencyKey(request.rawIdempotencyKey(), request.storeId(), actorId);
+
+        Optional<PosOrderRecord> existing = dataAccess.findOrderByIdempotencyKey(idempotencyKey);
+        if (existing.isPresent()) {
+            PosOrderRecord existingOrder = existing.get();
+            List<PosOrderItemRecord> existingItems = dataAccess.findOrderItems(existingOrder.id());
+            if (matchesPayload(existingOrder, existingItems, request)) {
+                return toOrderResponse(existingOrder, existingItems);
+            } else {
+                throw new ResourceConflictException(
+                        "Idempotency key reused with a different payload: " + idempotencyKey);
             }
-        } else {
-            idempotencyKey = UUID.randomUUID();
         }
 
         // Lookup price from Catalog DB and build order lines
@@ -130,35 +127,58 @@ public class PosOrderService {
         String orderCode = "SO-" + System.currentTimeMillis() + "-" +
                 UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
-        PosOrderRecord createdOrder;
-        try {
-            createdOrder = dataAccess.createOrder(
-                    orderId,
-                    orderCode,
-                    idempotencyKey,
-                    request.storeId(),
-                    request.warehouseId(),
-                    request.customerId(),
-                    actorId,
-                    orderItemsToCreate);
-        } catch (DuplicateKeyException ex) {
-            // Concurrent race: another worker created an order with this idempotency key
-            Optional<PosOrderRecord> concurrentOrder = dataAccess.findOrderByIdempotencyKey(idempotencyKey);
-            if (concurrentOrder.isPresent()) {
-                PosOrderRecord existing = concurrentOrder.get();
-                List<PosOrderItemRecord> existingItems = dataAccess.findOrderItems(existing.id());
-                if (matchesPayload(existing, existingItems, request)) {
-                    return toOrderResponse(existing, existingItems);
-                } else {
-                    throw new ResourceConflictException(
-                            "Idempotency key reused with a different payload: " + idempotencyKey);
-                }
+        Optional<PosOrderRecord> createdOrderOpt = dataAccess.createOrderIfAbsent(
+                orderId,
+                orderCode,
+                idempotencyKey,
+                request.storeId(),
+                request.warehouseId(),
+                request.customerId(),
+                actorId,
+                orderItemsToCreate);
+
+        PosOrderRecord targetOrder;
+        if (createdOrderOpt.isPresent()) {
+            targetOrder = createdOrderOpt.get();
+        } else {
+            // Concurrent race: INSERT ON CONFLICT DO NOTHING returned 0.
+            // Transaction is healthy and not aborted; fetch and verify existing order.
+            PosOrderRecord concurrentOrder = dataAccess.findOrderByIdempotencyKey(idempotencyKey)
+                    .orElseThrow(() -> new IllegalStateException("Order disappeared after idempotency conflict: " + idempotencyKey));
+            List<PosOrderItemRecord> existingItems = dataAccess.findOrderItems(concurrentOrder.id());
+            if (matchesPayload(concurrentOrder, existingItems, request)) {
+                return toOrderResponse(concurrentOrder, existingItems);
+            } else {
+                throw new ResourceConflictException(
+                        "Idempotency key reused with a different payload: " + idempotencyKey);
             }
-            throw ex;
         }
 
-        List<PosOrderItemRecord> savedItems = dataAccess.findOrderItems(createdOrder.id());
-        return toOrderResponse(createdOrder, savedItems);
+        List<PosOrderItemRecord> savedItems = dataAccess.findOrderItems(targetOrder.id());
+        return toOrderResponse(targetOrder, savedItems);
+    }
+
+    public static UUID resolveIdempotencyKey(Object rawKey, UUID storeId, UUID actorId) {
+        if (rawKey == null) {
+            return UUID.randomUUID();
+        }
+        if (rawKey instanceof UUID u) {
+            return u;
+        }
+        String str = rawKey.toString().trim();
+        if (str.isEmpty()) {
+            throw new PosOrderValidationException("Idempotency key must not be blank", "Idempotency-Key");
+        }
+        if (str.length() > 255) {
+            throw new PosOrderValidationException("Idempotency key must not exceed 255 characters", "Idempotency-Key");
+        }
+        try {
+            return UUID.fromString(str);
+        } catch (IllegalArgumentException ex) {
+            // Non-UUID string: derive deterministic UUID scoped by store and actor to prevent cross-tenant collision
+            String scoped = "store:" + storeId + ":actor:" + actorId + ":" + str;
+            return UUID.nameUUIDFromBytes(scoped.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     public ReservePosOrderResponse reserveOrder(UUID orderId, UUID actorId) {

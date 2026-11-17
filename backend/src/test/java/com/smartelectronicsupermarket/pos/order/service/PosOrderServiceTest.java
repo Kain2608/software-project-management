@@ -67,8 +67,8 @@ class PosOrderServiceTest {
         PosOrderRecord savedRecord = new PosOrderRecord(
                 ORDER_ID, "SO-2026-TEST", IDEMPOTENCY_KEY, STORE_ID, WAREHOUSE_ID, null,
                 "POS", "DRAFT", BigDecimal.ZERO, ACTOR_ID, Instant.now(), null);
-        when(dataAccess.createOrder(any(), any(), eq(IDEMPOTENCY_KEY), eq(STORE_ID), eq(WAREHOUSE_ID), any(), eq(ACTOR_ID), any()))
-                .thenReturn(savedRecord);
+        when(dataAccess.createOrderIfAbsent(any(), any(), eq(IDEMPOTENCY_KEY), eq(STORE_ID), eq(WAREHOUSE_ID), any(), eq(ACTOR_ID), any()))
+                .thenReturn(Optional.of(savedRecord));
 
         List<PosOrderItemRecord> savedItems = List.of(
                 new PosOrderItemRecord(UUID.randomUUID(), ORDER_ID, PRODUCT_ID_1, "SKU-001", "Product 1", 2, new BigDecimal("500000"), new BigDecimal("1000000")),
@@ -282,8 +282,8 @@ class PosOrderServiceTest {
         when(dataAccess.findActiveProduct(PRODUCT_ID_1)).thenReturn(
                 new CatalogProductRecord(PRODUCT_ID_1, "SKU-001", "Product 1", new BigDecimal("500000"), true));
 
-        when(dataAccess.createOrder(any(), any(), eq(IDEMPOTENCY_KEY), eq(STORE_ID), eq(WAREHOUSE_ID), any(), eq(ACTOR_ID), any()))
-                .thenThrow(new DuplicateKeyException("duplicate key value violates unique constraint"));
+        when(dataAccess.createOrderIfAbsent(any(), any(), eq(IDEMPOTENCY_KEY), eq(STORE_ID), eq(WAREHOUSE_ID), any(), eq(ACTOR_ID), any()))
+                .thenReturn(Optional.empty());
 
         List<PosOrderItemRecord> existingItems = List.of(
                 new PosOrderItemRecord(UUID.randomUUID(), ORDER_ID, PRODUCT_ID_1, "SKU-001", "Product 1", 2, new BigDecimal("500000"), new BigDecimal("1000000")));
@@ -315,8 +315,8 @@ class PosOrderServiceTest {
         when(dataAccess.findActiveProduct(PRODUCT_ID_1)).thenReturn(
                 new CatalogProductRecord(PRODUCT_ID_1, "SKU-001", "Product 1", new BigDecimal("500000"), true));
 
-        when(dataAccess.createOrder(any(), any(), eq(IDEMPOTENCY_KEY), eq(STORE_ID), eq(WAREHOUSE_ID), any(), eq(ACTOR_ID), any()))
-                .thenThrow(new DuplicateKeyException("duplicate key value violates unique constraint"));
+        when(dataAccess.createOrderIfAbsent(any(), any(), eq(IDEMPOTENCY_KEY), eq(STORE_ID), eq(WAREHOUSE_ID), any(), eq(ACTOR_ID), any()))
+                .thenReturn(Optional.empty());
 
         // Saved items differ (quantity 99 instead of 2)
         List<PosOrderItemRecord> existingItems = List.of(
@@ -333,5 +333,46 @@ class PosOrderServiceTest {
         assertThatThrownBy(() -> service.createDraftOrder(request, ACTOR_ID))
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("Idempotency key reused with a different payload");
+    }
+
+    @Test
+    void resolveIdempotencyKey_rejectsBlankString() {
+        assertThatThrownBy(() -> PosOrderService.resolveIdempotencyKey("   ", STORE_ID, ACTOR_ID))
+                .isInstanceOf(PosOrderValidationException.class)
+                .hasMessageContaining("must not be blank");
+    }
+
+    @Test
+    void resolveIdempotencyKey_rejectsLongString() {
+        String longString = "a".repeat(256);
+        assertThatThrownBy(() -> PosOrderService.resolveIdempotencyKey(longString, STORE_ID, ACTOR_ID))
+                .isInstanceOf(PosOrderValidationException.class)
+                .hasMessageContaining("must not exceed 255 characters");
+    }
+
+    @Test
+    void resolveIdempotencyKey_acceptsValidUuidDirectly() {
+        UUID validUuid = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        UUID resolved = PosOrderService.resolveIdempotencyKey(validUuid.toString(), STORE_ID, ACTOR_ID);
+        assertThat(resolved).isEqualTo(validUuid);
+    }
+
+    @Test
+    void resolveIdempotencyKey_scopesByStoreAndActorToPreventCollision() {
+        String customKey = "session-cart-12345";
+        UUID uuidStore1Actor1 = PosOrderService.resolveIdempotencyKey(customKey, STORE_ID, ACTOR_ID);
+        UUID uuidStore1Actor1Replay = PosOrderService.resolveIdempotencyKey(customKey, STORE_ID, ACTOR_ID);
+
+        UUID otherStore = UUID.randomUUID();
+        UUID otherActor = UUID.randomUUID();
+        UUID uuidStore2Actor1 = PosOrderService.resolveIdempotencyKey(customKey, otherStore, ACTOR_ID);
+        UUID uuidStore1Actor2 = PosOrderService.resolveIdempotencyKey(customKey, STORE_ID, otherActor);
+
+        // Same store and actor always derives identical UUID (deterministic replay)
+        assertThat(uuidStore1Actor1Replay).isEqualTo(uuidStore1Actor1);
+
+        // Different store or actor derives different UUID (namespace isolation)
+        assertThat(uuidStore2Actor1).isNotEqualTo(uuidStore1Actor1);
+        assertThat(uuidStore1Actor2).isNotEqualTo(uuidStore1Actor1);
     }
 }

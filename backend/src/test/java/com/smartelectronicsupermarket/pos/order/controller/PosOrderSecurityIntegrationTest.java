@@ -348,13 +348,13 @@ class PosOrderSecurityIntegrationTest {
 
         ArgumentCaptor<CreatePosOrderRequest> captor = ArgumentCaptor.forClass(CreatePosOrderRequest.class);
         verify(service).createDraftOrder(captor.capture(), eq(ACTOR_ID));
-        assertThat(captor.getValue().idempotencyKey()).isEqualTo(keyUuid);
+        assertThat(captor.getValue().rawIdempotencyKey()).isEqualTo(keyUuid.toString());
     }
 
     @Test
     void createDraftOrder_acceptsArbitraryStringIdempotencyKeyHeaderAndDerivesUuid() throws Exception {
         String stringKey = "custom-pos-client-session-key-999";
-        UUID expectedUuid = PosOrderController.parseOrDeriveIdempotencyKey(stringKey);
+        UUID expectedUuid = PosOrderService.resolveIdempotencyKey(stringKey, STORE_ID, ACTOR_ID);
 
         PosOrderResponse mockResponse = new PosOrderResponse(
                 ORDER_ID, "SO-TEST-003", expectedUuid, STORE_ID, WAREHOUSE_ID, null,
@@ -384,16 +384,41 @@ class PosOrderSecurityIntegrationTest {
 
         ArgumentCaptor<CreatePosOrderRequest> captor = ArgumentCaptor.forClass(CreatePosOrderRequest.class);
         verify(service).createDraftOrder(captor.capture(), eq(ACTOR_ID));
-        assertThat(captor.getValue().idempotencyKey()).isEqualTo(expectedUuid);
+        assertThat(captor.getValue().rawIdempotencyKey()).isEqualTo(stringKey);
     }
 
     @Test
-    void createDraftOrder_acceptsStringIdempotencyKeyInBody() throws Exception {
-        String stringKey = "body-key-test-888";
-        UUID expectedUuid = PosOrderController.parseOrDeriveIdempotencyKey(stringKey);
+    void createDraftOrder_rejectsBlankIdempotencyKeyHeader() throws Exception {
+        when(service.createDraftOrder(any(), eq(ACTOR_ID)))
+                .thenThrow(new PosOrderValidationException("Idempotency key must not be blank", "Idempotency-Key"));
+
+        String token = bearerToken(SUBJECT);
+        mockMvc.perform(post("/api/v1/pos/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", "   ")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "store_id": "%s",
+                                  "warehouse_id": "%s",
+                                  "items": [
+                                    { "product_id": "%s", "quantity": 1 }
+                                  ]
+                                }
+                                """.formatted(STORE_ID, WAREHOUSE_ID, PRODUCT_ID)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.field").value("Idempotency-Key"));
+    }
+
+    @Test
+    void createDraftOrder_headerOverridesBodyIdempotencyKey() throws Exception {
+        String headerKey = "header-authoritative-key";
+        String bodyKey = "body-ignored-key";
+        UUID expectedUuid = PosOrderService.resolveIdempotencyKey(headerKey, STORE_ID, ACTOR_ID);
 
         PosOrderResponse mockResponse = new PosOrderResponse(
-                ORDER_ID, "SO-TEST-004", expectedUuid, STORE_ID, WAREHOUSE_ID, null,
+                ORDER_ID, "SO-TEST-005", expectedUuid, STORE_ID, WAREHOUSE_ID, null,
                 "POS", "DRAFT", BigDecimal.ZERO, ACTOR_ID, Instant.now(), null,
                 List.of(new PosOrderItemResponse(
                         UUID.randomUUID(), PRODUCT_ID, "SKU-001", "Product 1", 1,
@@ -404,6 +429,7 @@ class PosOrderSecurityIntegrationTest {
         String token = bearerToken(SUBJECT);
         mockMvc.perform(post("/api/v1/pos/orders")
                         .header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", headerKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -414,13 +440,13 @@ class PosOrderSecurityIntegrationTest {
                                     { "product_id": "%s", "quantity": 1 }
                                   ]
                                 }
-                                """.formatted(STORE_ID, WAREHOUSE_ID, stringKey, PRODUCT_ID)))
+                                """.formatted(STORE_ID, WAREHOUSE_ID, bodyKey, PRODUCT_ID)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idempotency_key").value(expectedUuid.toString()));
 
         ArgumentCaptor<CreatePosOrderRequest> captor = ArgumentCaptor.forClass(CreatePosOrderRequest.class);
         verify(service).createDraftOrder(captor.capture(), eq(ACTOR_ID));
-        assertThat(captor.getValue().idempotencyKey()).isEqualTo(expectedUuid);
+        assertThat(captor.getValue().rawIdempotencyKey()).isEqualTo(headerKey);
     }
 
     private static String bearerToken(String subject) {

@@ -19,6 +19,16 @@ public interface PosOrderDataAccess {
 
     List<PosOrderItemRecord> findOrderItems(UUID orderId);
 
+    Optional<PosOrderRecord> createOrderIfAbsent(
+            UUID orderId,
+            String code,
+            UUID idempotencyKey,
+            UUID storeId,
+            UUID warehouseId,
+            UUID customerId,
+            UUID actorId,
+            List<PosOrderItemRecord> items);
+
     PosOrderRecord createOrder(
             UUID orderId,
             String code,

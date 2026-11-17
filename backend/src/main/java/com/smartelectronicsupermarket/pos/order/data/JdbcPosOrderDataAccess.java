@@ -72,6 +72,15 @@ public class JdbcPosOrderDataAccess implements PosOrderDataAccess {
             )
             """;
 
+    private static final String INSERT_ORDER_ON_CONFLICT_SQL = """
+            INSERT INTO sasms.sales_orders (
+                id, code, idempotency_key, store_id, warehouse_id, customer_id, channel, created_by
+            ) VALUES (
+                CAST(? AS uuid), CAST(? AS text), CAST(? AS uuid), CAST(? AS uuid), CAST(? AS uuid), CAST(? AS uuid), 'POS', CAST(? AS uuid)
+            )
+            ON CONFLICT (idempotency_key) DO NOTHING
+            """;
+
     private static final String INSERT_ORDER_ITEM_SQL = """
             INSERT INTO sasms.sales_order_items (
                 id, order_id, product_id, quantity, unit_price
@@ -161,7 +170,7 @@ public class JdbcPosOrderDataAccess implements PosOrderDataAccess {
 
     @Override
     @Transactional
-    public PosOrderRecord createOrder(
+    public Optional<PosOrderRecord> createOrderIfAbsent(
             UUID orderId,
             String code,
             UUID idempotencyKey,
@@ -170,8 +179,8 @@ public class JdbcPosOrderDataAccess implements PosOrderDataAccess {
             UUID customerId,
             UUID actorId,
             List<PosOrderItemRecord> items) {
-        jdbcTemplate.update(
-                INSERT_ORDER_SQL,
+        int rows = jdbcTemplate.update(
+                INSERT_ORDER_ON_CONFLICT_SQL,
                 orderId,
                 code,
                 idempotencyKey,
@@ -179,6 +188,10 @@ public class JdbcPosOrderDataAccess implements PosOrderDataAccess {
                 warehouseId,
                 customerId,
                 actorId);
+
+        if (rows == 0) {
+            return Optional.empty();
+        }
 
         for (PosOrderItemRecord item : items) {
             jdbcTemplate.update(
@@ -190,8 +203,22 @@ public class JdbcPosOrderDataAccess implements PosOrderDataAccess {
                     item.unitPrice());
         }
 
-        return findOrderById(orderId).orElseThrow(() ->
-                new IllegalStateException("Failed to retrieve created sales order: " + orderId));
+        return findOrderById(orderId);
+    }
+
+    @Override
+    @Transactional
+    public PosOrderRecord createOrder(
+            UUID orderId,
+            String code,
+            UUID idempotencyKey,
+            UUID storeId,
+            UUID warehouseId,
+            UUID customerId,
+            UUID actorId,
+            List<PosOrderItemRecord> items) {
+        return createOrderIfAbsent(orderId, code, idempotencyKey, storeId, warehouseId, customerId, actorId, items)
+                .orElseThrow(() -> new IllegalStateException("Failed to create order: idempotency conflict for " + idempotencyKey));
     }
 
     @Override

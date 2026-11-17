@@ -668,11 +668,12 @@ Mô hình Order-First chuẩn hóa đề xuất cho Sprint sau (hoặc giai đo�
    - Backend tự tra cứu giá bán từ bảng `sasms.products.list_price`. Tuyệt đối không nhận đơn giá (`unit_price`) hay tổng tiền (`total_amount`) từ client.
    - Khi tạo đơn DRAFT, trường `sales_orders.total_amount` mặc định là 0 (tuân thủ phân quyền `runtime-roles.sql`, `sasms_app` không có quyền INSERT `total_amount`). Giá trị tổng tiền chính thức sẽ do hàm DB `sasms.reserve_order` tự động tính toán tổng từ `sales_order_items`.
 4. **Idempotency Key & Phòng chống Replay / Xử lý Cạnh tranh Đồng thời**:
-   - Header hỗ trợ chuẩn RFC `Idempotency-Key` lẫn header legacy `X-Idempotency-Key` và trường `idempotency_key` trong JSON body.
-   - Chuẩn hóa tương thích CSDL: Cột `sales_orders.idempotency_key` là `uuid NOT NULL UNIQUE`. Hệ thống tự động phân tích: nếu là UUID hợp lệ thì parse trực tiếp, nếu là chuỗi tùy biến thì chuyển đổi ánh xạ tất định sang UUID (RFC 4122 v3 name-UUID). Khắc phục triệt để lỗi ép kiểu CSDL.
-   - Replay cùng key và cùng payload: Trả về đơn hàng đã tạo nguyên vẹn (idempotent replay, HTTP 201).
+   - Header hỗ trợ chuẩn RFC `Idempotency-Key` lẫn header legacy `X-Idempotency-Key` và trường `idempotency_key` trong JSON body. Thứ tự ưu tiên: `Idempotency-Key` > `X-Idempotency-Key` > body `idempotency_key` (header luôn ghi đè body).
+   - Kiểm tra ràng buộc: Từ chối chuỗi rỗng/khoảng trắng (422) và từ chối độ dài > 255 ký tự (422).
+   - Chuẩn hóa tương thích CSDL: Cột `sales_orders.idempotency_key` là `uuid NOT NULL UNIQUE`. Nếu là UUID hợp lệ thì parse trực tiếp. Nếu là chuỗi tùy biến thì chuyển đổi ánh xạ tất định có phân lập theo quầy và chi nhánh: `UUID.nameUUIDFromBytes(("store:" + storeId + ":actor:" + actorId + ":" + trimmed).getBytes(StandardCharsets.UTF_8))` (RFC 4122 v3 name-UUID). Khắc phục triệt để lỗi ép kiểu CSDL và chống đụng độ key giữa các quầy khác nhau.
+   - Replay cùng key và cùng payload: Trả về đơn hàng đã tạo nguyên vẹn (idempotent replay, HTTP 201/200).
    - Tái sử dụng key nhưng khác payload: Trả về HTTP 409 `IDEMPOTENCY_CONFLICT`.
-   - Cạnh tranh đồng thời (Race condition): Nếu hai connection cùng gửi yêu cầu tạo đơn đồng thời tại cùng mili-giây, connection thứ hai bắt ngoại lệ `DuplicateKeyException` từ ràng buộc duy nhất CSDL `sales_orders_idempotency_key_key`, tự động tái truy vấn kiểm tra: nếu trùng khớp payload sẽ trả về đơn hàng đã tạo an toàn; nếu sai lệch payload sẽ ném HTTP 409 conflict.
+   - Cạnh tranh đồng thời (Race condition) & Khắc phục Transaction Abort: Thay vì catch `DuplicateKeyException` (khiến PostgreSQL đánh dấu transaction bị abort và từ chối mọi câu SELECT tiếp theo trong cùng transaction), hệ thống sử dụng câu lệnh `INSERT INTO sasms.sales_orders (...) VALUES (...) ON CONFLICT (idempotency_key) DO NOTHING`. Nếu `rows == 0`, transaction vẫn nguyên vẹn và an toàn tái truy vấn kiểm tra: nếu trùng khớp payload sẽ trả về đơn hàng đã tạo an toàn; nếu sai lệch payload sẽ ném HTTP 409 conflict.
 5. **Giao dịch Nguyên tử (Transactional Atomicity)**:
    - Toàn bộ thao tác tạo đơn và chi tiết đơn hàng được bọc trong `@Transactional(rollbackFor = Exception.class)`. Nếu có bất kỳ dòng sản phẩm nào lỗi hoặc không hợp lệ, toàn bộ giao dịch được rollback sạch sẽ, không để lại đơn hàng rác/mồ côi trong `sales_orders`.
 
@@ -684,22 +685,103 @@ Mô hình Order-First chuẩn hóa đề xuất cho Sprint sau (hoặc giai đo�
   - `IDEMPOTENCY_CONFLICT`: Tái sử dụng Idempotency-Key với nội dung payload khác.
   - `DEVICE_LOCKED` (SQLSTATE `55P03`): Xung đột khóa thiết bị.
 - **422 Unprocessable Content**:
-  - `VALIDATION_FAILED`: Đơn hàng không có sản phẩm; số lượng $\le 0$; trùng lặp sản phẩm trong các dòng; hoặc vi phạm ràng buộc CSDL (SQLSTATE `23514`).
+  - `VALIDATION_FAILED`: Đơn hàng không có sản phẩm; số lượng $\le 0$; trùng lặp sản phẩm trong các dòng; Idempotency-Key rỗng hoặc quá dài; hoặc vi phạm ràng buộc CSDL (SQLSTATE `23514`).
 - **503 Service Unavailable**:
   - `DEPENDENCY_UNAVAILABLE`: Lỗi kết nối CSDL hoặc timeout, không để lộ câu lệnh SQL hay connection secret.
 
 ### 16.4 Bằng chứng Kiểm thử Tổng thể
 - **Backend Test Suite**:
-  - `mvnw.cmd test` chạy thành công toàn bộ **229 tests** (0 failures, 0 errors, 9 skipped).
-  - 32 tests mới chuyên biệt cho Order-First POS:
-    - `PosOrderServiceTest` (14 unit tests): Validation logic, duplicate check, cross-store check, warehouse membership, product lookup, idempotency replay vs conflict, reserve status check, và 2 test cạnh tranh đồng thời concurrent race condition (replay khi match, conflict khi mismatch).
+  - `mvnw.cmd test` chạy thành công toàn bộ **241 tests** (0 failures, 0 errors, 16 skipped).
+  - 39 tests mới chuyên biệt cho Order-First POS:
+    - `PosOrderServiceTest` (18 unit tests): Validation logic, duplicate check, cross-store check, warehouse membership, product lookup, idempotency replay vs conflict, reserve status check, key length/blank validation, store/actor isolation, và 2 test cạnh tranh đồng thời concurrent race condition (replay khi match, conflict khi mismatch).
     - `JdbcPosOrderDataAccessTest` (3 unit tests): SQL parameter mapping, permission checks, forward/backward compatibility với schema Kiên V004 (`to_jsonb(so)->>'hold_expires_at'`).
     - `PosOrderDisabledFeatureFlagIntegrationTest` (2 integration tests): 404 Not Found khi cờ tính năng tắt.
-    - `PosOrderSecurityIntegrationTest` (13 security integration tests): MockMvc xác thực JWT, 401 khi thiếu auth, 201 tạo đơn thành công, 403 thiếu quyền checkout, 422 lỗi validation, 409 xung đột idempotency, 200 reserve thành công, 401 reserve thiếu auth, 404 reserve đơn không tồn tại, 409 xung đột khóa thiết bị 55P03, 422 vi phạm ràng buộc 23514, và 3 test xác minh Idempotency-Key header RFC chuẩn UUID, chuỗi tùy biến deterministic UUID, và chuỗi trong JSON body.
+    - `PosOrderSecurityIntegrationTest` (14 security integration tests): MockMvc xác thực JWT, 401 khi thiếu auth, 201 tạo đơn thành công, 403 thiếu quyền checkout, 422 lỗi validation, 409 xung đột idempotency, 200 reserve thành công, 401 reserve thiếu auth, 404 reserve đơn không tồn tại, 409 xung đột khóa thiết bị 55P03, 422 vi phạm ràng buộc 23514, và các test xác minh Idempotency-Key header RFC chuẩn UUID, chuỗi tùy biến deterministic UUID, chuỗi trong JSON body, và header ghi đè body.
+    - `Sprint2OrderPostgreSqlIntegrationTest` (7 integration tests): Bộ test tích hợp trên PostgreSQL thật với 2 connection độc lập, concurrency race condition, rollback nguyên tử, kiểm tra quyền `sasms_app`, lease 10 phút và tương thích baseline vs V004.
 - **Frontend Test Suite & Build**:
   - `npm test`: **47/47 tests PASS** (authContext, QR, POS Cart, AI service).
   - `npm run build`: Vite 5.4.21 production build SUCCESS.
   - `git diff --check`: PASS, không có lỗi whitespace hay format.
 - **Hiện trạng Môi trường PostgreSQL**:
   - Docker Desktop daemon trên máy host đang tắt (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`).
-  - Vì vậy kịch bản live E2E trên container PostgreSQL 16 trong phiên này ghi nhận **NOT RUN / BLOCKED by Docker**, tuân thủ nguyên tắc không sử dụng database dùng chung hoặc database staging chưa cô lập.
+  - Toàn bộ script provisioning và test suite đã sẵn sàng: `scripts/create_s2_order_container.ps1`, `scripts/provision_s2_order_db.ps1`, `scripts/run_s2_order_it.ps1`.
+  - Tuân thủ nguyên tắc không sử dụng database dùng chung hoặc database staging chưa cô lập.
+
+## 17. Kiểm chứng Order-First trên PostgreSQL thật, Khắc phục Transaction Abort & Bộ Tự động hóa Cô lập
+
+### 17.1 Khắc phục triệt để lỗi Transaction Abort trên PostgreSQL
+- **Bản chất lỗi trên PostgreSQL**: Khác với một số RDBMS khác, khi PostgreSQL phát sinh vi phạm ràng buộc `UNIQUE` (`SQLSTATE 23505`), transaction hiện hành ngay lập tức bị đánh dấu là bị hủy (`current transaction is aborted, commands ignored until end of transaction block`). Nếu tầng ứng dụng bắt ngoại lệ `DuplicateKeyException` rồi thực hiện `SELECT` trong cùng transaction mà không có Savepoint, PostgreSQL sẽ từ chối thực thi và toàn bộ transaction thất bại.
+- **Giải pháp chuẩn kiến trúc**: Chuyển đổi câu lệnh INSERT đơn hàng trong `JdbcPosOrderDataAccess` sang:
+  ```sql
+  INSERT INTO sasms.sales_orders (
+      id, code, idempotency_key, store_id, warehouse_id, customer_id, channel, created_by
+  ) VALUES (
+      CAST(? AS uuid), CAST(? AS text), CAST(? AS uuid), CAST(? AS uuid), CAST(? AS uuid), CAST(? AS uuid), 'POS', CAST(? AS uuid)
+  )
+  ON CONFLICT (idempotency_key) DO NOTHING;
+  ```
+- **Hành vi xử lý tại `PosOrderService`**:
+  - `dataAccess.createOrderIfAbsent(...)` trả về `Optional<SalesOrderRecord>`.
+  - Nếu `rows == 1`: Đơn hàng mới được tạo thành công, tiến hành chèn các dòng sản phẩm `sales_order_items`.
+  - Nếu `rows == 0` (xung đột trên `idempotency_key`): Transaction **vẫn hợp lệ và không bị PostgreSQL đánh dấu lỗi**. Service thực hiện truy vấn `findOrderByIdempotencyKey(idempotencyKey)` trong cùng transaction và so sánh payload:
+    - Nếu khớp payload (cùng store, warehouse, items): Trả về đơn hàng đã tạo nguyên vẹn (idempotent replay thành công).
+    - Nếu khác payload: Ném `ResourceConflictException` (HTTP 409 Conflict) với lý do tái sử dụng key nhưng payload sai lệch.
+  - Chỉ bắt đúng xung đột trên constraint `idempotency_key`, không nuốt các lỗi UNIQUE hoặc ngoại lệ CSDL khác.
+
+### 17.2 Cơ chế phân giải Idempotency-Key an toàn & Cô lập Quầy/Actor
+- **Thứ tự ưu tiên nguồn Key**: Header `Idempotency-Key` (chuẩn RFC) > Header `X-Idempotency-Key` (legacy) > JSON body `idempotency_key`. Header luôn ghi đè body nếu cả hai cùng xuất hiện.
+- **Ràng buộc đầu vào**:
+  - Chuỗi rỗng hoặc chỉ chứa khoảng trắng: Ném HTTP 422 `PosOrderValidationException("Idempotency key must not be blank", "Idempotency-Key")`.
+  - Độ dài vượt quá 255 ký tự: Ném HTTP 422 `PosOrderValidationException("Idempotency key must not exceed 255 characters", "Idempotency-Key")`.
+- **Phân giải và Scoping Namespace**:
+  - Nếu là chuỗi UUID hợp lệ: Parse trực tiếp `UUID.fromString(trimmed)`.
+  - Nếu là chuỗi tùy biến: Ánh xạ tất định có phân lập theo chi nhánh và thu ngân:
+    `UUID.nameUUIDFromBytes(("store:" + storeId + ":actor:" + actorId + ":" + trimmed).getBytes(StandardCharsets.UTF_8))`
+  - **Lợi ích**: Đảm bảo hai thu ngân tại hai quầy hoặc hai chi nhánh khác nhau dù có cùng đặt tên key theo cùng quy tắc (ví dụ `pos-bill-001`) cũng sinh ra hai UUID hoàn toàn khác nhau trong CSDL, triệt tiêu nguy cơ đụng độ hoặc ghi đè đơn của nhau.
+
+### 17.3 Bộ Kiểm thử Tích hợp PostgreSQL 16 Cô lập (`Sprint2OrderPostgreSqlIntegrationTest`)
+Bổ sung test suite tích hợp `Sprint2OrderPostgreSqlIntegrationTest.java` (7 nhóm kiểm thử chuyên sâu trên PostgreSQL thật):
+1. **Quyền tối thiểu `sasms_app`**:
+   - Chỉ được INSERT các cột được cấp quyền trong `runtime-roles.sql` (`id, code, idempotency_key, store_id, warehouse_id, customer_id, channel, created_by`).
+   - Bị từ chối quyền (42501) nếu cố tình INSERT `status = 'PAID'` hoặc `total_amount`.
+   - Bị từ chối quyền (42501) nếu cố tình UPDATE `devices.status` trực tiếp.
+   - Được phép EXECUTE hàm nghiệp vụ `sasms.reserve_order(uuid, uuid)`.
+2. **Replay cùng payload**: Trả về đúng đơn hàng DRAFT đã tạo trước đó, trạng thái 200/201, CSDL chỉ có 1 bản ghi duy nhất.
+3. **Concurrency 2 kết nối đồng thời (Two-Connection Race Condition)**: Hai luồng chạy đồng thời cùng mili-giây với cùng key và cùng payload; một luồng thực hiện INSERT, luồng kia nhận `ON CONFLICT DO NOTHING` và tái truy vấn; cả hai luồng đều nhận kết quả thành công và cùng chung `order_id`.
+4. **Replay khác payload**: Phát hiện xung đột và trả về HTTP 409 Conflict.
+5. **Rollback nguyên tử (Atomicity)**: Khi có lỗi vi phạm ràng buộc CSDL (như mã sản phẩm không tồn tại), toàn bộ transaction rollback sạch sẽ, CSDL không tồn tại bản ghi đơn hàng mồ côi.
+6. **Kiểm tra Store/Warehouse Scope & Quyền `sales.checkout`**:
+   - Thu ngân Store B bị chặn khi tạo đơn tại Store A (403 Forbidden).
+   - Nhân viên bán hàng thiếu quyền `sales.checkout` bị chặn (403 Forbidden).
+   - Kho không trực thuộc Store của đơn hàng bị chặn (422 Unprocessable Content).
+   - Người dùng vô hiệu hóa (is_active=false) bị chặn (401 Unauthorized).
+7. **Reserve đơn hàng & Quản lý Lease 10 phút**:
+   - Gắn thiết bị thực tế qua `order_devices`.
+   - Gọi `reserve_order` chuyển trạng thái đơn hàng và thiết bị sang `RESERVED`.
+   - Tương thích ngược: Truy vấn `to_jsonb(so)->>'hold_expires_at'` hoạt động trơn tru trên cả schema baseline (chưa có cột) lẫn migration V004 của Kiên (đã có cột `hold_expires_at`).
+
+### 17.4 Bộ Script Tự động hóa Môi trường PostgreSQL 16 Cô lập
+1. `scripts/create_s2_order_container.ps1`:
+   - Kiểm tra daemon Docker.
+   - Tạo volume `tv4_s2_order_it_pgdata` và container `tv4_s2_order_it_db` trên port `127.0.0.1:15433` (loopback strictly).
+   - Nạp baseline schema `database/schema.sql` và phân quyền runtime `database/runtime-roles.sql`.
+   - Trích xuất và nạp migrations `V003`, `V004`, `V005` trực tiếp từ `origin/DB` bằng Git CLI mà **không merge, cherry-pick hay can thiệp vào working tree của Kiên**.
+2. `scripts/provision_s2_order_db.ps1`:
+   - Xác thực container, port 15433 và volume độc lập.
+   - Tạo tài khoản đăng nhập tạm thời `tv4_s2_app_login` (thuộc group `sasms_app`) và `tv4_s2_admin_login` (thuộc group `sasms_owner`) với mật khẩu ngẫu nhiên 64-hex ký tự.
+3. `scripts/run_s2_order_it.ps1`:
+   - Thiết lập các biến môi trường kiểm thử `SASMS_S2_PG_IT_ENABLED=true`, `SASMS_DB_URL=jdbc:postgresql://127.0.0.1:15433/sasms`.
+   - Thực thi `mvnw.cmd -Dtest=Sprint2OrderPostgreSqlIntegrationTest test`.
+   - Dọn dẹp sạch sẽ tài khoản tạm sau khi hoàn tất kiểm thử.
+
+### 17.5 Hướng dẫn Khởi động Docker Desktop & Thực thi
+- **Nguyên nhân daemon chưa chạy**: Daemon Docker Desktop trên máy host đang ở trạng thái dừng (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`). Quá trình Docker Desktop cần được khởi chạy trong phiên đồ họa người dùng.
+- **Cách khởi động**:
+  1. Mở Start Menu $\rightarrow$ gõ **Docker Desktop** (hoặc mở từ `C:\Users\ADMIN\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe`).
+  2. Chờ biểu tượng Docker dưới thanh Taskbar chuyển sang màu xanh (Docker Desktop is running).
+  3. Mở PowerShell và kiểm tra xác nhận: `docker info`.
+  4. Chạy script khởi tạo môi trường và kiểm thử:
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File scripts/create_s2_order_container.ps1
+     powershell -ExecutionPolicy Bypass -File scripts/run_s2_order_it.ps1
+     ```
