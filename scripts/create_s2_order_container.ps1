@@ -259,39 +259,86 @@ try {
         'V004__pos_lease_lifecycle.sql',
         'V005__frs_business_roles.sql'
     )
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     foreach ($mFile in $migrationFiles) {
-        $content = Invoke-Native -Command 'git' -Arguments @('-C', $repoRoot, 'show', "origin/DB:database/migrations/$mFile") -Description "Extracting $mFile from origin/DB"
-        if ([string]::IsNullOrWhiteSpace($content)) {
-            throw "Extracted migration $mFile from origin/DB is empty or missing."
+        $pinfoGit = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfoGit.FileName = 'git'
+        $pinfoGit.Arguments = "-C `"$repoRoot`" show origin/DB:database/migrations/$mFile"
+        $pinfoGit.RedirectStandardOutput = $true
+        $pinfoGit.RedirectStandardError = $true
+        $pinfoGit.UseShellExecute = $false
+        $pinfoGit.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+
+        $pGit = [System.Diagnostics.Process]::Start($pinfoGit)
+        $gitOut = $pGit.StandardOutput.ReadToEnd()
+        $gitErr = $pGit.StandardError.ReadToEnd()
+        $pGit.WaitForExit()
+
+        if ($pGit.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($gitOut)) {
+            throw "Failed to extract $mFile from origin/DB (exit code $($pGit.ExitCode)): $gitErr"
         }
+
         $destPath = Join-Path $tempMigDir $mFile
-        [System.IO.File]::WriteAllText($destPath, $content, [System.Text.Encoding]::UTF8)
+        [System.IO.File]::WriteAllText($destPath, $gitOut, $utf8NoBom)
     }
 
-    # Use official migrate_db.py to parse, validate and build atomic transactional migration SQL
-    $pyRunner = @'
+    # Prepare python generator script file (avoids stdin pipe / shell argument quoting fragility)
+    $tempPyRunner = Join-Path $tempMigDir 'build_migration_sql.py'
+    $pyScriptCode = @'
 import sys
 from pathlib import Path
-repo_scripts = Path(sys.argv[1])
-mig_dir = Path(sys.argv[2])
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
+repo_scripts = Path(sys.argv[1]).resolve()
+mig_dir = Path(sys.argv[2]).resolve()
 sys.path.insert(0, str(repo_scripts))
+
 from migrate_db import read_migrations, build_sql
 
 migrations = read_migrations(mig_dir)
 if len(migrations) != 5:
     raise ValueError(f"Expected exactly 5 migrations, found {len(migrations)}")
+
 sql = build_sql(migrations, lock_timeout=10, statement_timeout=120)
 sys.stdout.write(sql)
 '@
-    $scriptsDir = Join-Path $repoRoot 'scripts'
-    $buildSqlProcess = $pyRunner | & python - $scriptsDir $tempMigDir 2>&1
-    $pyExitCode = $LASTEXITCODE
+    [System.IO.File]::WriteAllText($tempPyRunner, $pyScriptCode, $utf8NoBom)
+
+    $scriptsDir = (Join-Path $repoRoot 'scripts').TrimEnd('\')
+    $cleanMigDir = $tempMigDir.TrimEnd('\')
+
+    # Execute python runner via ProcessStartInfo to cleanly separate stdout and stderr,
+    # preventing PowerShell 5.1 from aborting on native stderr or truncating tracebacks.
+    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pinfo.FileName = 'python'
+    $pinfo.Arguments = "`"$tempPyRunner`" `"$scriptsDir`" `"$cleanMigDir`""
+    $pinfo.RedirectStandardOutput = $true
+    $pinfo.RedirectStandardError = $true
+    $pinfo.UseShellExecute = $false
+    $pinfo.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+    $pinfo.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+
+    $process = [System.Diagnostics.Process]::Start($pinfo)
+    $migrationSql = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+
+    $pyExitCode = $process.ExitCode
     if ($pyExitCode -ne 0) {
-        throw "Python migration builder (scripts/migrate_db.py) failed with exit code $($pyExitCode): `n$($buildSqlProcess | Out-String)"
+        throw "Python migration builder (scripts/migrate_db.py) failed with exit code ${pyExitCode}:`n${stderr}"
     }
-    $migrationSql = ($buildSqlProcess | Out-String)
+
     if ([string]::IsNullOrWhiteSpace($migrationSql)) {
         throw "Generated migration SQL is empty."
+    }
+
+    # Verify atomic SQL transaction structure before sending to PostgreSQL
+    if (-not ($migrationSql.Contains("BEGIN;") -and $migrationSql.Contains("COMMIT;") -and $migrationSql.Contains("sasms_meta.schema_migrations"))) {
+        throw "Generated migration SQL failed integrity validation (missing BEGIN, COMMIT, or schema_migrations ledger)."
     }
 
     Invoke-PsqlStdin -Sql $migrationSql -Description "Transactional migrations V001-V005 (migrate_db.py runner)"
