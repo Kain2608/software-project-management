@@ -40,7 +40,8 @@ public class AiCrossSellController {
     @PostMapping("/cross-sell")
     public ResponseEntity<CrossSellResult> getCrossSell(
             @RequestBody CrossSellRequest request, Authentication authentication) {
-        log.info("[API] POST /api/v1/ai/cross-sell received request for store: {}", request.storeId());
+        // Never log client-supplied values here: they are unvalidated until the service parses them.
+        log.debug("[API] POST /api/v1/ai/cross-sell received");
 
         CrossSellResult result = aiCrossSellService.getCrossSellRecommendations(
                 TrustedActorAccess.actorId(authentication), request);
