@@ -20,8 +20,7 @@ function shortIdentifier(value) {
 
 function formatMinor(value) {
   if (!Number.isSafeInteger(value)) return '—'
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })
-    .format(value)
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
 }
 
 // Store/warehouse/cart must come from the real authenticated checkout flow.
@@ -118,17 +117,20 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
   }
 
   return (
-    <section aria-labelledby="pos-title">
-      <div className="section-heading">
+    <section className="pos-module" aria-labelledby="pos-title">
+      <div className="pos-module__utilities">
         <div>
           <p className="eyebrow">MODULE 2 · POS</p>
-          <h2 id="pos-title">Bán hàng và hóa đơn</h2>
+          <h2 id="pos-title">Chọn sản phẩm và lập giỏ hàng</h2>
         </div>
         <button type="button" onClick={checkBackend}>Kiểm tra Backend</button>
       </div>
 
-      <div className="pos-scope-note">
-        Giỏ hàng hiện chỉ là bản nháp frontend. Checkout, giữ Serial và xác nhận thanh toán vẫn cần backend thực hiện nguyên tử.
+      <div className={`pos-business-state${cartItems.length ? ' pos-business-state--active' : ''}`} role="status">
+        <strong>{cartItems.length ? `Giỏ hàng có ${cartItems.length} dòng sản phẩm` : 'Giỏ hàng đang trống'}</strong>
+        <span>{cartItems.length
+          ? 'Giỏ này là bản nháp tại trình duyệt; backend phải xác nhận lại giá, tồn và Serial trước khi tạo đơn.'
+          : 'Chọn sản phẩm và thiết bị để bắt đầu. Truy cập Catalog/Stock yêu cầu phiên JWT và kho bán hàng hợp lệ.'}</span>
       </div>
 
       <PosCart
@@ -141,55 +143,62 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
         onMessageChange={setCartMessage}
       />
 
-      <CrossSellWidget
-        accessToken={accessToken}
-        storeId={storeId}
-        warehouseId={warehouseId}
-        cartItems={crossSellCartItems}
-        onReviewSuggestion={addVerifiedSuggestion}
-      />
+      <div className="pos-followup">
+        <CrossSellWidget
+          accessToken={accessToken}
+          storeId={storeId}
+          warehouseId={warehouseId}
+          cartItems={crossSellCartItems}
+          onReviewSuggestion={addVerifiedSuggestion}
+        />
 
-      <form className="receipt-form" onSubmit={loadReceipt}>
-        <label htmlFor="receipt-order-id">
-          Mã UUID đơn hàng
-          <input
-            id="receipt-order-id"
-            value={orderId}
-            onChange={(event) => setOrderId(event.target.value)}
-            placeholder="00000000-0000-0000-0000-000000000000"
-            required
-          />
-        </label>
-        <button type="submit" disabled={receiptState === 'loading'}>
-          {receiptState === 'loading' ? 'Đang tải…' : 'Xem hóa đơn'}
-        </button>
-      </form>
+        <section className="pos-receipt-panel" aria-labelledby="pos-receipt-title">
+          <h3 id="pos-receipt-title" className="pos-receipt-panel__heading">Tra cứu hóa đơn</h3>
+          <p className="pos-receipt-panel__description">Xem hóa đơn của đơn PAID trong phạm vi được cấp quyền. In bằng hộp thoại trình duyệt.</p>
+          <form className="receipt-form" onSubmit={loadReceipt}>
+            <label htmlFor="receipt-order-id">
+              Mã UUID đơn hàng
+              <input
+                id="receipt-order-id"
+                value={orderId}
+                onChange={(event) => setOrderId(event.target.value)}
+                placeholder="00000000-0000-0000-0000-000000000000"
+                required
+              />
+            </label>
+            <button type="submit" disabled={receiptState === 'loading'}>
+              {receiptState === 'loading' ? 'Đang tải…' : 'Xem hóa đơn'}
+            </button>
+          </form>
 
-      {receiptMessage && <p className={`receipt-message receipt-message--${receiptState}`}>{receiptMessage}</p>}
+          {receiptMessage && <p className={`receipt-message receipt-message--${receiptState}`}>{receiptMessage}</p>}
 
-      {visibleReceipt && (
-        <article className="receipt-preview" aria-label="Bản xem trước hóa đơn">
-          <header>
-            <div><strong>SASMS</strong><span>HÓA ĐƠN BÁN HÀNG</span></div>
-            <small>Đơn: {shortIdentifier(visibleReceipt.order_id)}</small>
-          </header>
-          <dl>
-            <div><dt>Thanh toán lúc</dt><dd>{new Date(visibleReceipt.paid_at).toLocaleString('vi-VN')}</dd></div>
-            <div><dt>Tổng tiền</dt><dd>{formatMinor(visibleReceipt.total_minor)}</dd></div>
-          </dl>
-          <ul>
-            {visibleReceipt.items.map((item) => (
-              <li key={item.device_id}>
-                <span>{shortIdentifier(item.sku_id)} · {item.serial_masked}</span>
-                <strong>{formatMinor(item.price_minor)}</strong>
-              </li>
-            ))}
-          </ul>
-          <button type="button" onClick={() => window.print()}>Mở bản xem trước in</button>
-          <small>Đóng hoặc lỗi hộp thoại in không làm thay đổi trạng thái đơn hàng.</small>
-        </article>
-      )}
+          {visibleReceipt && (
+            <article className="receipt-preview" aria-label="Bản xem trước hóa đơn">
+              <header>
+                <div><strong>SASMS</strong><span>HÓA ĐƠN BÁN HÀNG</span></div>
+                <small>Đơn: {shortIdentifier(visibleReceipt.order_id)}</small>
+              </header>
+              <dl>
+                <div><dt>Thanh toán lúc</dt><dd>{new Date(visibleReceipt.paid_at).toLocaleString('vi-VN')}</dd></div>
+                <div><dt>Tổng tiền</dt><dd>{formatMinor(visibleReceipt.total_minor)}</dd></div>
+              </dl>
+              <ul>
+                {visibleReceipt.items.map((item) => (
+                  <li key={item.device_id}>
+                    <span>{shortIdentifier(item.sku_id)} · {item.serial_masked}</span>
+                    <strong>{formatMinor(item.price_minor)}</strong>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => window.print()}>Mở bản xem trước in</button>
+              <small>Đóng hoặc lỗi hộp thoại in không làm thay đổi trạng thái đơn hàng.</small>
+            </article>
+          )}
+        </section>
+      </div>
 
+      <p className="pos-scope-note">Checkout, giữ Serial và xác nhận thanh toán chưa khả dụng. Giao diện không tự tạo đơn, không đổi trạng thái SOLD hay cập nhật tồn kho.</p>
       {data && <StatusCard title={data.module} status={data.status} note={data.note} />}
       {error && <p className="error">{error}</p>}
     </section>

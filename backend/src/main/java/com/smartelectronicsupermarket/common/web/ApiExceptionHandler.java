@@ -41,6 +41,16 @@ public class ApiExceptionHandler {
         return response(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied", null, false);
     }
 
+    @ExceptionHandler(com.smartelectronicsupermarket.pos.order.service.PosOrderValidationException.class)
+    ResponseEntity<ApiErrorResponse> posOrderValidation(com.smartelectronicsupermarket.pos.order.service.PosOrderValidationException exception) {
+        return response(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "VALIDATION_FAILED",
+                exception.getMessage(),
+                exception.getField(),
+                false);
+    }
+
     @ExceptionHandler(DataAccessException.class)
     ResponseEntity<ApiErrorResponse> databaseError(DataAccessException exception) {
         return switch (findSqlState(exception)) {

@@ -1,97 +1,369 @@
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #172033;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color: #172c48;
   background: #f5f7fb;
+  font-synthesis: none;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea { font: inherit; }
 button { cursor: pointer; }
-
-.app-shell {
-  width: min(1120px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 40px 0 64px;
+button:disabled { cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid #7ab4ec;
+  outline-offset: 2px;
 }
 
-.hero, section {
-  background: white;
-  border: 1px solid #e6eaf0;
-  border-radius: 16px;
-  padding: 28px;
-  margin-bottom: 20px;
-  box-shadow: 0 8px 30px rgba(23, 32, 51, 0.06);
+.sasms-app {
+  display: grid;
+  grid-template-columns: 238px minmax(0, 1fr);
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+.sasms-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 32px 14px 24px;
+  color: #ffffff;
+  background: #11233d;
+}
+.sasms-brand { display: grid; gap: 0; padding: 0 11px 34px; }
+.sasms-brand strong { font-size: 24px; letter-spacing: .02em; }
+.sasms-brand span { font-size: 10px; color: #9eb0c6; letter-spacing: .1em; }
+.sasms-nav { display: flex; flex-direction: column; gap: 8px; }
+.sasms-nav__group {
+  margin: 12px 12px 3px;
+  color: #8199b4;
+  font-size: 10px;
+  letter-spacing: .13em;
+  font-weight: 700;
+}
+.sasms-nav__item {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  gap: 12px;
+  width: 100%;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #acbcd2;
+  text-align: left;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.sasms-nav__item:not(.sasms-nav__item--unavailable):hover { background: #1e3856; color: #fff; }
+.sasms-nav__item--active, .sasms-nav__item--active:hover {
+  color: #fff;
+  background: #25486a;
+  font-weight: 700;
+}
+.sasms-nav__item--unavailable { opacity: .48; cursor: default; }
+.sasms-nav__mark { flex: 0 0 7px; width: 7px; height: 7px; border: 1.5px solid currentColor; border-radius: 2px; }
+.sasms-nav__item--active .sasms-nav__mark { background: #fff; }
+.sasms-sidebar__footer {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding: 17px 12px 0;
+  border-top: 1px solid #31445c;
+  color: #d4e1f2;
+}
+.sasms-sidebar__footer strong { font-size: 12px; }
+.sasms-sidebar__footer small { color: #9eb0c6; font-size: 11px; line-height: 1.6; }
+.sasms-workspace { min-width: 0; }
+.sasms-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 74px;
+  padding: 15px 32px;
+  border-bottom: 1px solid #e8edf4;
+  background: #fff;
+}
+.sasms-breadcrumb { color: #70859a; font-size: 12px; font-weight: 600; }
+.sasms-topbar__environment {
+  flex-shrink: 0;
+  color: #8f6721;
+  background: #fff2d8;
+  border: 1px solid #f0d997;
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .025em;
+}
+.sasms-topbar__environment--configured {
+  color: #1a6d36;
+  background: #e6f7ec;
+  border-color: #a3e0b8;
+}
+.sasms-main { max-width: 1450px; margin: 0 auto; padding: 31px 32px 32px; }
+.sasms-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.sasms-page-heading h1 { margin: 6px 0 4px; color: #172c48; font-size: 26px; line-height: 1.3; }
+.sasms-page-heading p { margin: 0; color: #718098; font-size: 13px; line-height: 1.55; }
+.sasms-page-heading__eyebrow { font-size: 10px !important; letter-spacing: .12em; font-weight: 700; color: #47627f !important; }
+.sasms-page-heading__tag {
+  flex-shrink: 0;
+  border: 1px solid #d8e6f5;
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #416483;
+  background: #ecf4fc;
+  font-size: 11px;
+  font-weight: 700;
+}
+.sasms-view { min-width: 0; }
+.sasms-footer {
+  display: grid;
+  gap: 5px;
+  margin-top: 24px;
+  padding: 14px 18px;
+  border: 1px solid #d8e7f8;
+  border-radius: 12px;
+  background: #e8f1fc;
+  color: #55718c;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.sasms-footer strong { color: #275d94; font-size: 12px; }
+
+/* Retain the existing shared styles needed by the QR, Serial/IMEI and Receipt modules. */
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; margin: 0; }
+.section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.section-heading h2 { margin: 6px 0 10px; }
+.section-heading button, .pos-module__utilities button, .receipt-form button {
+  border: 1px solid #d8e3ee;
+  border-radius: 9px;
+  background: #eff4fa;
+  color: #315777;
+  padding: 10px 15px;
+  font-weight: 700;
+}
+.section-heading button:hover, .pos-module__utilities button:hover, .receipt-form button:hover { background: #e1edf9; }
+.status-card { margin-top: 14px; padding: 16px; border: 1px solid #d7dce4; border-radius: 10px; }
+.error { color: #a62a35; font-weight: 600; }
+.sasms-view > section:not(.pos-module), .sasms-view > .qr-panel {
+  min-width: 0;
+  border: 1px solid #e5ebf2;
+  border-radius: 14px;
+  background: #fff;
+  padding: 26px;
 }
 
-.hero h1, .section-heading h2 { margin: 6px 0 10px; }
-.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; margin: 0; }
-
-.section-heading {
+.pos-module { min-width: 0; }
+.pos-module__utilities {
   display: flex;
   justify-content: space-between;
   gap: 20px;
   align-items: center;
+  margin-bottom: 14px;
 }
-
-button {
-  border: 0;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 600;
-}
-
-.placeholder-grid {
+.pos-module__utilities h2 { margin: 5px 0 0; font-size: 15px; color: #355472; }
+.pos-business-state {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.placeholder {
-  border: 1px dashed #b7c0cf;
+  gap: 7px;
+  padding: 18px 22px;
+  margin: 0 0 20px;
+  background: #f0f3f8;
+  border-left: 7px solid #667890;
   border-radius: 12px;
-  padding: 24px 16px;
-  min-height: 100px;
+  color: #667890;
 }
-
-.status-card {
-  margin-top: 18px;
-  border: 1px solid #d7dce4;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.error { margin-top: 14px; font-weight: 600; }
-
-.pos-scope-note, .receipt-message {
-  margin-top: 18px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #fff8e6;
-  color: #674c00;
-}
-
-.receipt-form { display: flex; gap: 12px; align-items: end; margin-top: 18px; }
-.receipt-form label { display: grid; gap: 6px; flex: 1; font-weight: 600; }
-.receipt-form input { padding: 11px; border: 1px solid #b7c0cf; border-radius: 10px; }
-.receipt-preview { margin-top: 18px; padding: 22px; border: 1px solid #d7dce4; border-radius: 12px; }
-.receipt-preview header, .receipt-preview header div, .receipt-preview dl div, .receipt-preview li {
-  display: flex; justify-content: space-between; gap: 12px;
-}
+.pos-business-state strong { font-size: 17px; }
+.pos-business-state span { font-size: 12px; line-height: 1.5; }
+.pos-business-state--active { background: #eff7fd; border-left-color: #1769c2; color: #275d94; }
+.pos-followup { display: grid; grid-template-columns: minmax(0,1fr) minmax(300px,.72fr); gap: 16px; align-items: stretch; margin-top: 18px; }
+.pos-receipt-panel { min-width: 0; margin: 0; padding: 20px 22px; border: 1px solid #dde7f0; border-radius: 14px; background: #fff; }
+.pos-receipt-panel__heading { margin: 0 0 8px; color: #213c5a; font-size: 18px; }
+.pos-receipt-panel__description { margin: 0 0 18px; color: #647a91; font-size: 12px; line-height: 1.6; }
+.pos-scope-note { color: #647a91; margin-top: 10px; font-size: 11px; line-height: 1.55; }
+.receipt-form { display: grid; gap: 10px; }
+.receipt-form label { display: grid; gap: 7px; color: #34516c; font-size: 12px; font-weight: 700; }
+.receipt-form input { min-width: 0; width: 100%; padding: 11px 12px; border: 1px solid #b9c7d5; border-radius: 9px; background: #fff; }
+.receipt-form button { justify-self: start; }
+.receipt-message { margin: 12px 0 0; font-size: 12px; color: #8f6721; line-height: 1.6; }
+.receipt-preview { margin-top: 18px; padding: 16px; border: 1px solid #d7dce4; border-radius: 12px; }
+.receipt-preview header, .receipt-preview header div, .receipt-preview dl div, .receipt-preview li { display: flex; justify-content: space-between; gap: 12px; }
 .receipt-preview header div { flex-direction: column; gap: 2px; }
 .receipt-preview dl, .receipt-preview ul { padding: 0; }
 .receipt-preview li { padding: 10px 0; border-top: 1px solid #e6eaf0; }
 .receipt-preview dt { color: #5b6474; }
+.receipt-preview button { padding: 9px 12px; border: 0; border-radius: 9px; background: #1769c2; color: #fff; }
 
+@media (max-width: 1150px) {
+  .sasms-app { grid-template-columns: 210px minmax(0,1fr); }
+  .sasms-main { padding: 24px 20px; }
+  .pos-followup { grid-template-columns: 1fr; }
+}
+@media (max-width: 780px) {
+  .sasms-app { display: block; }
+  .sasms-sidebar { position: relative; height: auto; padding: 14px 16px; }
+  .sasms-brand { padding: 0 0 12px; }
+  .sasms-brand strong { font-size: 20px; }
+  .sasms-nav { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+  .sasms-nav__group, .sasms-sidebar__footer, .sasms-nav__item--unavailable { display: none; }
+  .sasms-nav__item { width: auto; padding: 7px 12px; min-height: 36px; white-space: normal; }
+  .sasms-topbar { min-height: 58px; flex-wrap: wrap; padding: 10px 16px; }
+  .sasms-topbar__environment { font-size: 9px; }
+  .sasms-main { padding: 24px 14px; }
+  .sasms-page-heading { align-items: flex-start; }
+  .sasms-page-heading__tag { display: none; }
+  .sasms-page-heading h1 { font-size: 23px; }
+  .pos-module__utilities { flex-wrap: wrap; }
+  .sasms-view > section:not(.pos-module), .sasms-view > .qr-panel { padding: 14px; }
+}
 @media print {
-  body * { visibility: hidden; }
-  .receipt-preview, .receipt-preview * { visibility: visible; }
-  .receipt-preview { position: absolute; inset: 0; border: 0; }
-  .receipt-preview button, .receipt-preview > small { display: none; }
+  @page {
+    /* Tuân thủ W3C CSS Paged Media Level 3: 'size: 80mm auto' không hợp lệ vì keyword 'auto' không thể kết hợp với <length>.
+       Sử dụng 'size: auto;' kết hợp margin để trình duyệt và print driver tự động khớp với khổ giấy cuộn 80mm được chọn. */
+    size: auto;
+    margin: 2mm 4mm;
+  }
+  html, body, #root {
+    width: 80mm;
+    max-width: 80mm;
+    margin: 0 auto;
+    padding: 0;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sasms-sidebar, .sasms-topbar, .sasms-page-heading, .sasms-footer,
+  .pos-module__utilities, .pos-business-state, .pos-cart, .cross-sell,
+  .pos-receipt-panel__heading, .pos-receipt-panel__description, .receipt-form,
+  .receipt-message, .pos-scope-note, .status-card, .error,
+  .qr-panel, .serial-panel__notice, .serial-panel__layout {
+    display: none !important;
+  }
+  .sasms-app, .sasms-workspace, .sasms-main, .sasms-view, .pos-module,
+  .pos-followup, .pos-receipt-panel {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .pos-module, .pos-receipt-panel {
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
+  }
+  .receipt-preview {
+    box-sizing: border-box !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    color: #000 !important;
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+    font-family: monospace, monospace !important;
+  }
+  .receipt-preview header {
+    text-align: center;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 3mm;
+    margin-bottom: 3mm;
+  }
+  .receipt-preview header div {
+    display: block;
+    text-align: center;
+  }
+  .receipt-preview header strong {
+    display: block;
+    font-size: 13pt;
+    letter-spacing: 0.05em;
+  }
+  .receipt-preview header span {
+    display: block;
+    font-size: 8pt;
+  }
+  .receipt-preview header small {
+    display: block;
+    margin-top: 1mm;
+    font-size: 8pt;
+  }
+  .receipt-preview dl {
+    margin: 2mm 0;
+    padding: 0;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 2mm;
+  }
+  .receipt-preview dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    break-inside: avoid;
+    margin: 1mm 0;
+  }
+  .receipt-preview dt {
+    color: #000;
+    font-weight: 500;
+  }
+  .receipt-preview dd {
+    margin: 0;
+    font-weight: 700;
+    text-align: right;
+  }
+  .receipt-preview ul {
+    list-style: none;
+    margin: 2mm 0;
+    padding: 0;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 2mm;
+  }
+  .receipt-preview li {
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    padding: 1.5mm 0;
+    border-top: 1px dotted #888;
+    break-inside: avoid;
+  }
+  .receipt-preview li:first-child {
+    border-top: none;
+  }
+  .receipt-preview li span {
+    word-break: break-all;
+    font-size: 8pt;
+  }
+  .receipt-preview li strong {
+    white-space: nowrap;
+    font-size: 8.5pt;
+  }
+  .receipt-preview button,
+  .receipt-preview > small {
+    display: none !important;
+  }
 }
 
-@media (max-width: 760px) {
-  .section-heading { align-items: flex-start; flex-direction: column; }
-  .placeholder-grid { grid-template-columns: 1fr; }
-  .receipt-form { align-items: stretch; flex-direction: column; }
-}
+/* Serial/IMEI placeholder adopts the same D53 left-content / right-state grid. */
+.serial-panel__notice { display: grid; gap: 7px; margin: 18px 0; padding: 17px 18px; border-left: 6px solid #667890; border-radius: 10px; background: #f0f3f8; color: #667890; font-size: 12px; line-height: 1.65; }
+.serial-panel__notice strong { font-size: 15px; }
+.serial-panel__layout { display: grid; grid-template-columns: minmax(0,718fr) minmax(270px,396fr); gap: 16px; }
+.serial-panel__info, .serial-panel__aside { min-width: 0; border: 1px solid #e2e9f2; background: #fff; padding: 20px; border-radius: 12px; }
+.serial-panel__info h3, .serial-panel__aside h3 { margin: 0 0 12px; color: #213c5a; font-size: 18px; }
+.serial-panel__info p, .serial-panel__aside p { margin: 0 0 18px; font-size: 12px; line-height: 1.65; color: #647a91; }
+.serial-panel__slot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 16px; background: #f4f7fa; border-radius: 8px; margin-bottom: 12px; color: #647a91; font-size: 12px; }
+.serial-panel__slot strong { color: #324b66; }
+.serial-panel__pending { background: #fff2d8; color: #8f6721; border-radius: 8px; font-size: 11px; font-weight: 700; padding: 12px 15px; margin-bottom: 18px; }
+@media (max-width: 950px) { .serial-panel__layout { grid-template-columns: 1fr; } }
