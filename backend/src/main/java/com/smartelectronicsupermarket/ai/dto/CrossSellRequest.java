@@ -1,6 +1,9 @@
 package com.smartelectronicsupermarket.ai.dto;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record CrossSellRequest(
@@ -10,30 +13,48 @@ public record CrossSellRequest(
         @JsonProperty("sku_ids") List<String> skuIds,
         @JsonProperty("limit") Integer limit
 ) {
+    public static final int DEFAULT_LIMIT = 4;
+    public static final int MAX_LIMIT = 10;
+    public static final int MAX_CART_SKUS = 50;
+
     public CrossSellRequest {
         if (storeId == null || storeId.isBlank()) {
             throw new IllegalArgumentException("store_id cannot be blank");
         }
-        boolean hasItems = (items != null && !items.isEmpty());
-        boolean hasSkus = (skuIds != null && !skuIds.isEmpty());
+        if (warehouseId == null || warehouseId.isBlank()) {
+            throw new IllegalArgumentException("warehouse_id cannot be blank");
+        }
+        boolean hasItems = items != null && !items.isEmpty();
+        boolean hasSkus = skuIds != null && !skuIds.isEmpty();
         if (!hasItems && !hasSkus) {
             throw new IllegalArgumentException("Request must contain at least 1 item in 'items' or 'sku_ids'");
         }
         if (limit == null || limit <= 0) {
-            limit = 4;
+            limit = DEFAULT_LIMIT;
+        }
+        if (limit > MAX_LIMIT) {
+            throw new IllegalArgumentException("limit must not exceed " + MAX_LIMIT);
         }
     }
 
+    /** Normalised (trimmed, upper-case, de-duplicated) cart SKUs. */
     public List<String> getEffectiveSkuIds() {
+        List<String> raw = new ArrayList<>();
         if (items != null && !items.isEmpty()) {
-            return items.stream()
-                    .map(CartItemInput::sku)
-                    .filter(s -> s != null && !s.isBlank())
-                    .toList();
+            for (CartItemInput item : items) {
+                if (item != null && item.sku() != null) {
+                    raw.add(item.sku());
+                }
+            }
+        } else if (skuIds != null) {
+            raw.addAll(skuIds);
         }
-        if (skuIds != null) {
-            return skuIds;
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (String sku : raw) {
+            if (sku != null && !sku.isBlank()) {
+                unique.add(sku.strip().toUpperCase(Locale.ROOT));
+            }
         }
-        return List.of();
+        return List.copyOf(unique);
     }
 }

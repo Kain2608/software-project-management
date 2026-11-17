@@ -44,8 +44,6 @@ public class SecurityConfiguration {
                                 "/api/serial-imei/status",
                                 "/api/v1/ai/status")
                         .permitAll()
-                        .requestMatchers("/api/v1/ai/**")
-                        .permitAll()
                         .anyRequest()
                         .authenticated());
 
