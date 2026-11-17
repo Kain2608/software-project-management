@@ -61,11 +61,12 @@ test('resolveAuthSession returns strictly unauthenticated fail-closed state when
 
   for (const input of emptyCases) {
     const session = resolveAuthSession(input)
-    assert.strictEqual(session.isAuthenticated, false)
+    assert.strictEqual(session.hasClientToken, false)
+    assert.strictEqual(session.isBackendVerified, false)
     assert.strictEqual(session.accessToken, null)
     assert.strictEqual(session.storeId, null)
     assert.strictEqual(session.warehouseId, null)
-    assert.strictEqual(session.status, 'UNAUTHENTICATED')
+    assert.strictEqual(session.status, 'NO_SESSION')
   }
 })
 
@@ -79,27 +80,49 @@ test('resolveAuthSession rejects whitespace-only or non-string tokens and fails 
 
   for (const input of invalidTokens) {
     const session = resolveAuthSession(input)
-    assert.strictEqual(session.isAuthenticated, false)
+    assert.strictEqual(session.hasClientToken, false)
+    assert.strictEqual(session.isBackendVerified, false)
     assert.strictEqual(session.accessToken, null)
     assert.strictEqual(session.storeId, null)
     assert.strictEqual(session.warehouseId, null)
-    assert.strictEqual(session.status, 'UNAUTHENTICATED')
+    assert.strictEqual(session.status, 'NO_SESSION')
   }
 })
 
-test('resolveAuthSession resolves valid in-memory session without reading URLs or storage', () => {
+test('resolveAuthSession rejects fake, demo or mock tokens', () => {
+  const fakeTokens = [
+    { accessToken: 'mock-jwt' },
+    { accessToken: 'demo-token' },
+    { accessToken: 'fake-token' },
+    { accessToken: 'test-token' },
+    { accessToken: 'dummy-token' },
+  ]
+
+  for (const input of fakeTokens) {
+    const session = resolveAuthSession(input)
+    assert.strictEqual(session.hasClientToken, false)
+    assert.strictEqual(session.isBackendVerified, false)
+    assert.strictEqual(session.accessToken, null)
+    assert.strictEqual(session.status, 'REJECTED_FAKE_TOKEN')
+  }
+})
+
+test('resolveAuthSession treats client token as unverified pending backend verification', () => {
   const validSessionConfig = {
-    accessToken: 'valid.inmemory.jwt.token',
+    accessToken: 'genuine.inmemory.jwt.token',
     storeId: '019318b2-b13c-7c01-8b21-4fca67d71001',
     warehouseId: '019318b2-b13c-7c01-8b21-4fca67d72002',
   }
 
   const session = resolveAuthSession(validSessionConfig)
-  assert.strictEqual(session.isAuthenticated, true)
-  assert.strictEqual(session.accessToken, 'valid.inmemory.jwt.token')
+  assert.strictEqual(session.hasClientToken, true)
+  // CRITICAL: Possession of client token string is NOT proof of authentication.
+  // Backend Spring Security & PostgreSQL assert_permission make the authoritative determination.
+  assert.strictEqual(session.isBackendVerified, false)
+  assert.strictEqual(session.accessToken, 'genuine.inmemory.jwt.token')
   assert.strictEqual(session.storeId, '019318b2-b13c-7c01-8b21-4fca67d71001')
   assert.strictEqual(session.warehouseId, '019318b2-b13c-7c01-8b21-4fca67d72002')
-  assert.strictEqual(session.status, 'AUTHENTICATED')
+  assert.strictEqual(session.status, 'CLIENT_TOKEN_PRESENT_PENDING_BACKEND_VERIFICATION')
 })
 
 test('regression: URL query strings cannot elevate or self-authenticate a session', () => {
@@ -107,7 +130,8 @@ test('regression: URL query strings cannot elevate or self-authenticate a sessio
   // resolveAuthSession does NOT parse window.location or URL parameters.
   // When the app initializes without an IdP context, it strictly remains unauthenticated.
   const unauthenticatedInit = resolveAuthSession(null)
-  assert.strictEqual(unauthenticatedInit.isAuthenticated, false)
+  assert.strictEqual(unauthenticatedInit.hasClientToken, false)
+  assert.strictEqual(unauthenticatedInit.isBackendVerified, false)
   assert.strictEqual(unauthenticatedInit.accessToken, null)
 
   // Verify rejectUrlSuppliedCredentials flags any attempt to supply token in URL

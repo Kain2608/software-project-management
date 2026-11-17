@@ -230,13 +230,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 @media print {
   @page {
-    size: 80mm auto;
+    /* Tuân thủ W3C CSS Paged Media Level 3: 'size: 80mm auto' không hợp lệ vì keyword 'auto' không thể kết hợp với <length>.
+       Sử dụng 'size: auto;' kết hợp margin để trình duyệt và print driver tự động khớp với khổ giấy cuộn 80mm được chọn. */
+    size: auto;
     margin: 2mm 4mm;
   }
   html, body, #root {
     width: 80mm;
-    min-width: 80mm;
-    margin: 0;
+    max-width: 80mm;
+    margin: 0 auto;
     padding: 0;
     background: #fff;
     -webkit-print-color-adjust: exact;

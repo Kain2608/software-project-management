@@ -9,6 +9,15 @@ const FORBIDDEN_URL_CREDENTIAL_PARAMS = [
   'sasms_token',
 ]
 
+const FORBIDDEN_FAKE_TOKEN_PATTERNS = [
+  'mock-jwt',
+  'demo-token',
+  'fake-token',
+  'test-token',
+  'dummy-token',
+  'mock-token',
+]
+
 /**
  * Prohibits and detects tokens provided via URL query strings or hashes.
  * Passing credentials via URLs exposes them in browser history, HTTP Referer headers,
@@ -53,24 +62,28 @@ export function rejectUrlSuppliedCredentials(searchInput) {
 }
 
 /**
- * Resolves an authenticated session strictly from in-memory IdP / OIDC configuration.
+ * Resolves an in-memory client session candidate from IdP / OIDC configuration.
  *
- * Enforces fail-closed semantics:
- * - If no genuine IdP session is provided, session is strictly unauthenticated (accessToken = null).
- * - Never parses window.location.search or sessionStorage for access tokens.
- * - Store and warehouse scopes are only valid when accompanied by a verified accessToken.
+ * Enforces strict Zero-Trust & Fail-Closed semantics:
+ * 1. Không nhận JWT từ URL hoặc browser storage (localStorage, sessionStorage).
+ * 2. Từ chối token giả lập (mock-jwt, demo-token...).
+ * 3. Client KHÔNG tự nhận định là đã xác thực (isBackendVerified: false);
+ *    việc sở hữu chuỗi token trong bộ nhớ chỉ là candidate token phía client (hasClientToken: true).
+ * 4. Quyền thực thi (RBAC) và phạm vi cửa hàng/kho (Store & Warehouse Scope)
+ *    HOÀN TOÀN do Backend Spring Security và PostgreSQL quyết định trên từng request.
  *
  * @param {object|null} sessionConfig - In-memory auth session from configured IdP
- * @returns {{ isAuthenticated: boolean, accessToken: string|null, storeId: string|null, warehouseId: string|null, status: string }}
+ * @returns {{ hasClientToken: boolean, isBackendVerified: boolean, accessToken: string|null, storeId: string|null, warehouseId: string|null, status: string }}
  */
 export function resolveAuthSession(sessionConfig = null) {
   if (!sessionConfig || typeof sessionConfig !== 'object') {
     return {
-      isAuthenticated: false,
+      hasClientToken: false,
+      isBackendVerified: false,
       accessToken: null,
       storeId: null,
       warehouseId: null,
-      status: 'UNAUTHENTICATED',
+      status: 'NO_SESSION',
     }
   }
 
@@ -79,11 +92,25 @@ export function resolveAuthSession(sessionConfig = null) {
 
   if (!validToken) {
     return {
-      isAuthenticated: false,
+      hasClientToken: false,
+      isBackendVerified: false,
       accessToken: null,
       storeId: null,
       warehouseId: null,
-      status: 'UNAUTHENTICATED',
+      status: 'NO_SESSION',
+    }
+  }
+
+  // Reject hardcoded fake/demo tokens
+  const lowerToken = validToken.toLowerCase()
+  if (FORBIDDEN_FAKE_TOKEN_PATTERNS.some(fake => lowerToken === fake || lowerToken.startsWith(fake))) {
+    return {
+      hasClientToken: false,
+      isBackendVerified: false,
+      accessToken: null,
+      storeId: null,
+      warehouseId: null,
+      status: 'REJECTED_FAKE_TOKEN',
     }
   }
 
@@ -95,10 +122,11 @@ export function resolveAuthSession(sessionConfig = null) {
     : null
 
   return {
-    isAuthenticated: true,
+    hasClientToken: true,
+    isBackendVerified: false, // Backend determines authentication & permission via Spring Security / PostgreSQL
     accessToken: validToken,
     storeId,
     warehouseId,
-    status: 'AUTHENTICATED',
+    status: 'CLIENT_TOKEN_PRESENT_PENDING_BACKEND_VERIFICATION',
   }
 }

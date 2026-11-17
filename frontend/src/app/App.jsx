@@ -29,9 +29,10 @@ export default function App({ authSession = null }) {
   // Strictly resolve in-memory auth session from configured IdP/OIDC.
   // Defaults strictly to null (fail-closed) when unauthenticated.
   // URL query strings and browser storage are completely prohibited from granting access tokens.
+  // Client possession of a token string is NOT proof of authentication; backend determines authorization.
   const session = resolveAuthSession(authSession)
-  const { accessToken, storeId, warehouseId, isAuthenticated } = session
-  const isConfigured = isAuthenticated && Boolean(storeId && warehouseId)
+  const { accessToken, storeId, warehouseId, hasClientToken } = session
+  const hasClientConfig = hasClientToken && Boolean(storeId && warehouseId)
 
   const navButton = (id, label) => (
     <button
@@ -83,8 +84,8 @@ export default function App({ authSession = null }) {
         <header className="sasms-topbar">
           <div className="sasms-breadcrumb">{screen.breadcrumb}</div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span className={`sasms-topbar__environment${isConfigured ? ' sasms-topbar__environment--configured' : ''}`}>
-              {isConfigured ? 'PHIÊN ĐÃ CẤU HÌNH' : 'CHƯA KẾT NỐI IdP / KHO (FAIL-CLOSED)'}
+            <span className={`sasms-topbar__environment${hasClientConfig ? ' sasms-topbar__environment--configured' : ''}`}>
+              {hasClientConfig ? 'PHIÊN BỘ NHỚ (CHỜ BACKEND XÁC THỰC)' : 'CHƯA KẾT NỐI IdP / KHO (FAIL-CLOSED)'}
             </span>
             <span className="sasms-topbar__environment">D53 · THIẾT KẾ THAM CHIẾU</span>
           </div>
