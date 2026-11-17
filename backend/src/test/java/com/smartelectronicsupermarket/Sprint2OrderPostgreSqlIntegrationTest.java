@@ -3,6 +3,7 @@ package com.smartelectronicsupermarket;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -13,6 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.smartelectronicsupermarket.pos.order.data.PosOrderDataAccess;
+import com.smartelectronicsupermarket.pos.order.data.PosOrderItemRecord;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
 import java.math.BigDecimal;
@@ -138,6 +141,9 @@ class Sprint2OrderPostgreSqlIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private PosOrderDataAccess dataAccess;
 
     private MockMvc mockMvc;
 
@@ -439,6 +445,40 @@ class Sprint2OrderPostgreSqlIntegrationTest {
         UUID rollbackKey = UUID.fromString("22222222-2222-4222-8222-000000000504");
         UUID nonExistentProduct = UUID.fromString("22222222-2222-4222-8222-999999999999");
 
+        // 1. Database-level mid-transaction rollback proof:
+        // When inserting multi-item order where item 1 succeeds but item 2 fails on foreign key
+        // sales_order_items_product_id_fkey, the @Transactional boundary must roll back both sales_orders and sales_order_items.
+        UUID midTxOrderId = UUID.fromString("22222222-2222-4222-8222-000000000599");
+        UUID midTxKey = UUID.fromString("22222222-2222-4222-8222-000000000598");
+        List<PosOrderItemRecord> itemsWithFkFailure = List.of(
+                new PosOrderItemRecord(UUID.randomUUID(), midTxOrderId, PRODUCT_A_ID, "S2-PROD-A", "S2 Product A", 1, new BigDecimal("10000000.00"), new BigDecimal("10000000.00")),
+                new PosOrderItemRecord(UUID.randomUUID(), midTxOrderId, nonExistentProduct, "NON-EXISTENT", "Missing", 1, new BigDecimal("5000000.00"), new BigDecimal("5000000.00"))
+        );
+
+        assertThrows(DataAccessException.class, () ->
+                dataAccess.createOrderIfAbsent(
+                        midTxOrderId,
+                        "S2-ORD-TX-FAIL",
+                        midTxKey,
+                        STORE_A_ID,
+                        WAREHOUSE_A_ID,
+                        null,
+                        ACTOR_STORE_A_CASHIER,
+                        itemsWithFkFailure
+                )
+        );
+
+        Integer midTxOrderCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.sales_orders WHERE id = CAST(? AS uuid) OR idempotency_key = CAST(? AS uuid)",
+                Integer.class, midTxOrderId, midTxKey);
+        assertEquals(0, midTxOrderCount, "sales_orders must roll back completely when item insert fails mid-transaction");
+
+        Integer midTxItemCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.sales_order_items WHERE order_id = CAST(? AS uuid)",
+                Integer.class, midTxOrderId);
+        assertEquals(0, midTxItemCount, "sales_order_items must have 0 rows after mid-transaction rollback");
+
+        // 2. Controller-level validation rejecting invalid product payload (HTTP 404 NOT_FOUND)
         String invalidPayload = """
                 {
                   "store_id": "%s",
@@ -562,7 +602,7 @@ class Sprint2OrderPostgreSqlIntegrationTest {
 
         JsonNode draftNode = objectMapper.readTree(draftResult.getResponse().getContentAsString());
         UUID orderId = UUID.fromString(draftNode.get("order_id").asString());
-        UUID orderItemId = UUID.fromString(draftNode.get("items").get(0).get("id").asString());
+        UUID orderItemId = UUID.fromString(draftNode.get("items").get(0).get("order_item_id").asString());
 
         // Attach device to order item via order_devices to satisfy reserve_order device count
         UUID orderDeviceId = UUID.fromString("22222222-2222-4222-8222-000000000601");
@@ -677,6 +717,11 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                     SET status = 'DRAFT', total_amount = 0, paid_at = NULL
                     WHERE store_id IN (
                         '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
+                    );
+                    DELETE FROM sasms.payments WHERE order_id IN (
+                        SELECT id FROM sasms.sales_orders WHERE store_id IN (
+                            '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
+                        )
                     );
                     DELETE FROM sasms.order_devices WHERE order_id IN (
                         SELECT id FROM sasms.sales_orders WHERE store_id IN (

@@ -749,7 +749,9 @@ Bổ sung test suite tích hợp `Sprint2OrderPostgreSqlIntegrationTest.java` (7
 2. **Replay cùng payload**: Trả về đúng đơn hàng DRAFT đã tạo trước đó, trạng thái 200/201, CSDL chỉ có 1 bản ghi duy nhất.
 3. **Concurrency 2 kết nối đồng thời (Two-Connection Race Condition)**: Hai luồng chạy đồng thời cùng mili-giây với cùng key và cùng payload; một luồng thực hiện INSERT, luồng kia nhận `ON CONFLICT DO NOTHING` và tái truy vấn; cả hai luồng đều nhận kết quả thành công và cùng chung `order_id`.
 4. **Replay khác payload**: Phát hiện xung đột và trả về HTTP 409 Conflict.
-5. **Rollback nguyên tử (Atomicity)**: Khi có lỗi vi phạm ràng buộc CSDL (như mã sản phẩm không tồn tại), toàn bộ transaction rollback sạch sẽ, CSDL không tồn tại bản ghi đơn hàng mồ côi.
+5. **Rollback nguyên tử (Atomicity) & Chứng minh Rollback giữa Transaction**:
+   - **Database-level Mid-transaction Rollback**: Chứng minh rollback thực sự tại tầng CSDL thông qua `dataAccess.createOrderIfAbsent` với đơn hàng có nhiều dòng sản phẩm: dòng 1 chèn hợp lệ vào `sales_orders` và `sales_order_items`, dòng 2 cố tình vi phạm khóa ngoại `sales_order_items_product_id_fkey` (`SQLSTATE 23503`). CSDL ném `DataAccessException` khi đang thực thi giữa chừng transaction, và ranh giới `@Transactional` lập tức rollback toàn bộ: truy vấn kiểm tra thực tế trong PostgreSQL xác nhận cả `sales_orders` lẫn `sales_order_items` đều có đúng 0 bản ghi tồn tại (chứng minh rollback thật sự sau lỗi giữa transaction, không chỉ dừng ở việc từ chối input trước khi INSERT).
+   - **Controller-level Input Validation**: Đồng thời kiểm chứng tầng Controller từ chối payload có sản phẩm không tồn tại ngay từ khâu thẩm định danh mục với HTTP 404 NOT_FOUND (`ResourceNotFoundException`), không phát sinh đơn hàng rác.
 6. **Kiểm tra Store/Warehouse Scope & Quyền `sales.checkout`**:
    - Thu ngân Store B bị chặn khi tạo đơn tại Store A (403 Forbidden).
    - Nhân viên bán hàng thiếu quyền `sales.checkout` bị chặn (403 Forbidden).
@@ -775,13 +777,53 @@ Bổ sung test suite tích hợp `Sprint2OrderPostgreSqlIntegrationTest.java` (7
    - Dọn dẹp sạch sẽ tài khoản tạm sau khi hoàn tất kiểm thử.
 
 ### 17.5 Hướng dẫn Khởi động Docker Desktop & Thực thi
-- **Nguyên nhân daemon chưa chạy**: Daemon Docker Desktop trên máy host đang ở trạng thái dừng (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`). Quá trình Docker Desktop cần được khởi chạy trong phiên đồ họa người dùng.
-- **Cách khởi động**:
-  1. Mở Start Menu $\rightarrow$ gõ **Docker Desktop** (hoặc mở từ `C:\Users\ADMIN\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe`).
-  2. Chờ biểu tượng Docker dưới thanh Taskbar chuyển sang màu xanh (Docker Desktop is running).
-  3. Mở PowerShell và kiểm tra xác nhận: `docker info`.
-  4. Chạy script khởi tạo môi trường và kiểm thử:
-     ```powershell
-     powershell -ExecutionPolicy Bypass -File scripts/create_s2_order_container.ps1
-     powershell -ExecutionPolicy Bypass -File scripts/run_s2_order_it.ps1
-     ```
+- **Môi trường thực thi**: Container `tv4_s2_order_it_db` trên port `127.0.0.1:15433` (volume `tv4_s2_order_it_pgdata`) được khởi tạo và nạp đầy đủ baseline schema, runtime-roles, cùng toàn bộ migrations V001–V005 từ `origin/DB` thông qua `scripts/create_s2_order_container.ps1`.
+- **Thực thi kiểm thử**:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts/run_s2_order_it.ps1
+  ```
+
+## 18. Xác minh Thực tế trên PostgreSQL 16 Thật, Chuẩn hóa DTO & Bàn giao Draft PR (17/11/2026)
+
+### 18.1 Kết quả Kiểm thử Tích hợp Thực tế trên PostgreSQL 16
+- **Kết quả thực thi `run_s2_order_it.ps1`**:
+  - Toàn bộ **7/7 tests** trong `Sprint2OrderPostgreSqlIntegrationTest` đều **PASS 100%** (0 failures, 0 errors, 0 skipped, thời gian chạy ~4.3s).
+  - Đã xác thực trên PostgreSQL 16 thật:
+    1. Quyền tối thiểu `sasms_app` (bị chặn 42501 khi ghi status/total/devices, được phép gọi reserve_order).
+    2. Idempotent replay thành công khi trùng payload (200/201, 1 bản ghi duy nhất).
+    3. Concurrency 2 kết nối đồng thời chạy song song không sinh deadlock, không abort transaction, cùng nhận đơn hợp lệ.
+    4. Xung đột idempotency key khác payload trả về đúng HTTP 409 Conflict.
+    5. Chứng minh rollback nguyên tử thực sự giữa transaction: khi chèn đơn nhiều dòng mà dòng con bị lỗi khóa ngoại `sales_order_items_product_id_fkey` (`23503`), cả đơn hàng lẫn các dòng con đều được rollback sạch về 0 bản ghi.
+    6. Thực thi nghiêm ngặt phân quyền `sales.checkout` và phạm vi cửa hàng/kho hàng (chặn 401, 403, 422).
+    7. Reserve đơn hàng, khóa thiết bị thành RESERVED, quản lý lease 10 phút tương thích ngược schema.
+
+### 18.2 Ranh giới Rõ ràng: MockMvc + PostgreSQL Integration vs HTTP End-to-End Độc lập
+> [!IMPORTANT]
+> - **Phạm vi đã đạt**: Bộ kiểm thử `Sprint2OrderPostgreSqlIntegrationTest` là **PostgreSQL 16 + MockMvc Integration Test**. Mã nguồn Spring Boot nạp cấu hình thực tế, kết nối live connection pool (HikariCP) tới PostgreSQL 16 thật trong Docker container `tv4_s2_order_it_db`, đồng thời sử dụng mock token do ephemeral JWKS in-memory server ký phát.
+> - **Phạm vi CHƯA đạt (NOT RUN / BLOCKED)**: Đây **KHÔNG PHẢI** là kiểm thử **HTTP End-to-End (E2E) độc lập trên toàn bộ mạng**.
+> - **Lý do còn thiếu cho E2E độc lập**:
+>   1. **Thiếu Identity Provider (IdP) production**: Chưa có server OAuth2/OIDC/JWKS thật cấp phát token cho frontend và backend xác thực chéo qua mạng.
+>   2. **Thiếu Cổng thanh toán (Payment Provider & Webhook IPN)**: Các bước thanh toán VietQR / Thẻ / Webhook ngân hàng chưa triển khai REST Controller; đơn hàng mới dừng lại ở trạng thái `RESERVED`, chưa thể chuyển tự động sang `CAPTURED` và `PAID` trên môi trường staging thật.
+>   3. **Cờ tính năng mặc định OFF**: Cả hai cờ `sasms.features.pos-serial-api.enabled` và `sasms.features.pos-order-api.enabled` đều đang đặt `false` trong mã nguồn bàn giao.
+>   4. **Báo cáo cam kết**: Tuyệt đối không ghi nhận "DONE" hoặc "E2E PASS" cho chu trình bán hàng / thanh toán khi các thành phần trên chưa được tích hợp và kiểm thử qua HTTP thật.
+
+### 18.3 Chuẩn hóa Hợp đồng DTO `PosOrderItemResponse`
+- Đã rà soát và chuẩn hóa DTO `PosOrderItemResponse`:
+  - Chỉ xuất duy nhất trường `@JsonProperty("order_item_id") UUID orderItemId` theo đúng hợp đồng REST API đã thống nhất với các endpoint thiết bị (`/api/v1/pos/orders/{orderId}/items/{orderItemId}/devices`).
+  - Loại bỏ hoàn toàn việc xuất song song hai trường `id` và `order_item_id` gây dư thừa hoặc sai lệch hợp đồng.
+  - Cập nhật test suite để đọc và xác minh nhất quán theo trường `order_item_id`.
+
+### 18.4 Kiểm chứng Dọn dẹp Fixture Cô lập (Clean Teardown)
+- Phương thức `cleanupFixtures` trong `Sprint2OrderPostgreSqlIntegrationTest`:
+  - Chỉ tác động đến các bản ghi mang tiền tố / UUID fixture cô lập của TV4 (`22222222-2222-4222-8222-...`).
+  - Trước khi xóa `sales_order_items` và `order_devices`, test tự động chuyển `devices.status` về `IN_STOCK` và `sales_orders.status` về `DRAFT` để thỏa mãn trigger bảo vệ `guard_order_child()`.
+  - Bổ sung xóa bảng `sasms.payments` theo `order_id` trước khi xóa `sales_orders`, ngăn ngừa triệt để lỗi khóa ngoại hoặc dữ liệu mồ côi.
+  - Hậu kiểm thực tế trong CSDL PostgreSQL qua câu lệnh SQL xác nhận: **0 orphan records** trên tất cả các bảng `sales_orders`, `sales_order_items`, `order_devices`, `payments`, `devices`, `inventory_movements`, `outbox_events`, `audit_logs`, `users`.
+  - Không làm suy yếu bất kỳ trigger nào của CSDL và không sửa đổi các file migration của Kiên.
+
+### 18.5 Tổng hợp Kết quả Regression Kiểm thử Toàn diện
+- **Backend Test Suite**: `mvnw.cmd test` $\rightarrow$ **241 tests run: 0 failures, 0 errors, 16 skipped** (BUILD SUCCESS).
+- **PostgreSQL 16 Integration**: `run_s2_order_it.ps1` $\rightarrow$ **7 tests run: 0 failures, 0 errors, 0 skipped** (BUILD SUCCESS).
+- **Frontend Test Suite**: `npm test` $\rightarrow$ **47 tests run: 0 failures, 0 skipped** (PASS 100%).
+- **Frontend Production Build**: `npm run build` $\rightarrow$ **Vite build SUCCESS** (332 modules).
+- **Code Hygiene**: `git diff --check` $\rightarrow$ Không có lỗi khoảng trắng hay định dạng thừa.
