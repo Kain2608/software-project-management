@@ -82,7 +82,7 @@ function Wait-ForPostgreSqlReady {
     } while ($true)
 }
 
-# Verify schema completeness: baseline schema + runtime roles + V003 + V004 + V005
+# Verify schema completeness: baseline + V001..V005 + runtime roles + Sprint 2 extensions
 function Assert-CompleteSchema {
     param(
         [Parameter(Mandatory)][string]$ContextDescription
@@ -101,7 +101,8 @@ SELECT
     ),
     (SELECT count(*) FROM pg_roles WHERE rolname IN ('sasms_app','sasms_owner')),
     (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'sasms' AND proname IN ('valid_imei','assert_live_order_lease','reserve_order','complete_sale'));
+      WHERE n.nspname = 'sasms' AND proname IN ('valid_imei','assert_live_order_lease','reserve_order','complete_sale','find_and_lock_device_for_pos','release_device_lock')),
+    (SELECT count(*) FROM sasms_meta.schema_migrations WHERE version IN (1, 2, 3, 4, 5));
 "@
     $prevErr = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -117,7 +118,7 @@ SELECT
 
     $raw = ($verifyOutput | Out-String).Trim()
     $parts = @($raw -split ',')
-    if ($parts.Count -lt 5) {
+    if ($parts.Count -lt 6) {
         throw "Unexpected schema probe output format: '$raw'"
     }
 
@@ -126,9 +127,10 @@ SELECT
     $legacyColCount = [int]$parts[2]
     $roleCount = [int]$parts[3]
     $funcCount = [int]$parts[4]
+    $migCount = [int]$parts[5]
 
-    if ($tableCount -lt 9 -or $holdColCount -lt 1 -or $legacyColCount -lt 1 -or $roleCount -lt 2 -or $funcCount -lt 4) {
-        throw "Schema completeness verification failed ($ContextDescription): expected tables>=9 (got $tableCount), hold_expires_at>=1 (got $holdColCount), is_legacy>=1 (got $legacyColCount), roles>=2 (got $roleCount), functions>=4 (got $funcCount)."
+    if ($tableCount -lt 9 -or $holdColCount -lt 1 -or $legacyColCount -lt 1 -or $roleCount -lt 2 -or $funcCount -lt 6 -or $migCount -lt 5) {
+        throw "Schema completeness verification failed ($ContextDescription): expected tables>=9 (got $tableCount), hold_expires_at>=1 (got $holdColCount), is_legacy>=1 (got $legacyColCount), roles>=2 (got $roleCount), functions>=6 (got $funcCount), migrations>=5 (got $migCount)."
     }
 }
 
@@ -137,7 +139,7 @@ Write-Host "Checking if Docker is running..."
 $prevErr = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
 try {
-    $dockerInfoOutput = & docker info 2>&1
+    $null = & docker info 2>&1
     $dockerInfoCode = $LASTEXITCODE
 } finally {
     $ErrorActionPreference = $prevErr
@@ -187,11 +189,15 @@ if ($containerList -contains $ContainerName) {
     # Wait for ready
     Wait-ForPostgreSqlReady -Container $ContainerName
 
-    # Verify complete schema
+    # Verify complete schema (Fail-closed if incomplete; refuse to automatically delete)
     Write-Host "Verifying schema completeness in existing container '$ContainerName'..."
-    Assert-CompleteSchema -ContextDescription "Existing container '$ContainerName'"
+    try {
+        Assert-CompleteSchema -ContextDescription "Existing container '$ContainerName'"
+    } catch {
+        throw "Existing container '$ContainerName' has an incomplete or corrupted schema (e.g. failed partial migration): $($_.Exception.Message)`nAutomatic deletion is refused to protect your data. To cleanly confirm and recreate the container, run:`npowershell -ExecutionPolicy Bypass -File scripts/recreate_s2_order_container.ps1"
+    }
 
-    Write-Host "Container '$ContainerName' already exists, is healthy, and its schema (baseline + V003-V005) is fully verified."
+    Write-Host "Container '$ContainerName' already exists, is healthy, and its schema (baseline + V001-V005 + extensions) is fully verified."
     return
 }
 
@@ -223,7 +229,7 @@ $null = Invoke-Native -Command 'docker' -Arguments @(
 Write-Host "Waiting for container to become healthy and ready..."
 Wait-ForPostgreSqlReady -Container $ContainerName
 
-# 5. Load baseline schema
+# 5. Load baseline schema (Sprint 0)
 Write-Host "Loading baseline schema..."
 $schemaFile = Join-Path $repoRoot 'database\schema.sql'
 if (-not (Test-Path $schemaFile)) {
@@ -232,38 +238,87 @@ if (-not (Test-Path $schemaFile)) {
 $schemaSql = Get-Content $schemaFile -Raw
 Invoke-PsqlStdin -Sql $schemaSql -Description "Baseline schema (database/schema.sql)"
 
-# 6. Load runtime roles
-Write-Host "Loading runtime roles..."
+# 6. Load baseline runtime roles
+Write-Host "Loading baseline runtime roles..."
 $rolesFile = Join-Path $repoRoot 'database\runtime-roles.sql'
 if (-not (Test-Path $rolesFile)) {
     throw "Runtime roles file not found at: $rolesFile"
 }
 $rolesSql = Get-Content $rolesFile -Raw
-Invoke-PsqlStdin -Sql $rolesSql -Description "Runtime roles (database/runtime-roles.sql)"
+Invoke-PsqlStdin -Sql $rolesSql -Description "Baseline runtime roles (database/runtime-roles.sql)"
 
-# 7. Extract and apply V003-V005 from origin/DB (fail-fast on each migration)
-Write-Host "Extracting and applying migration V003 from origin/DB..."
-$v003 = Invoke-Native -Command 'git' -Arguments @('-C', $repoRoot, 'show', 'origin/DB:database/migrations/V003__scoped_device_identifiers.sql') -Description "git show V003"
-if ([string]::IsNullOrWhiteSpace($v003)) {
-    throw "Extracted migration V003 is empty or unavailable from origin/DB."
+# 7. Extract and apply migrations V001..V005 from origin/DB via official runner logic
+Write-Host "Extracting and applying migrations V001-V005 from origin/DB via official runner logic..."
+$tempMigDir = Join-Path $env:TEMP ("sasms_s2_mig_" + [Guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $tempMigDir -Force
+try {
+    $migrationFiles = @(
+        'V001__catalog_and_iam.sql',
+        'V002__inventory_batches_and_identifiers.sql',
+        'V003__scoped_device_identifiers.sql',
+        'V004__pos_lease_lifecycle.sql',
+        'V005__frs_business_roles.sql'
+    )
+    foreach ($mFile in $migrationFiles) {
+        $content = Invoke-Native -Command 'git' -Arguments @('-C', $repoRoot, 'show', "origin/DB:database/migrations/$mFile") -Description "Extracting $mFile from origin/DB"
+        if ([string]::IsNullOrWhiteSpace($content)) {
+            throw "Extracted migration $mFile from origin/DB is empty or missing."
+        }
+        $destPath = Join-Path $tempMigDir $mFile
+        [System.IO.File]::WriteAllText($destPath, $content, [System.Text.Encoding]::UTF8)
+    }
+
+    # Use official migrate_db.py to parse, validate and build atomic transactional migration SQL
+    $pyRunner = @'
+import sys
+from pathlib import Path
+repo_scripts = Path(sys.argv[1])
+mig_dir = Path(sys.argv[2])
+sys.path.insert(0, str(repo_scripts))
+from migrate_db import read_migrations, build_sql
+
+migrations = read_migrations(mig_dir)
+if len(migrations) != 5:
+    raise ValueError(f"Expected exactly 5 migrations, found {len(migrations)}")
+sql = build_sql(migrations, lock_timeout=10, statement_timeout=120)
+sys.stdout.write(sql)
+'@
+    $scriptsDir = Join-Path $repoRoot 'scripts'
+    $buildSqlProcess = $pyRunner | & python - $scriptsDir $tempMigDir 2>&1
+    $pyExitCode = $LASTEXITCODE
+    if ($pyExitCode -ne 0) {
+        throw "Python migration builder (scripts/migrate_db.py) failed with exit code $($pyExitCode): `n$($buildSqlProcess | Out-String)"
+    }
+    $migrationSql = ($buildSqlProcess | Out-String)
+    if ([string]::IsNullOrWhiteSpace($migrationSql)) {
+        throw "Generated migration SQL is empty."
+    }
+
+    Invoke-PsqlStdin -Sql $migrationSql -Description "Transactional migrations V001-V005 (migrate_db.py runner)"
+} finally {
+    Remove-Item -Path $tempMigDir -Recurse -Force -ErrorAction SilentlyContinue
 }
-Invoke-PsqlStdin -Sql $v003 -Description "V003__scoped_device_identifiers.sql"
 
-Write-Host "Extracting and applying migration V004 from origin/DB..."
-$v004 = Invoke-Native -Command 'git' -Arguments @('-C', $repoRoot, 'show', 'origin/DB:database/migrations/V004__pos_lease_lifecycle.sql') -Description "git show V004"
-if ([string]::IsNullOrWhiteSpace($v004)) {
-    throw "Extracted migration V004 is empty or unavailable from origin/DB."
+# 8. Load Sprint 1 runtime roles grants
+Write-Host "Loading Sprint 1 runtime roles grants..."
+$sprint1RolesFile = Join-Path $repoRoot 'database\sprint1\runtime-roles.sql'
+if (-not (Test-Path $sprint1RolesFile)) {
+    throw "Sprint 1 runtime roles file not found at: $sprint1RolesFile"
 }
-Invoke-PsqlStdin -Sql $v004 -Description "V004__pos_lease_lifecycle.sql"
+# Strip \ir ../runtime-roles.sql because baseline runtime-roles.sql was already applied
+$sprint1RolesSql = (Get-Content $sprint1RolesFile -Raw) -replace '(?m)^\s*\\ir\s+.*$', ''
+Invoke-PsqlStdin -Sql $sprint1RolesSql -Description "Sprint 1 runtime roles (database/sprint1/runtime-roles.sql)"
 
-Write-Host "Extracting and applying migration V005 from origin/DB..."
-$v005 = Invoke-Native -Command 'git' -Arguments @('-C', $repoRoot, 'show', 'origin/DB:database/migrations/V005__frs_business_roles.sql') -Description "git show V005"
-if ([string]::IsNullOrWhiteSpace($v005)) {
-    throw "Extracted migration V005 is empty or unavailable from origin/DB."
+# 9. Load Sprint 2 real-time inventory and locking extensions
+Write-Host "Loading Sprint 2 real-time inventory and locking extensions..."
+$sprint2File = Join-Path $repoRoot 'database\sprint2\realtime_stock_and_locking.sql'
+if (-not (Test-Path $sprint2File)) {
+    throw "Sprint 2 realtime_stock_and_locking.sql file not found at: $sprint2File"
 }
-Invoke-PsqlStdin -Sql $v005 -Description "V005__frs_business_roles.sql"
+$sprint2Sql = Get-Content $sprint2File -Raw
+Invoke-PsqlStdin -Sql $sprint2Sql -Description "Sprint 2 realtime stock and locking (database/sprint2/realtime_stock_and_locking.sql)"
 
-# 8. Post-provisioning schema completeness assertion
+# 10. Post-provisioning schema completeness assertion
 Write-Host "Verifying schema completeness after provisioning..."
 Assert-CompleteSchema -ContextDescription "Newly created container '$ContainerName'"
 
