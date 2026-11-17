@@ -1,10 +1,10 @@
 # SASMS Sprint 2 - Báo cáo triển khai TV4
 
 **Người thực hiện:** Vũ Duy Thái (TV4 - Fullstack Lead)
-**Ngày kiểm chứng cuối:** 13/11/2026
-**Nhánh:** `feat/tv4-s2-pos`
-**Nền nhánh:** `origin/main` tại `f3a3814`
-**Trạng thái:** Sẵn sàng tạo Draft PR để review phần đã có; chưa đủ điều kiện nghiệm thu toàn bộ Sprint 2.
+**Ngày kiểm chứng cuối:** 16/11/2026
+**Nhánh cập nhật S2-02:** `feat/tv4-s2-pos-cart`
+**Nền nhánh cập nhật:** `origin/main` tại `e2db1a7`
+**Trạng thái:** Sẵn sàng tạo Draft PR để review giao diện giỏ hàng; chưa đủ điều kiện nghiệm thu POS end-to-end.
 
 ## 1. Phân công Sprint 2
 
@@ -12,9 +12,9 @@ Phân công chính thức trong `Sprint 2/DB/inputs/phan-cong-sprint-2.csv` giao
 
 | Task | User Story / phạm vi | Vai trò TV4 | Trạng thái thực tế |
 |---|---|---|---|
-| S2-02 / TSK-02-01 | US-04 - màn hình POS tại quầy | Chính | PARTIAL: có receipt preview; chưa có cart/order/payment end-to-end. |
+| S2-02 / TSK-02-01 | US-04 - màn hình POS tại quầy | Chính | IMPLEMENTED/UNIT TESTED phần giỏ hàng Catalog + Stock; order/Serial/payment end-to-end vẫn BLOCKED. |
 | S2-04 / TSK-02-03 | US-05 - mẫu hóa đơn POS có QR bảo hành | Chính | PARTIAL: API receipt PAID và browser print preview đã có; QR bảo hành/print-job/e-invoice chưa có contract chốt. |
-| S2-09 / TSK-02-08 | US-07 - tích hợp AI vào POS | Chính phần tích hợp | BLOCKED: chưa có hợp đồng UI/API được BA/TV5 bàn giao; không làm thay AI engine của TV5. |
+| S2-09 / TSK-02-08 | US-07 - tích hợp AI vào POS | Chính phần tích hợp | Widget đã nhận cart thật qua props và chỉ dùng gợi ý sau khi đối chiếu Catalog/Stock; App chưa có login/cart production nên E2E vẫn NOT TESTED. |
 | S2-03 / TSK-02-02 | US-04 - tìm và khóa Serial | Hỗ trợ Kiên | PARTIAL: tầng Data Access/Service nội bộ đã có unit test; DB artifact Sprint 2 hiện không cài được trên schema thật. |
 | S2-05 / TSK-02-04 | US-05 - driver/test máy in | Hỗ trợ QA | PARTIAL: CR-TV4-W6-001 chuyển sang browser preview; máy in nhiệt thật NOT TESTED. |
 | S2-06 / TSK-02-05 | US-06 - tồn kho real-time | Hỗ trợ Kiên | IMPLEMENTED, UNIT TESTED, POSTGRESQL TESTED trên view baseline `stock_availability`. |
@@ -223,7 +223,7 @@ Chưa thể demo production payment hoặc POS Serial lock qua HTTP cho tới kh
 - Runtime grant cho view/function Sprint 2 chưa có.
 - Payment provider, callback signature, verification, idempotency, currency semantics, retry/refund/cancel chưa được BA/Architect/PM duyệt.
 - REST contract reservation/order hiện không khớp SQL function; không mở endpoint tạm.
-- AI-to-POS integration contract từ TV5 chưa được bàn giao.
+- AI engine không thuộc phạm vi TV4; widget frontend đã nối với cart nhưng chưa có login/store/warehouse production để kiểm thử E2E.
 
 ### PENDING review
 
@@ -249,3 +249,51 @@ Chưa thể demo production payment hoặc POS Serial lock qua HTTP cho tới kh
 - [ ] QA/PO review bằng chứng và demo thật.
 
 **Kết luận:** Có thể tạo **Draft PR nhắm `main`** để review phần US-05, US-06 và POS selection nội bộ. Không được đánh dấu Ready/Accepted hoặc tuyên bố US-04 end-to-end hoàn thành khi DB Sprint 2, payment và REST contract vẫn bị chặn.
+
+## 11. Cập nhật S2-02 - giỏ hàng POS ngày 16/11/2026
+
+### Phạm vi đã triển khai
+
+- `PosCart` tìm sản phẩm active qua Catalog API, sau đó kiểm tra `sellable_count` qua Stock API theo đúng `warehouse_id` trước khi cho thêm hàng.
+- Giỏ cục bộ hỗ trợ thêm, xóa, đổi số lượng, giới hạn theo tồn đã biết và mức bảo vệ giao diện 99; tổng dự kiến dùng số nguyên VND, không tự làm tròn.
+- Các trạng thái chưa đăng nhập, thiếu kho, loading, empty, forbidden và lỗi API có thông báo riêng; lỗi backend không được đưa thẳng ra màn hình.
+- `PosPage` là nơi sở hữu cart cục bộ hoặc nhận cart có kiểm soát qua props. `CrossSellWidget` chỉ nhận `productId` và `sku`; đề xuất AI phải qua lớp đối chiếu Catalog/Stock hiện có trước khi người dùng thêm vào cart.
+- Không có lời gọi tạo order, payment, giữ Serial hay ghi tồn kho. Nút thanh toán bị khóa và ghi rõ đây là cart frontend dự kiến.
+- CSS có layout desktop/mobile cho quầy; chưa thay thế visual/accessibility QA trên thiết bị thật.
+
+### Hợp đồng và giới hạn
+
+- Catalog/Stock/JWT hiện có trong source là căn cứ triển khai. `sku_id` của Stock hiện mang `products.id`; đây vẫn là tên trường cần BA/Architect xác nhận.
+- D52 reservation/order/payment vẫn là DRAFT và chưa khớp hoàn toàn SQL Sprint 2. Frontend không tự tạo hợp đồng thay thế.
+- `App.jsx` chưa có login, store, warehouse hoặc cart production. Vì vậy khi chạy app mặc định, tra cứu Catalog/Stock và AI giữ trạng thái khóa an toàn; không hardcode token hoặc fixture demo.
+- Chọn/giữ Serial, tạo order nguyên tử, chống tranh chấp hai POS, payment và cập nhật SOLD là **BLOCKED/NOT TESTED**, không được suy ra từ cart frontend.
+
+### Bằng chứng kiểm thử
+
+```powershell
+cd frontend
+npm ci
+npm test
+npm run build
+```
+
+- `npm ci`: PASS, cài 92 package theo lockfile; npm báo 2 vulnerability (1 moderate, 1 high), chưa dùng `npm audit fix --force` hoặc nâng major.
+- `npm test`: PASS, 38/38 test, 0 fail, 0 skip. Test mới phủ thêm/xóa/sửa, dữ liệu không hợp lệ, tồn/giới hạn số lượng, tổng VND, JWT thiếu/hết hạn, HTTP 401/403, lỗi API, scope kho, context switching, stale Catalog/Stock/receipt response và payload cart chuyển sang AI.
+- `npm run build`: PASS, Vite 5.4.21 build 331 module. Cảnh báo còn lại: bundle JS 636.11 kB trước gzip, lớn hơn ngưỡng 500 kB; không chặn build.
+- `git diff --check`: PASS trước khi tạo commit.
+- E2E login/cart, browser responsive thật, thanh toán, Serial locking và ghi tồn: **NOT TESTED**.
+
+### Hardening context trên PR #23
+
+- Cart và kết quả tìm kiếm được gắn với bộ ba session/store/warehouse đã tạo ra dữ liệu. Đổi bất kỳ giá trị nào sẽ hiển thị rỗng ngay và xóa cart cục bộ qua effect; render bình thường với cùng context giữ nguyên dữ liệu.
+- Mỗi lượt tìm kiếm hủy request trước bằng `AbortController` và dùng generation gate. Response chỉ được cập nhật UI nếu cả generation lẫn context vẫn hiện hành.
+- HTTP 401, bao gồm token hết hạn, xóa cart cục bộ theo chính sách fail-closed. Lỗi thông thường hoặc 403 không tự biến thành thao tác payment/inventory và không giữ kết quả tìm kiếm cũ.
+- Receipt request truyền `AbortSignal` xuống HTTP client và dùng cùng generation/context guard. Đổi session/store/warehouse sẽ ẩn receipt cũ ngay, hủy request đang chạy và bỏ qua cả success/error trả về muộn của context trước.
+
+### Cách demo an toàn
+
+1. Cấp `accessToken`, `storeId`, `warehouseId` từ phiên đăng nhập đã xác thực vào `PosPage`; không đưa token vào source.
+2. Tìm theo tên/SKU và quan sát request Catalog rồi Stock của đúng warehouse.
+3. Thêm, đổi số lượng, xóa sản phẩm; xác nhận không thể vượt `sellable_count` đã đọc.
+4. Khi cart có dữ liệu và đủ context, kiểm tra widget AI nhận danh sách sản phẩm. Mọi đề xuất vẫn phải được Catalog/Stock xác minh lại.
+5. Không dùng demo này để tuyên bố order/payment/Serial/inventory mutation đã PASS.

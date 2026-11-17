@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { classifyPosError, getPosStatus, getReceipt } from './posApi.js'
 import CrossSellWidget from './CrossSellWidget.jsx'
+import PosCart from './PosCart.jsx'
+import { addCartItem, toCrossSellCartItems } from './posCartModel.js'
+import {
+  createLatestRequestGate,
+  createPosContext,
+  isRequestCurrentForContext,
+  isSamePosContext,
+  retainCartForContext,
+} from './posCartContext.js'
 import StatusCard from '../../shared/components/StatusCard.jsx'
 
 function shortIdentifier(value) {
@@ -17,14 +26,57 @@ function formatMinor(value) {
 
 // Store/warehouse/cart must come from the real authenticated checkout flow.
 // App.jsx does not yet supply these; the AI widget remains read-only and idle until integrated.
-export default function PosPage({ accessToken = null, storeId = null, warehouseId = null, cartItems = [], onReviewSuggestion = null }) {
+export default function PosPage({ accessToken = null, storeId = null, warehouseId = null, cartItems: providedCartItems = null, onCartItemsChange = null }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [orderId, setOrderId] = useState('')
   const [receipt, setReceipt] = useState(null)
   const [receiptState, setReceiptState] = useState('idle')
   const [receiptMessage, setReceiptMessage] = useState('')
-  const authenticated = typeof accessToken === 'string' && accessToken.length > 0
+  const [localCartItems, setLocalCartItems] = useState([])
+  const [cartMessage, setCartMessage] = useState('')
+  const authenticated = typeof accessToken === 'string' && accessToken.trim().length > 0
+  const controlled = Array.isArray(providedCartItems) && typeof onCartItemsChange === 'function'
+  const currentContext = createPosContext({ accessToken, storeId, warehouseId })
+  const previousContext = useRef(currentContext)
+  const latestContext = useRef(currentContext)
+  const receiptContext = useRef(null)
+  const receiptRequestGate = useRef(null)
+  if (receiptRequestGate.current === null) receiptRequestGate.current = createLatestRequestGate()
+  latestContext.current = currentContext
+  const storedCartItems = controlled ? providedCartItems : localCartItems
+  const cartItems = retainCartForContext(storedCartItems, previousContext.current, currentContext)
+  const visibleReceipt = isSamePosContext(receiptContext.current, currentContext) ? receipt : null
+  const crossSellCartItems = useMemo(() => toCrossSellCartItems(cartItems), [cartItems])
+
+  useEffect(() => {
+    if (isSamePosContext(previousContext.current, currentContext)) return
+    previousContext.current = currentContext
+    if (controlled) onCartItemsChange([])
+    else setLocalCartItems([])
+    receiptRequestGate.current.invalidate()
+    receiptContext.current = null
+    setCartMessage('Phiên, cửa hàng hoặc kho đã thay đổi. Giỏ cục bộ cũ đã được xóa để kiểm tra lại tồn kho.')
+    setReceipt(null)
+    setReceiptState('idle')
+    setReceiptMessage('')
+  }, [accessToken, storeId, warehouseId, controlled, onCartItemsChange])
+
+  useEffect(() => () => receiptRequestGate.current.invalidate(), [])
+
+  function changeCart(nextItems) {
+    if (controlled) onCartItemsChange?.(nextItems)
+    else setLocalCartItems(nextItems)
+  }
+
+  function addVerifiedSuggestion(suggestion) {
+    try {
+      changeCart(addCartItem(cartItems, suggestion))
+      setCartMessage(`Đã thêm ${suggestion.name} vào giỏ cục bộ. Giá và tồn sẽ được kiểm tra lại khi tạo order.`)
+    } catch {
+      setCartMessage('Không thể thêm gợi ý vì dữ liệu không hợp lệ hoặc đã vượt tồn có thể bán.')
+    }
+  }
 
   async function checkBackend() {
     try {
@@ -38,19 +90,27 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
 
   async function loadReceipt(event) {
     event.preventDefault()
+    receiptRequestGate.current.invalidate()
+    receiptContext.current = null
     setReceipt(null)
     if (!authenticated) {
       setReceiptState('auth-required')
       setReceiptMessage('Cần phiên JWT hợp lệ trước khi đọc hóa đơn.')
       return
     }
+    const requestContext = createPosContext({ accessToken, storeId, warehouseId })
+    const request = receiptRequestGate.current.start()
     setReceiptState('loading')
     setReceiptMessage('Đang tải dữ liệu hóa đơn đã thanh toán…')
     try {
-      setReceipt(await getReceipt(orderId, accessToken))
+      const loadedReceipt = await getReceipt(orderId, accessToken, request.signal)
+      if (!isRequestCurrentForContext(receiptRequestGate.current, request, requestContext, latestContext.current)) return
+      receiptContext.current = requestContext
+      setReceipt(loadedReceipt)
       setReceiptState('success')
       setReceiptMessage('Đã tải bản xem trước. Đây không phải bằng chứng hóa đơn điện tử đã phát hành.')
     } catch (requestError) {
+      if (!isRequestCurrentForContext(receiptRequestGate.current, request, requestContext, latestContext.current)) return
       const classified = classifyPosError(requestError)
       setReceiptState(classified.state)
       setReceiptMessage(classified.message)
@@ -68,15 +128,25 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
       </div>
 
       <div className="pos-scope-note">
-        Checkout và xác nhận thanh toán đang chờ hợp đồng Sprint 2. Màn hình này chỉ đọc hóa đơn của đơn PAID và mở hộp thoại in của trình duyệt.
+        Giỏ hàng hiện chỉ là bản nháp frontend. Checkout, giữ Serial và xác nhận thanh toán vẫn cần backend thực hiện nguyên tử.
       </div>
+
+      <PosCart
+        accessToken={accessToken}
+        storeId={storeId}
+        warehouseId={warehouseId}
+        items={cartItems}
+        onItemsChange={changeCart}
+        message={cartMessage}
+        onMessageChange={setCartMessage}
+      />
 
       <CrossSellWidget
         accessToken={accessToken}
         storeId={storeId}
         warehouseId={warehouseId}
-        cartItems={cartItems}
-        onReviewSuggestion={onReviewSuggestion}
+        cartItems={crossSellCartItems}
+        onReviewSuggestion={addVerifiedSuggestion}
       />
 
       <form className="receipt-form" onSubmit={loadReceipt}>
@@ -97,18 +167,18 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
 
       {receiptMessage && <p className={`receipt-message receipt-message--${receiptState}`}>{receiptMessage}</p>}
 
-      {receipt && (
+      {visibleReceipt && (
         <article className="receipt-preview" aria-label="Bản xem trước hóa đơn">
           <header>
             <div><strong>SASMS</strong><span>HÓA ĐƠN BÁN HÀNG</span></div>
-            <small>Đơn: {shortIdentifier(receipt.order_id)}</small>
+            <small>Đơn: {shortIdentifier(visibleReceipt.order_id)}</small>
           </header>
           <dl>
-            <div><dt>Thanh toán lúc</dt><dd>{new Date(receipt.paid_at).toLocaleString('vi-VN')}</dd></div>
-            <div><dt>Tổng tiền</dt><dd>{formatMinor(receipt.total_minor)}</dd></div>
+            <div><dt>Thanh toán lúc</dt><dd>{new Date(visibleReceipt.paid_at).toLocaleString('vi-VN')}</dd></div>
+            <div><dt>Tổng tiền</dt><dd>{formatMinor(visibleReceipt.total_minor)}</dd></div>
           </dl>
           <ul>
-            {receipt.items.map((item) => (
+            {visibleReceipt.items.map((item) => (
               <li key={item.device_id}>
                 <span>{shortIdentifier(item.sku_id)} · {item.serial_masked}</span>
                 <strong>{formatMinor(item.price_minor)}</strong>
