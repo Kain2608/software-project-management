@@ -482,8 +482,8 @@ Backup mới được lưu ngoài repository tại:
 # Backend Test Suite
 cd backend
 .\mvnw.cmd test
-# Kết quả: Tests run: 197, Failures: 0, Errors: 0, Skipped: 9, BUILD SUCCESS
-# (Bao gồm 11 integration tests mới kiểm chứng tải Controller khi Flag ON/OFF, xác thực JWT, bảo vệ scope và ánh xạ mã lỗi SQLSTATE)
+# Kết quả: Tests run: 229, Failures: 0, Errors: 0, Skipped: 9, BUILD SUCCESS
+# (Bao gồm 11 tests cho PosDeviceSelection và 32 tests mới cho PosOrder: PosOrderServiceTest [14 tests], JdbcPosOrderDataAccessTest [3 tests], PosOrderDisabledFeatureFlagIntegrationTest [2 tests], PosOrderSecurityIntegrationTest [13 tests] kiểm chứng cờ tính năng ON/OFF, xác thực JWT, bảo vệ scope, kiểm soát idempotency UUID/string, cạnh tranh đồng thời concurrent race, và ánh xạ mã lỗi SQLSTATE)
 
 # Frontend Test Suite & Build
 cd ..\frontend
@@ -525,13 +525,13 @@ npm.cmd run build
 |---|---|---|---|
 | **`POST /api/v1/pos/orders/{orderId}/items/{itemId}/devices`** | **ĐÃ TRIỂN KHAI (Flag OFF)** | MockMvc + Security IT (10 tests PASS khi ON, 1 test 404 khi OFF) | Đã có Controller, DTO, Service, DataAccess, cờ tính năng `sasms.features.pos-serial-api.enabled=false`. |
 | **`DELETE /api/v1/pos/orders/{orderId}/devices/{deviceId}`** | **ĐÃ TRIỂN KHAI (Flag OFF)** | MockMvc + Security IT PASS khi ON, 404 khi OFF | Đã hoàn thành giải phóng thiết bị khỏi giỏ hàng POS. |
-| **`GET /api/v1/pos/receipts/{orderId}`** | **ĐÃ TRIỂN KHAI** | 3 tests Controller, 2 tests DataAccess, 2 tests Service | Tra cứu biên nhận, che giấu đơn chưa trả tiền hoặc không thuộc quyền. |
+| **`GET /api/v1/pos/orders/{orderId}/receipt`** | **ĐÃ TRIỂN KHAI** | 3 tests Controller, 2 tests DataAccess, 2 tests Service | Tra cứu biên nhận, che giấu đơn chưa trả tiền hoặc không thuộc quyền (full path đúng source). |
 | **`GET /api/v1/inventory/stock`** | **ĐÃ TRIỂN KHAI** | Controller + DataAccess test PASS | Tra cứu tồn kho khả dụng theo từng kho hàng. |
 | **`GET /api/v1/catalog/products/search`** | **ĐÃ TRIỂN KHAI** | Controller + DataAccess test PASS | Tra cứu danh mục sản phẩm đang kinh doanh. |
 | **CSS Browser Print 80mm** | **ĐÃ TRIỂN KHAI (Preview)** | Vite Build SUCCESS + W3C Paged Media fix | Chuẩn hóa hộp thoại in trình duyệt, **chưa kiểm thử máy in nhiệt vật lý thật**. |
 | **Bảo vệ Zero-Trust Auth Client** | **ĐÃ TRIỂN KHAI** | 47 tests frontend PASS | Từ chối token từ URL/Storage, loại bỏ token giả, fail-closed khi thiếu IdP. |
-| **`POST /api/v1/pos/orders` (Tạo đơn DRAFT)** | **THIẾT KẾ ĐỀ XUẤT** | **CHƯA TRIỂN KHAI (NOT RUN)** | Chưa có REST Controller. Mới có hàm DB của Kiên. |
-| **`POST /api/v1/pos/orders/{orderId}/reserve`** | **THIẾT KẾ ĐỀ XUẤT** | **CHƯA TRIỂN KHAI (NOT RUN)** | Chưa có REST Controller. Cần thống nhất thời điểm gọi reserve. |
+| **`POST /api/v1/pos/orders` (Tạo đơn DRAFT)** | **ĐÃ TRIỂN KHAI (Flag OFF)** | Service (12 tests) + DataAccess (3 tests) + Security IT (4 tests) PASS | Đã có Controller, DTO, Service, DataAccess, cờ tính năng `sasms.features.pos-order-api.enabled=false`. Giá từ DB, xác thực JWT, Idempotency-Key. **E2E NOT RUN**. |
+| **`POST /api/v1/pos/orders/{orderId}/reserve`** | **ĐÃ TRIỂN KHAI (Flag OFF)** | Service + Security IT (6 tests: 401, 200, 404, 409, 422) PASS | Đã có Controller, Service, DataAccess gọi `sasms.reserve_order`, cờ tính năng `sasms.features.pos-order-api.enabled=false`. **E2E NOT RUN**. |
 | **`POST /api/v1/pos/payments/initiate`** | **THIẾT KẾ ĐỀ XUẤT** | **CHƯA TRIỂN KHAI (NOT RUN)** | Chưa có REST Controller. Hiển thị VietQR không tự chuyển PAID. |
 | **`POST /api/v1/pos/payments/webhook`** | **THIẾT KẾ ĐỀ XUẤT** | **CHƯA TRIỂN KHAI (NOT RUN)** | Chưa tích hợp webhook ký số HMAC với ngân hàng thật. |
 | **`POST /api/v1/pos/orders/{orderId}/complete`** | **THIẾT KẾ ĐỀ XUẤT** | **CHƯA TRIỂN KHAI (NOT RUN)** | Chưa có REST Controller. Mới có hàm DB `sasms.complete_sale`. |
@@ -543,31 +543,31 @@ npm.cmd run build
 Mô hình Order-First chuẩn hóa đề xuất cho Sprint sau (hoặc giai đoạn hoàn thiện Checkout):
 
 ```
-[POS Cart] --> (1) Tạo DRAFT Order --> (2) Khóa Serial (10m lease) --> (3) Reserve Order --> (4) Khởi tạo Payment (PENDING) --> (5) Xác nhận Thanh toán (CAPTURED) --> (6) Complete Sale (SOLD)
+[POS Cart] --> (1) Tạo DRAFT Order --> (2) Khóa Serial (10m lease) --> (3) Reserve Order --> (4) Khởi tạo Payment (PENDING) --> (5) Xác nhận Thanh toán (CAPTURED) --> (6) Complete Sale (PAID)
 ```
 
-1. **`POST /api/v1/pos/orders` (Tạo đơn hàng DRAFT - Đề xuất)**:
-   - **Input**: `{ store_id, warehouse_id, items: [{ product_id, quantity, unit_price }] }`.
-   - **Xử lý**: Tạo bản ghi `sales_orders` với `status = 'DRAFT'`, `channel = 'POS'`. Tạo các dòng `sales_order_items`. Lúc này `hold_expires_at` là `NULL` (chưa kích hoạt lease).
+1. **`POST /api/v1/pos/orders` (Tạo đơn hàng DRAFT - Đã triển khai dưới Flag OFF)**:
+   - **Input**: `{ store_id, warehouse_id, items: [{ product_id, quantity }] }` và header `Idempotency-Key`.
+   - **Xử lý**: Kiểm tra quyền `sales.checkout` tại `store_id`, kho thuộc store. Giá sản phẩm bắt buộc lấy từ CSDL Catalog (`products.list_price`), tuyệt đối không nhận giá hoặc tổng tiền từ client. Tạo bản ghi `sales_orders` với `status = 'DRAFT'`, `channel = 'POS'`. Tạo các dòng `sales_order_items`. Lúc này `hold_expires_at` là `NULL` (chưa kích hoạt lease).
    - **Quyền yêu cầu**: `sales.checkout` tại `store_id`.
 
-2. **`POST /api/v1/pos/orders/{orderId}/items/{itemId}/devices` (Khóa thiết bị theo Serial - Đã triển khai)**:
+2. **`POST /api/v1/pos/orders/{orderId}/items/{itemId}/devices` (Khóa thiết bị theo Serial - Đã triển khai dưới Flag OFF)**:
    - **Input**: `{ serial: "SN12345678" }`.
    - **Xử lý**: Gọi hàm CSDL `sasms.find_and_lock_device_for_pos`. Tại lần khóa đầu tiên, CSDL tự động gán `hold_expires_at = clock_timestamp() + 10 minutes`. Kiểm tra thiết bị `IN_STOCK` tại kho của đơn, khóa dòng bằng `FOR UPDATE NOWAIT`, chèn vào `order_devices` với `active = true`.
    - **Mã lỗi chuẩn**: `55P03` $\rightarrow$ 409 `DEVICE_LOCKED`, `P0002` $\rightarrow$ 404 `NOT_FOUND`, `23514` (hết hạn lease) $\rightarrow$ 422 `VALIDATION_FAILED`.
 
-3. **`DELETE /api/v1/pos/orders/{orderId}/devices/{deviceId}` (Giải phóng thiết bị khỏi giỏ - Đã triển khai)**:
+3. **`DELETE /api/v1/pos/orders/{orderId}/devices/{deviceId}` (Giải phóng thiết bị khỏi giỏ - Đã triển khai dưới Flag OFF)**:
    - **Xử lý**: Gọi hàm CSDL `sasms.release_device_lock`. Kiểm tra đơn còn `DRAFT`, cập nhật `order_devices.active = false` để trả thiết bị về trạng thái sẵn sàng cho quầy khác.
 
-4. **`POST /api/v1/pos/orders/{orderId}/reserve` (Khóa tổng thể đơn hàng để chuẩn bị thanh toán - Đề xuất)**:
-   - **Xử lý**: Gọi hàm CSDL `sasms.reserve_order`. Kiểm tra `hold_expires_at > clock_timestamp()`. Chuyển trạng thái đơn sang `RESERVED`, cập nhật trạng thái thiết bị trong bảng `devices` thành `RESERVED`. Không gia hạn thêm thời gian giữ hàng.
+4. **`POST /api/v1/pos/orders/{orderId}/reserve` (Khóa tổng thể đơn hàng để chuẩn bị thanh toán - Đã triển khai dưới Flag OFF)**:
+   - **Xử lý**: Gọi hàm CSDL `sasms.reserve_order(orderId, actorId)`. Kiểm tra `hold_expires_at > clock_timestamp()`. Chuyển trạng thái đơn sang `RESERVED`, cập nhật trạng thái thiết bị trong bảng `devices` thành `RESERVED`. Không gia hạn thêm thời gian giữ hàng.
 
 5. **Khởi tạo Thanh toán & Xác nhận Thanh toán (Đề xuất)**:
    - **VietQR (Không tiền mặt)**: Khởi tạo thanh toán `PENDING`, hiển thị VietQR. Chờ webhook ký số HMAC từ ngân hàng/cổng thanh toán để chuyển sang `CAPTURED`. **Tuyệt đối không tự động chuyển PAID trên client.**
    - **Phương án Demo Tiền mặt (Cash Payment)**: Xem chi tiết tại Mục 15.3.
 
 6. **`POST /api/v1/pos/orders/{orderId}/complete` (Hoàn tất giao dịch bán lẻ - Đề xuất)**:
-   - **Xử lý**: Gọi hàm CSDL `sasms.complete_sale`. Kiểm tra tổng tiền đã thu `sum(amount) >= total_amount`. Chuyển `sales_orders.status = 'COMPLETED'`, cập nhật thiết bị thành `SOLD`, ghi nhận phiếu xuất kho, sinh chứng từ hóa đơn và đẩy event ra outbox.
+   - **Xử lý**: Gọi hàm CSDL `sasms.complete_sale(orderId, actorId)`. Kiểm tra tổng tiền đã thu `sum(amount) == total_amount` (chính xác 100%, không cho phép sai lệch). Chuyển `sales_orders.status = 'PAID'`, cập nhật thiết bị thành `SOLD`, ghi nhận phiếu xuất kho, sinh chứng từ hóa đơn và đẩy event ra outbox.
 
 7. **Cơ chế Hủy / Hết hạn tự động (Sweeper / Expire - Đề xuất)**:
    - Nếu sau 10 phút khách hàng không thanh toán và không có khoản thanh toán nào ở trạng thái `PENDING`/`CAPTURED`, hàm `sasms.expire_order_reservation` hoặc background sweeper sẽ gọi `sasms.cancel_order` để hủy đơn và giải phóng toàn bộ thiết bị về `IN_STOCK`.
@@ -577,9 +577,9 @@ Mô hình Order-First chuẩn hóa đề xuất cho Sprint sau (hoặc giai đo�
 Để luồng POS Checkout có thể chạy thông suốt từ đầu đến cuối (E2E), hiện tại có **3 rào cản kỹ thuật/nghiệp vụ chính** cần sự đồng thuận của BA (Huy), Architect/DBA (Kiên) và PM (An):
 
 #### Quyết định 1: Chốt hợp đồng Order-First REST API (Tạo đơn DRAFT)
-- **Vấn đề**: Hiện tại backend đã có API chọn/bỏ Serial cho đơn hàng, nhưng chưa có API REST tạo đơn hàng DRAFT (`POST /api/v1/pos/orders`). D52 bản cũ phác thảo `/pos/reservations`, trong khi CSDL V004 của Kiên yêu cầu đơn hàng phải tồn tại trước khi khóa Serial.
-- **Rào cản**: Frontend không thể gọi API chọn Serial nếu chưa có `orderId` và `orderItemId` thực từ phía server.
-- **Hành động cần duyệt**: BA Huy và DBA Kiên phê duyệt DTO tạo đơn DRAFT (bao gồm `store_id`, `warehouse_id`, danh sách items) để TV4 triển khai `PosOrderController`.
+- **Hiện trạng mã nguồn**: TV4 đã chủ động triển khai đầy đủ mã nguồn backend cho API tạo đơn DRAFT (`POST /api/v1/pos/orders`) và khóa đơn hàng (`POST /api/v1/pos/orders/{orderId}/reserve`) theo đúng cấu trúc CSDL V004 của Kiên và D34/D52, kèm bộ unit/integration test toàn diện (27 tests PASS). Hiện tại các endpoint này được đặt dưới cờ tính năng an toàn `sasms.features.pos-order-api.enabled=false` (mặc định OFF).
+- **Rào cản còn lại**: Cần sự phê duyệt chính thức từ BA Huy và DBA Kiên về hợp đồng DTO (`store_id`, `warehouse_id`, `items: [{product_id, quantity}]`) và thời điểm kích hoạt cờ tính năng để frontend có thể kết nối giao diện giỏ hàng vào luồng tạo đơn thật (**E2E NOT RUN**).
+- **Hành động cần duyệt**: BA Huy và DBA Kiên phê chuẩn hợp đồng DTO và quy trình chuyển đổi đơn hàng sang RESERVED.
 
 #### Quyết định 2: Quy ước Tính tiền & Làm tròn tiền tệ VND (Money Semantics)
 - **Vấn đề**: D34 và D52 quy định đơn vị tiền tệ VND là số nguyên (`total_minor`), không có đơn vị lẻ như cent hay hào. Tuy nhiên, quy tắc tính thuế VAT (tính theo từng dòng sản phẩm rồi cộng lại hay tính trên tổng đơn hàng), làm tròn khi áp dụng mã giảm giá/chiết khấu chưa được chuẩn hóa giữa frontend và backend.
@@ -597,7 +597,7 @@ Mô hình Order-First chuẩn hóa đề xuất cho Sprint sau (hoặc giai đo�
     4. **Xác thực Server-side**:
        - Backend trích xuất JWT của Thu ngân, kiểm tra quyền `sales.checkout` tại đúng `store_id` của đơn hàng.
        - Backend tạo bản ghi trong bảng `sasms.payments` với `payment_method = 'CASH'`, `status = 'CAPTURED'`, `amount = totalAmount`, ghi nhận `actor_id` của Thu ngân và thời điểm thu tiền vào audit trail.
-       - Backend gọi hàm CSDL `sasms.complete_sale(orderId, actor_id)`. Hàm kiểm tra `captured == total_amount`, cập nhật `sales_orders.status = 'COMPLETED'`, chuyển thiết bị trong `devices` từ `RESERVED` sang `SOLD`.
+       - Backend gọi hàm CSDL `sasms.complete_sale(orderId, actor_id)`. Hàm kiểm tra `captured == total_amount` (chính xác 100%), cập nhật `sales_orders.status = 'PAID'`, chuyển thiết bị trong `devices` từ `RESERVED` sang `SOLD`.
        - Backend trả về kết quả thành công kèm số hóa đơn (`invoice_number`).
     5. Frontend POS nhận phản hồi thành công, hiển thị biên nhận và mở hộp thoại in nhiệt 80mm.
   - **Ưu điểm**: 100% hợp lệ về mặt kiến trúc, tuân thủ chặt chẽ ràng buộc CSDL của Kiên, có bằng chứng server-side đầy đủ, loại bỏ hoàn toàn việc "fake PAID" trên frontend.
@@ -638,3 +638,68 @@ Mô hình Order-First chuẩn hóa đề xuất cho Sprint sau (hoặc giai đo�
    - **Kịch bản 2 (Phiên bộ nhớ chưa xác thực)**: Khi test runner hoặc launcher cung cấp cấu hình session trong bộ nhớ (`authSession`), topbar hiển thị `PHIÊN BỘ NHỚ (CHỜ BACKEND XÁC THỰC)`. **Nguyên tắc Zero-Trust**: Sở hữu token chuỗi phía client không phải là bằng chứng đã xác thực; Spring Security và PostgreSQL trên backend luôn quyết định quyền và phạm vi kho trên từng request. Mọi token cố tình truyền qua URL query parameters hoặc lưu trữ storage đều bị chặn và từ chối.
    - **Kịch bản 3 (Gợi ý AI)**: Khi giỏ có sản phẩm, widget AI hiển thị danh sách gợi ý chéo; người dùng bấm kiểm tra để đối chiếu tồn kho thực trước khi đưa vào giỏ.
    - **Kịch bản 4 (In biên nhận 80mm)**: Tra cứu đơn hàng đã thanh toán (PAID) và bấm "Mở bản xem trước in". Hộp thoại in của trình duyệt hiển thị phiếu in cuộn 80mm chuẩn nhiệt (72mm nội dung, phân cách nét đứt, ẩn mọi thanh điều hướng).
+
+## 16. Triển khai Backend Order-First DRAFT Order & Reserve API (17/11/2026)
+
+### 16.1 Hiện trạng & Ranh giới kỹ thuật
+- **Mã nguồn đã triển khai**:
+  - `POST /api/v1/pos/orders`: Tạo đơn hàng DRAFT và các dòng `sales_order_items`.
+  - `POST /api/v1/pos/orders/{orderId}/reserve`: Khóa tổng thể đơn hàng để chuẩn bị thanh toán qua hàm CSDL `sasms.reserve_order(orderId, actorId)`.
+- **Cờ tính năng (Feature Flag) mặc định OFF**:
+  - Cấu hình tại `backend/src/main/resources/application.properties`:
+    ```properties
+    sasms.features.pos-order-api.enabled=false
+    ```
+  - Khi cờ mang giá trị `false` (hoặc thiếu cấu hình), Bean `PosOrderController` hoàn toàn không được nạp vào Spring context; các request gửi đến trả về `404 Not Found` (fail-closed).
+- **Ranh giới nghiệm thu**:
+  - **CODE IMPLEMENTED, TESTED, FEATURE FLAG OFF, E2E NOT RUN**.
+  - Không triển khai payment CAPTURED/PAID khi chưa có phê duyệt từ BA Huy/PM An.
+  - Không sửa migration CSDL của Kiên (V001–V005).
+  - Không sửa mã nguồn AI của Vũ.
+
+### 16.2 Nguyên tắc Bảo mật Zero-Trust & Toàn vẹn Dữ liệu
+1. **Xác thực JWT Actor tin cậy**:
+   - Không nhận `actor_id` từ request body hoặc HTTP headers; trích xuất bắt buộc từ `TrustedActorAccess.actorId(authentication)`. Thiếu token hoặc token không hợp lệ trả về HTTP 401.
+2. **Kiểm tra Store Scope & Quyền thu ngân**:
+   - Thu ngân phải có quyền `sales.checkout` tại đúng `store_id` của đơn hàng (`has_permission(actorId, 'sales.checkout', storeId)`).
+   - Kho hàng `warehouse_id` bắt buộc phải trực thuộc `store_id` (`warehouses.store_id = store_id`).
+   - Vi phạm quyền hoặc sai kho trả về HTTP 403 `FORBIDDEN`.
+3. **Giá bán Authoritative từ Catalog DB**:
+   - Backend tự tra cứu giá bán từ bảng `sasms.products.list_price`. Tuyệt đối không nhận đơn giá (`unit_price`) hay tổng tiền (`total_amount`) từ client.
+   - Khi tạo đơn DRAFT, trường `sales_orders.total_amount` mặc định là 0 (tuân thủ phân quyền `runtime-roles.sql`, `sasms_app` không có quyền INSERT `total_amount`). Giá trị tổng tiền chính thức sẽ do hàm DB `sasms.reserve_order` tự động tính toán tổng từ `sales_order_items`.
+4. **Idempotency Key & Phòng chống Replay / Xử lý Cạnh tranh Đồng thời**:
+   - Header hỗ trợ chuẩn RFC `Idempotency-Key` lẫn header legacy `X-Idempotency-Key` và trường `idempotency_key` trong JSON body.
+   - Chuẩn hóa tương thích CSDL: Cột `sales_orders.idempotency_key` là `uuid NOT NULL UNIQUE`. Hệ thống tự động phân tích: nếu là UUID hợp lệ thì parse trực tiếp, nếu là chuỗi tùy biến thì chuyển đổi ánh xạ tất định sang UUID (RFC 4122 v3 name-UUID). Khắc phục triệt để lỗi ép kiểu CSDL.
+   - Replay cùng key và cùng payload: Trả về đơn hàng đã tạo nguyên vẹn (idempotent replay, HTTP 201).
+   - Tái sử dụng key nhưng khác payload: Trả về HTTP 409 `IDEMPOTENCY_CONFLICT`.
+   - Cạnh tranh đồng thời (Race condition): Nếu hai connection cùng gửi yêu cầu tạo đơn đồng thời tại cùng mili-giây, connection thứ hai bắt ngoại lệ `DuplicateKeyException` từ ràng buộc duy nhất CSDL `sales_orders_idempotency_key_key`, tự động tái truy vấn kiểm tra: nếu trùng khớp payload sẽ trả về đơn hàng đã tạo an toàn; nếu sai lệch payload sẽ ném HTTP 409 conflict.
+5. **Giao dịch Nguyên tử (Transactional Atomicity)**:
+   - Toàn bộ thao tác tạo đơn và chi tiết đơn hàng được bọc trong `@Transactional(rollbackFor = Exception.class)`. Nếu có bất kỳ dòng sản phẩm nào lỗi hoặc không hợp lệ, toàn bộ giao dịch được rollback sạch sẽ, không để lại đơn hàng rác/mồ côi trong `sales_orders`.
+
+### 16.3 Ánh xạ Mã lỗi Chuẩn
+- **401 Unauthorized**: Thiếu JWT hoặc token không hợp lệ / hết hạn.
+- **403 Forbidden**: Thu ngân thiếu quyền `sales.checkout` hoặc kho không thuộc chi nhánh của đơn hàng.
+- **404 Not Found**: Sản phẩm không tìm thấy / không active; hoặc đơn hàng không tồn tại khi gọi reserve; hoặc cờ tính năng đang tắt (404 Spring MVC).
+- **409 Conflict**:
+  - `IDEMPOTENCY_CONFLICT`: Tái sử dụng Idempotency-Key với nội dung payload khác.
+  - `DEVICE_LOCKED` (SQLSTATE `55P03`): Xung đột khóa thiết bị.
+- **422 Unprocessable Content**:
+  - `VALIDATION_FAILED`: Đơn hàng không có sản phẩm; số lượng $\le 0$; trùng lặp sản phẩm trong các dòng; hoặc vi phạm ràng buộc CSDL (SQLSTATE `23514`).
+- **503 Service Unavailable**:
+  - `DEPENDENCY_UNAVAILABLE`: Lỗi kết nối CSDL hoặc timeout, không để lộ câu lệnh SQL hay connection secret.
+
+### 16.4 Bằng chứng Kiểm thử Tổng thể
+- **Backend Test Suite**:
+  - `mvnw.cmd test` chạy thành công toàn bộ **229 tests** (0 failures, 0 errors, 9 skipped).
+  - 32 tests mới chuyên biệt cho Order-First POS:
+    - `PosOrderServiceTest` (14 unit tests): Validation logic, duplicate check, cross-store check, warehouse membership, product lookup, idempotency replay vs conflict, reserve status check, và 2 test cạnh tranh đồng thời concurrent race condition (replay khi match, conflict khi mismatch).
+    - `JdbcPosOrderDataAccessTest` (3 unit tests): SQL parameter mapping, permission checks, forward/backward compatibility với schema Kiên V004 (`to_jsonb(so)->>'hold_expires_at'`).
+    - `PosOrderDisabledFeatureFlagIntegrationTest` (2 integration tests): 404 Not Found khi cờ tính năng tắt.
+    - `PosOrderSecurityIntegrationTest` (13 security integration tests): MockMvc xác thực JWT, 401 khi thiếu auth, 201 tạo đơn thành công, 403 thiếu quyền checkout, 422 lỗi validation, 409 xung đột idempotency, 200 reserve thành công, 401 reserve thiếu auth, 404 reserve đơn không tồn tại, 409 xung đột khóa thiết bị 55P03, 422 vi phạm ràng buộc 23514, và 3 test xác minh Idempotency-Key header RFC chuẩn UUID, chuỗi tùy biến deterministic UUID, và chuỗi trong JSON body.
+- **Frontend Test Suite & Build**:
+  - `npm test`: **47/47 tests PASS** (authContext, QR, POS Cart, AI service).
+  - `npm run build`: Vite 5.4.21 production build SUCCESS.
+  - `git diff --check`: PASS, không có lỗi whitespace hay format.
+- **Hiện trạng Môi trường PostgreSQL**:
+  - Docker Desktop daemon trên máy host đang tắt (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`).
+  - Vì vậy kịch bản live E2E trên container PostgreSQL 16 trong phiên này ghi nhận **NOT RUN / BLOCKED by Docker**, tuân thủ nguyên tắc không sử dụng database dùng chung hoặc database staging chưa cô lập.
