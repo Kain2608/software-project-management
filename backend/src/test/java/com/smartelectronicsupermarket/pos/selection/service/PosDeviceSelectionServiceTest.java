@@ -54,7 +54,25 @@ class PosDeviceSelectionServiceTest {
                 () -> service.lockDevice(null, ORDER_ID, ORDER_ITEM_ID, "SERIAL-1", ACTOR_ID));
         assertThrows(
                 IllegalArgumentException.class,
+                () -> service.lockDevice(STORE_ID, null, ORDER_ITEM_ID, "SERIAL-1", ACTOR_ID));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.lockDevice(STORE_ID, ORDER_ID, null, "SERIAL-1", ACTOR_ID));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.lockDevice(STORE_ID, ORDER_ID, ORDER_ITEM_ID, null, ACTOR_ID));
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> service.lockDevice(STORE_ID, ORDER_ID, ORDER_ITEM_ID, " ", ACTOR_ID));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.lockDevice(STORE_ID, ORDER_ID, ORDER_ITEM_ID, "SERIAL-1", null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.releaseDevice(null, DEVICE_ID, ACTOR_ID));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.releaseDevice(ORDER_ID, null, ACTOR_ID));
         assertThrows(
                 IllegalArgumentException.class,
                 () -> service.releaseDevice(ORDER_ID, DEVICE_ID, null));

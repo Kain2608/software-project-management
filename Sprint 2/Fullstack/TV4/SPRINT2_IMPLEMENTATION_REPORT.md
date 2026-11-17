@@ -440,3 +440,70 @@ Backup mới được lưu ngoài repository tại:
 | Nguyễn Tiến Vũ — AI Lead | Bảo vệ API AI, kiểm `ai.use`/store scope, candidate từ Catalog/Stock thật, provider/fallback và log latency. |
 | Trịnh Quốc An — PM | Chốt chiến lược PR, secret/hạ tầng/staging, CR/payment/provider và biên bản Quality Gate M3/M4. |
 | Phạm Đại Phát — QA Lead | Chạy D72/D73/D76, E2E POS/QR/receipt, máy in 80mm, mobile/camera, hai POS thật và hiệu năng p95. |
+
+## 14. Cập nhật hoàn thiện Serial REST API, CSS Browser Print 80mm & Test Coverage (17/11/2026)
+
+### 14.1 Hoàn thiện REST API chọn/giải phóng Serial (US-04 / S2-03)
+
+- **Endpoints triển khai**:
+  - `POST /api/v1/pos/orders/{orderId}/items/{orderItemId}/devices`: Khóa thiết bị theo Serial cho dòng đơn hàng.
+  - `DELETE /api/v1/pos/orders/{orderId}/devices/{deviceId}`: Giải phóng thiết bị đã khóa khỏi giỏ hàng POS.
+- **Feature Flag mặc định OFF**:
+  - Cấu hình tại `backend/src/main/resources/application.properties`:
+    ```properties
+    sasms.features.pos-serial-api.enabled=false
+    ```
+  - `PosDeviceSelectionController` gắn `@ConditionalOnProperty(prefix = "sasms.features.pos-serial-api", name = "enabled", havingValue = "true", matchIfMissing = false)`.
+  - Khi chưa bật flag, Bean Controller hoàn toàn không được khởi tạo vào Spring context; request tới endpoint trả về `404 Not Found` theo nguyên tắc an toàn fail-closed.
+- **Bảo mật, Identity & Scope**:
+  - Không nhận `actor_id` từ client request body hoặc header; danh tính người thực hiện chỉ được giải quyết qua `TrustedActorAccess.actorId(authentication)`.
+  - Lời gọi database gắn chặt với quyền `sales.checkout` theo đúng `store_id` của đơn hàng trong hàm DB `find_and_lock_device_for_pos` và câu truy vấn bảo vệ trong `release_device_lock`.
+- **Ánh xạ lỗi chuẩn từ PostgreSQL (ApiExceptionHandler)**:
+  - `55P03` (lock_not_available) $\rightarrow$ `409 Conflict`, code `DEVICE_LOCKED`, `retryable: true`.
+  - `P0002` (no_data_found) $\rightarrow$ `404 Not Found`, code `NOT_FOUND`, `retryable: false`.
+  - `23514` (check_violation / constraint) $\rightarrow$ `422 Unprocessable Content`, code `VALIDATION_FAILED`, `retryable: false`.
+  - `42501` (insufficient_privilege) $\rightarrow$ `403 Forbidden`, code `FORBIDDEN`, `retryable: false`.
+  - Lỗi database chung $\rightarrow$ `503 Service Unavailable`, code `DEPENDENCY_UNAVAILABLE`, `retryable: true`, tuyệt đối không rò rỉ câu lệnh SQL hay connection secret.
+
+### 14.2 Hoàn thiện CSS Browser Print 80mm (US-05 / S2-04)
+
+- **Quy chuẩn khổ in nhiệt 80mm (`@media print`)**:
+  - Định dạng `@page { size: 80mm auto; margin: 2mm 4mm; }` phù hợp với máy in bill cuộn nhiệt tiêu chuẩn (chiều rộng in thực tế 72mm).
+  - Áp dụng font monospace nét mảnh, tương phản cao, phân đoạn rõ ràng bằng đường kẻ `dashed` và `dotted`.
+  - Tránh gãy trang giữa các dòng sản phẩm bằng thuộc tính `break-inside: avoid;`.
+  - Ẩn triệt để toàn bộ thành phần không thuộc hóa đơn: Sidebar, Topbar, Header trang, Footer, Giỏ hàng POS, Widget gợi ý AI, Form tra cứu, Thông báo ghi chú nghiệp vụ, Thẻ trạng thái và Cảnh báo lỗi.
+- **Giới hạn kiểm thử thiết bị**:
+  - Đây là CSS chuẩn hóa cho hộp thoại in trình duyệt (`window.print()`).
+  - **KHÔNG** tuyên bố đã kiểm chứng trên máy in nhiệt phần cứng thật (máy in vật lý và cổng giao tiếp máy in vẫn ghi nhận `NOT TESTED`).
+
+### 14.3 Bằng chứng kiểm thử tổng thể mới nhất
+
+```powershell
+# Backend Test Suite
+cd backend
+.\mvnw.cmd test
+# Kết quả: Tests run: 186, Failures: 0, Errors: 0, Skipped: 9, BUILD SUCCESS
+
+# Frontend Test Suite & Build
+cd ..\frontend
+npm.cmd test
+# Kết quả: 40 tests PASS, 0 fail, 0 skip
+npm.cmd run build
+# Kết quả: Vite 5.4.21 production build SUCCESS (331 modules)
+```
+
+- Không có lỗi `git diff --check`.
+- Không sửa schema/migration/SQL của Kiên.
+- Không sửa AI backend của Vũ.
+- Không tự đánh dấu đơn hàng thành `PAID` hay `SOLD`.
+
+### 14.4 Bảng trạng thái nghiệm thu Sprint 2 TV4
+
+| Hạng mục | Trạng thái kỹ thuật | Người cần phê duyệt | Điều kiện nghiệm thu cuối |
+|---|---|---|---|
+| **S2-02 (POS Cart UI)** | Hoàn thiện Cart Catalog + Stock | Nguyễn Quang Huy (BA/PO) | Duyệt luồng nghiệp vụ quầy và giao diện giỏ hàng. |
+| **S2-03 (Serial REST)** | Hoàn thiện Code + Tests (Flag OFF) | Trần Trung Kiên (DBA), Huy (BA) | Thống nhất hợp đồng D52 và bật feature flag. |
+| **S2-04 (Hóa đơn 80mm)** | Hoàn thiện Print CSS 80mm | Phạm Đại Phát (QA), Huy (BA) | Kiểm thử trên máy in nhiệt 80mm vật lý thật. |
+| **S2-06 (Realtime Stock)** | Hoàn thiện API + SQL baseline | Trần Trung Kiên (DBA) | Xác nhận view realtime chính thức trên schema mới. |
+| **S2-08 (Tích hợp AI)** | Hoàn thiện Widget + Auth Context | Nguyễn Tiến Vũ (AI Lead) | Bảo mật endpoint AI và kiểm thử latency p95. |
+| **S2-12 (Staging/CI)** | Giữ nguyên quy trình chuẩn | Trịnh Quốc An (PM) | Review PR, hợp nhất branch và kích hoạt CI staging. |

@@ -224,14 +224,129 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .sasms-view > section:not(.pos-module), .sasms-view > .qr-panel { padding: 14px; }
 }
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm 4mm;
+  }
+  html, body, #root {
+    width: 80mm;
+    min-width: 80mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   .sasms-sidebar, .sasms-topbar, .sasms-page-heading, .sasms-footer,
   .pos-module__utilities, .pos-business-state, .pos-cart, .cross-sell,
   .pos-receipt-panel__heading, .pos-receipt-panel__description, .receipt-form,
-  .receipt-message { display: none !important; }
+  .receipt-message, .pos-scope-note, .status-card, .error,
+  .qr-panel, .serial-panel__notice, .serial-panel__layout {
+    display: none !important;
+  }
   .sasms-app, .sasms-workspace, .sasms-main, .sasms-view, .pos-module,
-  .pos-followup, .pos-receipt-panel { display: block; padding: 0; margin: 0; border: 0; background: white; }
-  .receipt-preview { border: 0; padding: 0; margin: 0; }
-  .receipt-preview button, .receipt-preview > small { display: none; }
+  .pos-followup, .pos-receipt-panel {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .pos-module, .pos-receipt-panel {
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
+  }
+  .receipt-preview {
+    box-sizing: border-box !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    color: #000 !important;
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+    font-family: monospace, monospace !important;
+  }
+  .receipt-preview header {
+    text-align: center;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 3mm;
+    margin-bottom: 3mm;
+  }
+  .receipt-preview header div {
+    display: block;
+    text-align: center;
+  }
+  .receipt-preview header strong {
+    display: block;
+    font-size: 13pt;
+    letter-spacing: 0.05em;
+  }
+  .receipt-preview header span {
+    display: block;
+    font-size: 8pt;
+  }
+  .receipt-preview header small {
+    display: block;
+    margin-top: 1mm;
+    font-size: 8pt;
+  }
+  .receipt-preview dl {
+    margin: 2mm 0;
+    padding: 0;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 2mm;
+  }
+  .receipt-preview dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    break-inside: avoid;
+    margin: 1mm 0;
+  }
+  .receipt-preview dt {
+    color: #000;
+    font-weight: 500;
+  }
+  .receipt-preview dd {
+    margin: 0;
+    font-weight: 700;
+    text-align: right;
+  }
+  .receipt-preview ul {
+    list-style: none;
+    margin: 2mm 0;
+    padding: 0;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 2mm;
+  }
+  .receipt-preview li {
+    display: flex;
+    justify-content: space-between;
+    gap: 4mm;
+    padding: 1.5mm 0;
+    border-top: 1px dotted #888;
+    break-inside: avoid;
+  }
+  .receipt-preview li:first-child {
+    border-top: none;
+  }
+  .receipt-preview li span {
+    word-break: break-all;
+    font-size: 8pt;
+  }
+  .receipt-preview li strong {
+    white-space: nowrap;
+    font-size: 8.5pt;
+  }
+  .receipt-preview button,
+  .receipt-preview > small {
+    display: none !important;
+  }
 }
 
 /* Serial/IMEI placeholder adopts the same D53 left-content / right-state grid. */
