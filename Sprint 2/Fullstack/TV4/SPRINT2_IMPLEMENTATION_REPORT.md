@@ -482,7 +482,8 @@ Backup mới được lưu ngoài repository tại:
 # Backend Test Suite
 cd backend
 .\mvnw.cmd test
-# Kết quả: Tests run: 186, Failures: 0, Errors: 0, Skipped: 9, BUILD SUCCESS
+# Kết quả: Tests run: 197, Failures: 0, Errors: 0, Skipped: 9, BUILD SUCCESS
+# (Bao gồm 11 integration tests mới kiểm chứng tải Controller khi Flag ON/OFF, xác thực JWT, bảo vệ scope và ánh xạ mã lỗi SQLSTATE)
 
 # Frontend Test Suite & Build
 cd ..\frontend
@@ -507,3 +508,52 @@ npm.cmd run build
 | **S2-06 (Realtime Stock)** | Hoàn thiện API + SQL baseline | Trần Trung Kiên (DBA) | Xác nhận view realtime chính thức trên schema mới. |
 | **S2-08 (Tích hợp AI)** | Hoàn thiện Widget + Auth Context | Nguyễn Tiến Vũ (AI Lead) | Bảo mật endpoint AI và kiểm thử latency p95. |
 | **S2-12 (Staging/CI)** | Giữ nguyên quy trình chuẩn | Trịnh Quốc An (PM) | Review PR, hợp nhất branch và kích hoạt CI staging. |
+
+## 15. Phân tích đối chiếu D34/D35/D40/D52 và V003–V005: Đề xuất Hợp đồng Order-First & Ma trận Quyết định
+
+### 15.1 Bảng đối chiếu chi tiết giữa Đặc tả (BA) và Hiện trạng CSDL (DBA)
+
+| Tiêu chí | Đặc tả nghiệp vụ (D34/D35/D40/D52) | Hiện trạng CSDL Kiên (V003–V005 / SQL) | Đánh giá & Đề xuất kiến trúc của TV4 |
+|---|---|---|---|
+| **Mô hình chọn Serial** | D52 đề xuất `/pos/reservations` (Reservation-First: sinh entity reservation tạm rồi chuyển thành order). | V004 & SQL dùng **Order-First**: Đơn hàng tạo ở trạng thái `DRAFT`, thiết bị gắn trực tiếp vào `order_devices` theo từng dòng `order_item_id`. | **Đề xuất Order-First**: Tránh dư thừa bảng tạm, khớp 100% với hàm `find_and_lock_device_for_pos` và `order_devices(active=true)` đã benchmark concurrency. |
+| **Thời hạn giữ hàng (Lease TTL)** | D34 BR-03 quy định: POS **10 phút**, Online **30 phút**. Không tự ý gia hạn. | V004 cài đặt hàm `order_hold_duration(channel)`: POS **10 phút**, ONLINE **30 phút** qua `hold_expires_at`. | **Nhất quán**: Chốt chính thức mốc 10 phút cho POS. Bản ghi chú cũ DS2 ghi 15 phút được loại bỏ để tuân thủ D34 và V004. |
+| **Định dạng Serial / IMEI** | D35 chốt quy tắc theo hãng: Sony TV 7 số, Apple 10-12 số + Luhn IMEI, Samsung, LG. | V003 thêm `product_identifier_profiles`, `valid_imei` (Luhn checksum), `serial_raw`, `imei_raw`. | **Nhất quán**: Backend giữ nguyên chuỗi Serial của client; DB trigger kiểm tra theo brand profile đã kích hoạt. |
+| **Quy trình Thanh toán & Đổi trạng thái** | D34 FR-06 / D40: Chỉ chuyển `PAID` khi có xác nhận tiền về (giao dịch ngân hàng/thẻ/tiền mặt). | Trigger `guard_order_child` (V004): Chỉ cho phép tạo `payments` khi đơn `RESERVED`; không thể sửa payment `CAPTURED`. | **Nhất quán**: Không tự động đánh dấu `PAID` khi chỉ hiển thị mã QR VietQR. Phải có webhook/IPN xác nhận hoặc thao tác thu ngân. |
+| **Phân quyền vai trò (RBAC)** | D34 FR-01: 9 vai trò chuẩn (`CASHIER`, `SALES_STAFF`, `CATALOG_MANAGER`, `STORE_MANAGER`, ...). | V005 định nghĩa các vai trò D34; `CASHIER` có quyền `sales.checkout` và `payments.read`. | **Nhất quán**: REST Serial API và Receipt API yêu cầu quyền `sales.checkout` / `sales.read` gắn chặt với `store_id` của đơn hàng. |
+
+### 15.2 Ma trận 5 Quyết định cần BA / Architect / PM phê duyệt
+
+| STT | Quyết định cần chốt | Các bên liên quan | Tác động kỹ thuật & Phương án khuyến nghị | Trạng thái |
+|---|---|---|---|---|
+| **DEC-S2-01** | Chuyển đổi D52 sang chuẩn **Order-First** thay cho Reservation-First | Huy (BA), Kiên (DBA), Thái (Dev) | Chuẩn hóa endpoint `POST /api/v1/pos/orders/{orderId}/items/{itemId}/devices` và `DELETE .../devices/{deviceId}`. Khớp 100% SQL Kiên. | **ĐỀ XUẤT CHẤP THUẬN** |
+| **DEC-S2-02** | Chốt thời hạn giữ hàng POS là **10 phút** | Huy (BA), Kiên (DBA) | Xác nhận tuân thủ D34 BR-03 và hàm `sasms.order_hold_duration('POS')`. Hết 10 phút đơn DRAFT hết hạn. | **ĐỀ XUẤT CHẤP THUẬN** |
+| **DEC-S2-03** | Quy ước giá tiền VND là **số nguyên VND** | Huy (BA), An (PM) | Trường `total_minor` / `price_minor` mang giá trị số nguyên VND (12.000.000 VND = 12000000). Không nhân/chia 100. | **ĐÃ THỰC THI TRÊN CODE** |
+| **DEC-S2-04** | Nguyên tắc xác nhận thanh toán `PAID` | Huy (BA), Kiên (DBA), An (PM) | VietQR chỉ là phương tiện hiển thị. Chuyển `PAID` bắt buộc qua Webhook ký số của cổng thanh toán hoặc xác nhận thu ngân có audit log. | **ĐỀ XUẤT CHẤP THUẬN** |
+| **DEC-S2-05** | Phê duyệt V003–V005 và cấp quyền runtime role | Kiên (DBA), An (PM) | Chạy migration V003–V005 trên Staging và `GRANT EXECUTE ON FUNCTION sasms.find_and_lock_device_for_pos` cho role `sasms_app`. | **CHỜ DBA THỰC THI** |
+
+### 15.3 Hướng dẫn Demo Sprint 2 thực tế
+
+1. **Khởi động Backend (Spring Boot)**:
+   ```powershell
+   cd backend
+   # Cấu hình biến môi trường kết nối database và JWT (nếu có)
+   $env:SASMS_DB_URL = "jdbc:postgresql://127.0.0.1:5432/sasms"
+   $env:SASMS_DB_USERNAME = "sasms_app"
+   $env:SASMS_DB_PASSWORD = "..."
+   # Để kiểm thử REST chọn Serial, bật cờ tính năng:
+   $env:SASMS_FEATURES_POS_SERIAL_API_ENABLED = "true"
+   .\mvnw.cmd spring-boot:run
+   ```
+
+2. **Khởi động Frontend (React / Vite)**:
+   ```powershell
+   cd frontend
+   npm.cmd run dev
+   # Truy cập ứng dụng tại http://localhost:5173
+   ```
+
+3. **Kịch bản Demo**:
+   - **Kịch bản 1 (Fail-Closed mặc định)**: Mở trình duyệt không truyền tham số. Topbar hiển thị `CHƯA KẾT NỐI IdP / KHO`. Mọi thao tác tìm kiếm hay giỏ hàng đều yêu cầu phiên an toàn, không rò rỉ dữ liệu.
+   - **Kịch bản 2 (Truyền phiên qua URL / Storage)**: Mở `http://localhost:5173?storeId=00000000-0000-4000-8000-000000000010&warehouseId=00000000-0000-4000-8000-000000000011&token=mock-jwt`. Topbar chuyển sang `PHIÊN ĐÃ CẤU HÌNH`. Giỏ hàng cho phép tra cứu Catalog, kiểm tra tồn kho realtime, thêm sản phẩm và tự động chặn vượt tồn kho khả dụng.
+   - **Kịch bản 3 (Gợi ý AI)**: Khi giỏ có sản phẩm, widget AI hiển thị danh sách gợi ý chéo; người dùng bấm kiểm tra để đối chiếu tồn kho trước khi đưa vào giỏ.
+   - **Kịch bản 4 (In biên nhận 80mm)**: Tra cứu đơn hàng đã thanh toán (PAID) và bấm "Mở bản xem trước in". Hộp thoại in của trình duyệt hiển thị phiếu in cuộn 80mm chuẩn nhiệt (72mm nội dung, phân cách nét đứt, ẩn mọi thanh điều hướng).

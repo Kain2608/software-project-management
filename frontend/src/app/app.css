@@ -102,6 +102,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   font-weight: 700;
   letter-spacing: .025em;
 }
+.sasms-topbar__environment--configured {
+  color: #1a6d36;
+  background: #e6f7ec;
+  border-color: #a3e0b8;
+}
 .sasms-main { max-width: 1450px; margin: 0 auto; padding: 31px 32px 32px; }
 .sasms-page-heading {
   display: flex;

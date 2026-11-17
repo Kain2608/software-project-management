@@ -25,6 +25,25 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState('pos')
   const screen = screens[activeScreen]
 
+  // Read non-hardcoded session and store/warehouse context if provided by IdP or launcher.
+  // Defaults strictly to null (fail-closed) when unauthenticated or unconfigured.
+  const urlParams = typeof window !== 'undefined' && window.location?.search
+    ? new URLSearchParams(window.location.search)
+    : null
+  const accessToken = urlParams?.get('token')
+    || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('sasms_access_token') : null)
+    || null
+  const storeId = urlParams?.get('store_id')
+    || urlParams?.get('storeId')
+    || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('sasms_store_id') : null)
+    || null
+  const warehouseId = urlParams?.get('warehouse_id')
+    || urlParams?.get('warehouseId')
+    || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('sasms_warehouse_id') : null)
+    || null
+
+  const isConfigured = Boolean(accessToken && storeId && warehouseId)
+
   const navButton = (id, label) => (
     <button
       key={id}
@@ -74,7 +93,12 @@ export default function App() {
       <div className="sasms-workspace">
         <header className="sasms-topbar">
           <div className="sasms-breadcrumb">{screen.breadcrumb}</div>
-          <span className="sasms-topbar__environment">D53 · BẢN THIẾT KẾ CHƯA DUYỆT</span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span className={`sasms-topbar__environment${isConfigured ? ' sasms-topbar__environment--configured' : ''}`}>
+              {isConfigured ? 'PHIÊN ĐÃ CẤU HÌNH' : 'CHƯA KẾT NỐI IdP / KHO'}
+            </span>
+            <span className="sasms-topbar__environment">D53 · THIẾT KẾ THAM CHIẾU</span>
+          </div>
         </header>
 
         <main className="sasms-main" id="main-content">
@@ -88,8 +112,14 @@ export default function App() {
           </div>
 
           <div className="sasms-view" key={activeScreen}>
-            {activeScreen === 'pos' && <PosPage />}
-            {activeScreen === 'qr' && <QrCameraScanner />}
+            {activeScreen === 'pos' && (
+              <PosPage
+                accessToken={accessToken}
+                storeId={storeId}
+                warehouseId={warehouseId}
+              />
+            )}
+            {activeScreen === 'qr' && <QrCameraScanner accessToken={accessToken} />}
             {activeScreen === 'serial' && <SerialImeiPanel />}
           </div>
 
