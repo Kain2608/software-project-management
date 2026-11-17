@@ -9,6 +9,7 @@ import com.smartelectronicsupermarket.pos.order.dto.ReservePosOrderResponse;
 import com.smartelectronicsupermarket.pos.order.service.PosOrderService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,8 +35,7 @@ public class PosOrderController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public PosOrderResponse createDraftOrder(
+    public ResponseEntity<PosOrderResponse> createDraftOrder(
             @RequestBody CreatePosOrderRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKeyHeader,
             @RequestHeader(name = "X-Idempotency-Key", required = false) String xIdempotencyKeyHeader,
@@ -61,7 +61,11 @@ public class PosOrderController {
                 request.items());
 
         UUID actorId = TrustedActorAccess.actorId(authentication);
-        return service.createDraftOrder(effectiveRequest, actorId);
+        PosOrderResponse response = service.createDraftOrder(effectiveRequest, actorId);
+        if (response.replayed()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/{orderId}/reserve")

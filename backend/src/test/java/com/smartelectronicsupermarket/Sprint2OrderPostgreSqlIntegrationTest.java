@@ -111,8 +111,20 @@ class Sprint2OrderPostgreSqlIntegrationTest {
     private static final UUID DEVICE_A_1_ID = UUID.fromString("22222222-2222-4222-8222-000000000401");
     private static final UUID DEVICE_A_2_ID = UUID.fromString("22222222-2222-4222-8222-000000000402");
 
-    private static final UUID BRAND_ID = UUID.fromString("00000000-0000-4000-8000-000000000020");
-    private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-4000-8000-000000000021");
+    private static final UUID BRAND_ID = UUID.fromString("22222222-2222-4222-8222-000000000020");
+    private static final UUID CATEGORY_ID = UUID.fromString("22222222-2222-4222-8222-000000000021");
+    private static final UUID SUPPLIER_ID = UUID.fromString("22222222-2222-4222-8222-000000000040");
+    private static final UUID PO_ID = UUID.fromString("22222222-2222-4222-8222-000000000050");
+    private static final UUID PO_ITEM_A_ID = UUID.fromString("22222222-2222-4222-8222-000000000051");
+    private static final UUID PO_ITEM_B_ID = UUID.fromString("22222222-2222-4222-8222-000000000052");
+    private static final UUID GR_ID = UUID.fromString("22222222-2222-4222-8222-000000000060");
+    private static final UUID GR_ITEM_A_ID = UUID.fromString("22222222-2222-4222-8222-000000000061");
+    private static final UUID GR_ITEM_B_ID = UUID.fromString("22222222-2222-4222-8222-000000000062");
+
+    static {
+        System.setProperty("user.timezone", "UTC");
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));
+    }
 
     private static HttpServer jwksServer;
     private static String jwksUri;
@@ -505,7 +517,7 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidWarehousePayload))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
 
         // 4. Unassigned actor -> 403 FORBIDDEN
         mockMvc.perform(post("/api/v1/pos/orders")
@@ -634,23 +646,44 @@ class Sprint2OrderPostgreSqlIntegrationTest {
             action.run();
             throw new AssertionError("Expected DataAccessException with SQLSTATE 42501 (insufficient privilege)");
         } catch (DataAccessException ex) {
-            String message = ex.getMessage();
-            assertNotNull(message);
+            Throwable root = ex.getMostSpecificCause();
+            String combined = ((ex.getMessage() != null ? ex.getMessage() : "") + " "
+                    + (root != null && root.getMessage() != null ? root.getMessage() : "")).toLowerCase();
+            String extracted = null;
+            if (root instanceof SQLException sqlEx) {
+                extracted = sqlEx.getSQLState();
+            } else if (ex.getCause() instanceof SQLException sqlEx) {
+                extracted = sqlEx.getSQLState();
+            }
+            final String sqlState = extracted;
             assertTrue(
-                    message.contains("42501")
-                            || message.toLowerCase().contains("permission denied")
-                            || message.toLowerCase().contains("must be owner"),
-                    () -> "Expected 42501/permission denied but got: " + message);
+                    "42501".equals(sqlState)
+                            || combined.contains("42501")
+                            || combined.contains("permission denied")
+                            || combined.contains("must be owner"),
+                    () -> "Expected 42501/permission denied but got: " + ex.getMessage() + " (root: " + (root != null ? root.getMessage() : "null") + ", sqlstate: " + sqlState + ")");
         }
     }
 
     private static void cleanupFixtures(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("""
+                    UPDATE sasms.devices
+                    SET status = 'IN_STOCK', reserved_order_id = NULL, sold_order_id = NULL, sold_at = NULL
+                    WHERE id IN (
+                        '22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000402'
+                    );
+                    UPDATE sasms.sales_orders
+                    SET status = 'DRAFT', total_amount = 0, paid_at = NULL
+                    WHERE store_id IN (
+                        '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
+                    );
                     DELETE FROM sasms.order_devices WHERE order_id IN (
                         SELECT id FROM sasms.sales_orders WHERE store_id IN (
                             '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
                         )
+                    ) OR device_id IN (
+                        '22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000402'
                     );
                     DELETE FROM sasms.sales_order_items WHERE order_id IN (
                         SELECT id FROM sasms.sales_orders WHERE store_id IN (
@@ -659,21 +692,47 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                     );
                     DELETE FROM sasms.inventory_movements WHERE warehouse_id IN (
                         '22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000212'
+                    ) OR device_id IN (
+                        '22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000402'
                     );
                     DELETE FROM sasms.outbox_events WHERE aggregate_id IN (
                         SELECT id FROM sasms.sales_orders WHERE store_id IN (
                             '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
                         )
+                    ) OR aggregate_id IN (
+                        '22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000402'
                     );
+                    DELETE FROM sasms.audit_logs WHERE actor_id IN (
+                        '22222222-2222-4222-8222-000000000101', '22222222-2222-4222-8222-000000000102',
+                        '22222222-2222-4222-8222-000000000103', '22222222-2222-4222-8222-000000000104',
+                        '22222222-2222-4222-8222-000000000105'
+                    ) OR (entity_type = 'sales_order' AND entity_id IN (
+                        SELECT id FROM sasms.sales_orders WHERE store_id IN (
+                            '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
+                        )
+                    ));
                     DELETE FROM sasms.sales_orders WHERE store_id IN (
                         '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
                     );
                     DELETE FROM sasms.devices WHERE warehouse_id IN (
                         '22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000212'
+                    ) OR id IN (
+                        '22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000402'
                     );
+                    DELETE FROM sasms.goods_receipt_items WHERE id IN (
+                        '22222222-2222-4222-8222-000000000061', '22222222-2222-4222-8222-000000000062'
+                    );
+                    DELETE FROM sasms.goods_receipts WHERE id = '22222222-2222-4222-8222-000000000060';
+                    DELETE FROM sasms.purchase_order_items WHERE id IN (
+                        '22222222-2222-4222-8222-000000000051', '22222222-2222-4222-8222-000000000052'
+                    );
+                    DELETE FROM sasms.purchase_orders WHERE id = '22222222-2222-4222-8222-000000000050';
+                    DELETE FROM sasms.suppliers WHERE id = '22222222-2222-4222-8222-000000000040';
                     DELETE FROM sasms.products WHERE id IN (
                         '22222222-2222-4222-8222-000000000301', '22222222-2222-4222-8222-000000000302'
                     );
+                    DELETE FROM sasms.categories WHERE id = '22222222-2222-4222-8222-000000000021';
+                    DELETE FROM sasms.brands WHERE id = '22222222-2222-4222-8222-000000000020';
                     DELETE FROM sasms.user_roles WHERE user_id IN (
                         '22222222-2222-4222-8222-000000000101', '22222222-2222-4222-8222-000000000102',
                         '22222222-2222-4222-8222-000000000103', '22222222-2222-4222-8222-000000000104',
@@ -697,12 +756,11 @@ class Sprint2OrderPostgreSqlIntegrationTest {
     private static void seedFixtures(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute("""
-                    INSERT INTO sasms.users(id, email, full_name, auth_subject, is_active) VALUES
-                        ('22222222-2222-4222-8222-000000000101', 's2-cashier-a@sasms.test', 'S2 Cashier A', 'urn:sasms:s2-it:store-a-cashier', true),
-                        ('22222222-2222-4222-8222-000000000102', 's2-sales-a@sasms.test', 'S2 Sales A', 'urn:sasms:s2-it:store-a-sales', true),
-                        ('22222222-2222-4222-8222-000000000103', 's2-cashier-b@sasms.test', 'S2 Cashier B', 'urn:sasms:s2-it:store-b-cashier', true),
-                        ('22222222-2222-4222-8222-000000000104', 's2-inactive@sasms.test', 'S2 Inactive', 'urn:sasms:s2-it:inactive', false),
-                        ('22222222-2222-4222-8222-000000000105', 's2-unassigned@sasms.test', 'S2 Unassigned', 'urn:sasms:s2-it:unassigned', true);
+                    INSERT INTO sasms.brands(id, name) VALUES
+                        ('22222222-2222-4222-8222-000000000020', 'S2 Test Brand');
+
+                    INSERT INTO sasms.categories(id, name) VALUES
+                        ('22222222-2222-4222-8222-000000000021', 'S2 Test Category');
 
                     INSERT INTO sasms.stores(id, code, name, address, is_active) VALUES
                         ('22222222-2222-4222-8222-000000000201', 'S2-STORE-A', 'S2 Store A', 'Store A Address', true),
@@ -712,18 +770,42 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                         ('22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000201', 'S2-WH-A', 'S2 Warehouse A'),
                         ('22222222-2222-4222-8222-000000000212', '22222222-2222-4222-8222-000000000202', 'S2-WH-B', 'S2 Warehouse B');
 
+                    INSERT INTO sasms.users(id, email, full_name, auth_subject, is_active) VALUES
+                        ('22222222-2222-4222-8222-000000000101', 's2-cashier-a@sasms.test', 'S2 Cashier A', 'urn:sasms:s2-it:store-a-cashier', true),
+                        ('22222222-2222-4222-8222-000000000102', 's2-sales-a@sasms.test', 'S2 Sales A', 'urn:sasms:s2-it:store-a-sales', true),
+                        ('22222222-2222-4222-8222-000000000103', 's2-cashier-b@sasms.test', 'S2 Cashier B', 'urn:sasms:s2-it:store-b-cashier', true),
+                        ('22222222-2222-4222-8222-000000000104', 's2-inactive@sasms.test', 'S2 Inactive', 'urn:sasms:s2-it:inactive', false),
+                        ('22222222-2222-4222-8222-000000000105', 's2-unassigned@sasms.test', 'S2 Unassigned', 'urn:sasms:s2-it:unassigned', true);
+
                     INSERT INTO sasms.user_roles(user_id, role_code, store_id) VALUES
                         ('22222222-2222-4222-8222-000000000101', 'CASHIER', '22222222-2222-4222-8222-000000000201'),
                         ('22222222-2222-4222-8222-000000000102', 'SALES', '22222222-2222-4222-8222-000000000201'),
                         ('22222222-2222-4222-8222-000000000103', 'CASHIER', '22222222-2222-4222-8222-000000000202');
 
-                    INSERT INTO sasms.products(id, sku, brand_id, category_id, name, list_price, warranty_months, is_active) VALUES
-                        ('22222222-2222-4222-8222-000000000301', 'S2-PROD-A', '00000000-0000-4000-8000-000000000020', '00000000-0000-4000-8000-000000000021', 'S2 Product A', 10000000.00, 12, true),
-                        ('22222222-2222-4222-8222-000000000302', 'S2-PROD-B', '00000000-0000-4000-8000-000000000020', '00000000-0000-4000-8000-000000000021', 'S2 Product B', 5000000.00, 12, true);
+                    INSERT INTO sasms.products(id, sku, brand_id, category_id, name, specifications, list_price, warranty_months, is_active) VALUES
+                        ('22222222-2222-4222-8222-000000000301', 'S2-PROD-A', '22222222-2222-4222-8222-000000000020', '22222222-2222-4222-8222-000000000021', 'S2 Product A', '{}'::jsonb, 10000000.00, 12, true),
+                        ('22222222-2222-4222-8222-000000000302', 'S2-PROD-B', '22222222-2222-4222-8222-000000000020', '22222222-2222-4222-8222-000000000021', 'S2 Product B', '{}'::jsonb, 5000000.00, 12, true);
 
-                    INSERT INTO sasms.devices(id, warehouse_id, product_id, serial, qr_token, status) VALUES
-                        ('22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000301', 'S2-SER-0001', '22222222-2222-4222-8222-000000000411', 'IN_STOCK'),
-                        ('22222222-2222-4222-8222-000000000402', '22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000301', 'S2-SER-0002', '22222222-2222-4222-8222-000000000412', 'IN_STOCK');
+                    INSERT INTO sasms.suppliers(id, code, name) VALUES
+                        ('22222222-2222-4222-8222-000000000040', 'S2-SUP-01', 'S2 Test Supplier');
+
+                    INSERT INTO sasms.purchase_orders(id, code, supplier_id, warehouse_id, status, created_by) VALUES
+                        ('22222222-2222-4222-8222-000000000050', 'S2-PO-01', '22222222-2222-4222-8222-000000000040', '22222222-2222-4222-8222-000000000211', 'APPROVED', '22222222-2222-4222-8222-000000000101');
+
+                    INSERT INTO sasms.purchase_order_items(id, purchase_order_id, product_id, quantity, unit_cost) VALUES
+                        ('22222222-2222-4222-8222-000000000051', '22222222-2222-4222-8222-000000000050', '22222222-2222-4222-8222-000000000301', 50, 8000000.00),
+                        ('22222222-2222-4222-8222-000000000052', '22222222-2222-4222-8222-000000000050', '22222222-2222-4222-8222-000000000302', 50, 4000000.00);
+
+                    INSERT INTO sasms.goods_receipts(id, code, purchase_order_id, warehouse_id, status, received_by) VALUES
+                        ('22222222-2222-4222-8222-000000000060', 'S2-GR-01', '22222222-2222-4222-8222-000000000050', '22222222-2222-4222-8222-000000000211', 'OPEN', '22222222-2222-4222-8222-000000000101');
+
+                    INSERT INTO sasms.goods_receipt_items(id, receipt_id, purchase_order_id, purchase_order_item_id, product_id, quantity) VALUES
+                        ('22222222-2222-4222-8222-000000000061', '22222222-2222-4222-8222-000000000060', '22222222-2222-4222-8222-000000000050', '22222222-2222-4222-8222-000000000051', '22222222-2222-4222-8222-000000000301', 50),
+                        ('22222222-2222-4222-8222-000000000062', '22222222-2222-4222-8222-000000000060', '22222222-2222-4222-8222-000000000050', '22222222-2222-4222-8222-000000000052', '22222222-2222-4222-8222-000000000302', 50);
+
+                    INSERT INTO sasms.devices(id, warehouse_id, product_id, receipt_item_id, serial, qr_token, status) VALUES
+                        ('22222222-2222-4222-8222-000000000401', '22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000301', '22222222-2222-4222-8222-000000000061', 'S2-SER-0001', '22222222-2222-4222-8222-000000000411', 'IN_STOCK'),
+                        ('22222222-2222-4222-8222-000000000402', '22222222-2222-4222-8222-000000000211', '22222222-2222-4222-8222-000000000301', '22222222-2222-4222-8222-000000000061', 'S2-SER-0002', '22222222-2222-4222-8222-000000000412', 'IN_STOCK');
                     """);
         }
     }

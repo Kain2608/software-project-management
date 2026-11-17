@@ -27,10 +27,11 @@ public class JdbcPosOrderDataAccess implements PosOrderDataAccess {
 
     private static final String IS_WAREHOUSE_IN_STORE_SQL = """
             SELECT EXISTS(
-                SELECT 1 FROM sasms.warehouses
-                WHERE id = CAST(? AS uuid)
-                  AND store_id = CAST(? AS uuid)
-                  AND is_active = TRUE
+                SELECT 1 FROM sasms.warehouses w
+                JOIN sasms.stores s ON s.id = w.store_id
+                WHERE w.id = CAST(? AS uuid)
+                  AND w.store_id = CAST(? AS uuid)
+                  AND s.is_active = TRUE
             )
             """;
 

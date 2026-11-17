@@ -88,7 +88,7 @@ public class PosOrderService {
             PosOrderRecord existingOrder = existing.get();
             List<PosOrderItemRecord> existingItems = dataAccess.findOrderItems(existingOrder.id());
             if (matchesPayload(existingOrder, existingItems, request)) {
-                return toOrderResponse(existingOrder, existingItems);
+                return toOrderResponse(existingOrder, existingItems, true);
             } else {
                 throw new ResourceConflictException(
                         "Idempotency key reused with a different payload: " + idempotencyKey);
@@ -101,7 +101,11 @@ public class PosOrderService {
 
         for (PosOrderItemRequest itemReq : request.items()) {
             CatalogProductRecord product = dataAccess.findActiveProduct(itemReq.productId());
-            if (product == null || !product.isActive()) {
+            if (product == null) {
+                throw new ResourceNotFoundException(
+                        "Product not found in catalog: " + itemReq.productId());
+            }
+            if (!product.isActive()) {
                 throw new PosOrderValidationException(
                         "Product not found or inactive in catalog: " + itemReq.productId(), "product_id");
             }
@@ -147,7 +151,7 @@ public class PosOrderService {
                     .orElseThrow(() -> new IllegalStateException("Order disappeared after idempotency conflict: " + idempotencyKey));
             List<PosOrderItemRecord> existingItems = dataAccess.findOrderItems(concurrentOrder.id());
             if (matchesPayload(concurrentOrder, existingItems, request)) {
-                return toOrderResponse(concurrentOrder, existingItems);
+                return toOrderResponse(concurrentOrder, existingItems, true);
             } else {
                 throw new ResourceConflictException(
                         "Idempotency key reused with a different payload: " + idempotencyKey);
@@ -155,7 +159,7 @@ public class PosOrderService {
         }
 
         List<PosOrderItemRecord> savedItems = dataAccess.findOrderItems(targetOrder.id());
-        return toOrderResponse(targetOrder, savedItems);
+        return toOrderResponse(targetOrder, savedItems, false);
     }
 
     public static UUID resolveIdempotencyKey(Object rawKey, UUID storeId, UUID actorId) {
@@ -219,6 +223,10 @@ public class PosOrderService {
     }
 
     private static PosOrderResponse toOrderResponse(PosOrderRecord order, List<PosOrderItemRecord> items) {
+        return toOrderResponse(order, items, false);
+    }
+
+    private static PosOrderResponse toOrderResponse(PosOrderRecord order, List<PosOrderItemRecord> items, boolean replayed) {
         List<PosOrderItemResponse> itemResponses = items.stream()
                 .map(item -> new PosOrderItemResponse(
                         item.id(),
@@ -230,6 +238,14 @@ public class PosOrderService {
                         item.lineTotal()))
                 .toList();
 
+        BigDecimal calculatedTotal = items.stream()
+                .map(PosOrderItemRecord::lineTotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal effectiveTotal = (order.totalAmount() != null && order.totalAmount().compareTo(BigDecimal.ZERO) > 0)
+                ? order.totalAmount()
+                : calculatedTotal;
+
         return new PosOrderResponse(
                 order.id(),
                 order.code(),
@@ -239,10 +255,11 @@ public class PosOrderService {
                 order.customerId(),
                 order.channel(),
                 order.status(),
-                order.totalAmount(),
+                effectiveTotal,
                 order.createdBy(),
                 order.createdAt(),
                 order.holdExpiresAt(),
-                itemResponses);
+                itemResponses,
+                replayed);
     }
 }

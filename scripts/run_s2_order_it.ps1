@@ -77,7 +77,7 @@ try {
 
     Push-Location (Join-Path $repoRoot 'backend')
     try {
-        & .\mvnw.cmd '-Dtest=Sprint2OrderPostgreSqlIntegrationTest' test
+        & .\mvnw.cmd '-Duser.timezone=UTC' '-Dtest=Sprint2OrderPostgreSqlIntegrationTest' test
         $testExitCode = $LASTEXITCODE
     } finally {
         Pop-Location
