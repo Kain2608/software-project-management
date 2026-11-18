@@ -1,71 +1,53 @@
--- SASMS Sprint 1 - Provisioning D35 Official Manufacturer Identifier Rules
--- Based on: Sprint 0/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx by Nguyen Quang Huy (BA)
--- Sources: SRC-01 (Sony Support 00248421), SRC-02 (Samsung), SRC-03 (LG), SRC-04 (Apple), SRC-05 (GSMA TS.06 v22)
+-- DBA-only explicit SKU configuration after V003; values from actual approval.
+-- psql -v product_id=<uuid> -v profile_code=SONY_TV_7 -v requires_imei=false
+--      -v approved_by=<uuid> -v approved_at=<ISO8601> -v source_reference=<record>
+--      -f scripts/provision_d35_rules.sql
 \set ON_ERROR_STOP on
+\if :{?product_id}
+\else
+  \echo 'Required: product_id, profile_code, requires_imei, approved_by, approved_at, source_reference'
+  DO $$ BEGIN RAISE EXCEPTION 'Required approval variable missing'; END $$;
+\endif
+\if :{?profile_code}
+\else
+  DO $$ BEGIN RAISE EXCEPTION 'Required approval variable missing'; END $$;
+\endif
+\if :{?requires_imei}
+\else
+  DO $$ BEGIN RAISE EXCEPTION 'Required approval variable missing'; END $$;
+\endif
+\if :{?approved_by}
+\else
+  DO $$ BEGIN RAISE EXCEPTION 'Required approval variable missing'; END $$;
+\endif
+\if :{?approved_at}
+\else
+  DO $$ BEGIN RAISE EXCEPTION 'Required approval variable missing'; END $$;
+\endif
+\if :{?source_reference}
+\else
+  DO $$ BEGIN RAISE EXCEPTION 'Required approval variable missing'; END $$;
+\endif
 BEGIN;
-
--- 1. Ensure manufacturer brands exist
-INSERT INTO sasms.brands (id, name) VALUES
-    ('00000000-0000-4000-8000-000000000020', 'Sony'),
-    ('00000000-0000-4000-8000-000000000021', 'Samsung'),
-    ('00000000-0000-4000-8000-000000000022', 'LG'),
-    ('00000000-0000-4000-8000-000000000023', 'Apple')
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
-
--- 2. Deactivate old active rules for these brands if any
-UPDATE sasms.identifier_rules
-   SET is_active = false
- WHERE brand_id IN (
-    '00000000-0000-4000-8000-000000000020',
-    '00000000-0000-4000-8000-000000000021',
-    '00000000-0000-4000-8000-000000000022',
-    '00000000-0000-4000-8000-000000000023'
- ) AND is_active = true;
-
--- 3. Provision official D35 rules with approval metadata
--- Profile SONY_TV_7: 7 numeric digits ^[0-9]{7}$, no IMEI required
-INSERT INTO sasms.identifier_rules (
-    brand_id, version, serial_pattern, imei_required,
-    source_reference, approved_by, approved_at, is_active
-) VALUES (
-    '00000000-0000-4000-8000-000000000020', 1, '^[0-9]{7}$', false,
-    'D35 SER-06; SRC-01 Sony Support 00248421',
-    (SELECT id FROM sasms.users WHERE email = 'admin@sasms.local' OR id = '00000000-0000-4000-8000-000000000001' LIMIT 1),
-    now(), true
-);
-
--- Profile SAMSUNG_GENERIC: 11-15 uppercase alphanumeric characters, optional IMEI
-INSERT INTO sasms.identifier_rules (
-    brand_id, version, serial_pattern, imei_required,
-    source_reference, approved_by, approved_at, is_active
-) VALUES (
-    '00000000-0000-4000-8000-000000000021', 1, '^[A-Z0-9]{11,15}$', false,
-    'D35 Profile SAMSUNG_GENERIC; SRC-02 Samsung Support',
-    (SELECT id FROM sasms.users WHERE email = 'admin@sasms.local' OR id = '00000000-0000-4000-8000-000000000001' LIMIT 1),
-    now(), true
-);
-
--- Profile LG_GENERIC: 3 digits + 4 letters + 5 digits, optional IMEI
-INSERT INTO sasms.identifier_rules (
-    brand_id, version, serial_pattern, imei_required,
-    source_reference, approved_by, approved_at, is_active
-) VALUES (
-    '00000000-0000-4000-8000-000000000022', 1, '^[0-9]{3}[A-Z]{4}[0-9]{5}$', false,
-    'D35 Profile LG_GENERIC; SRC-03 LG Support',
-    (SELECT id FROM sasms.users WHERE email = 'admin@sasms.local' OR id = '00000000-0000-4000-8000-000000000001' LIMIT 1),
-    now(), true
-);
-
--- Profile APPLE_SERIAL_IMEI: 10-12 uppercase alphanumeric characters, IMEI required (15 digits)
-INSERT INTO sasms.identifier_rules (
-    brand_id, version, serial_pattern, imei_required,
-    source_reference, approved_by, approved_at, is_active
-) VALUES (
-    '00000000-0000-4000-8000-000000000023', 1, '^[A-Z0-9]{10,12}$', true,
-    'D35 Profile APPLE_SERIAL_IMEI; SRC-04 Apple Support, SRC-05 GSMA TS.06',
-    (SELECT id FROM sasms.users WHERE email = 'admin@sasms.local' OR id = '00000000-0000-4000-8000-000000000001' LIMIT 1),
-    now(), true
-);
-
+CREATE TEMP TABLE requested_profile ON COMMIT DROP AS SELECT
+ :'product_id'::uuid product_id, :'profile_code'::text profile_code,
+ :'requires_imei'::boolean requires_imei, :'approved_by'::uuid approved_by,
+ :'approved_at'::timestamptz approved_at, :'source_reference'::text source_reference;
+SELECT p.id FROM sasms.products p JOIN requested_profile r ON r.product_id=p.id FOR UPDATE;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM sasms.products p JOIN requested_profile r ON r.product_id=p.id) THEN
+  RAISE EXCEPTION 'Explicit SKU does not exist' USING ERRCODE='23503';
+ END IF;
+ PERFORM sasms.assert_permission(r.approved_by,'catalog.write',NULL) FROM requested_profile r;
+ IF EXISTS(SELECT 1 FROM sasms.product_identifier_profiles p JOIN requested_profile r USING(product_id)
+  WHERE (p.profile_code,p.requires_imei,p.approved_by,p.approved_at,p.source_reference)
+   IS DISTINCT FROM (r.profile_code,r.requires_imei,r.approved_by,r.approved_at,r.source_reference)) THEN
+  RAISE EXCEPTION 'Different approved SKU profile exists; use a reviewed versioned change' USING ERRCODE='23514';
+ END IF;
+END $$;
+INSERT INTO sasms.product_identifier_profiles
+ (product_id,profile_code,requires_imei,approved_by,approved_at,source_reference)
+SELECT product_id,profile_code,requires_imei,approved_by,approved_at,source_reference
+FROM requested_profile WHERE NOT EXISTS(
+ SELECT 1 FROM sasms.product_identifier_profiles p WHERE p.product_id=requested_profile.product_id);
 COMMIT;
-

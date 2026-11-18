@@ -1,5 +1,8 @@
 # DS1 — Thiết kế và bàn giao DB Sprint 1
 
+> Bản S1 dưới đây là snapshot V001/V002, **39 bảng**. Hiện hành V003…V005 có **41 bảng**, Serial raw/case-sensitive, IMEI/Luhn/multi-slot và role BA; dùng D35 DB/runbook Sprint 2. validate_sprint1 kiểm tới V002; không dùng uppercase cũ làm hợp đồng mới.
+
+
 | Thuộc tính | Nội dung |
 |---|---|
 | Phụ trách | Trần Trung Kiên — Architect / DBA |

@@ -1,66 +1,66 @@
 {
-  "started_at_utc": "2026-11-13T16:14:15.913461+00:00",
+  "started_at_utc": "2026-11-17T01:04:48.764377+00:00",
   "status": "passed",
   "checks": {
     "PostgreSQL16 version": {
       "passed": true,
-      "seconds": 0.1145
+      "seconds": 0.0361
     },
     "schema presence": {
       "passed": true,
-      "seconds": 0.0919
+      "seconds": 0.0352
     },
     "schema apply": {
       "passed": true,
-      "seconds": 0.4754
+      "seconds": 0.9201
     },
     "seed first apply": {
       "passed": true,
-      "seconds": 0.1408
+      "seconds": 0.0885
     },
     "table names": {
       "passed": true,
-      "seconds": 0.0651
+      "seconds": 0.0482
     },
     "seed snapshot": {
       "passed": true,
-      "seconds": 0.2184
+      "seconds": 0.0566
     },
     "seed second apply": {
       "passed": true,
-      "seconds": 0.0962
+      "seconds": 0.0672
     },
     "constraint and lifecycle assertions": {
       "passed": true,
-      "seconds": 0.2262
+      "seconds": 0.1433
     },
     "runtime role provisioning": {
       "passed": true,
-      "seconds": 0.0811
+      "seconds": 0.0515
     },
     "runtime ACL assertions": {
       "passed": true,
-      "seconds": 0.1447
+      "seconds": 0.0646
     },
     "race receive fixture": {
       "passed": true,
-      "seconds": 0.1905
+      "seconds": 0.0482
     },
     "race cart fixtures": {
       "passed": true,
-      "seconds": 0.12
+      "seconds": 0.0542
     },
     "race stock ownership": {
       "passed": true,
-      "seconds": 0.1534
+      "seconds": 0.0579
     },
     "race winner checkout rollback": {
       "passed": true,
-      "seconds": 0.1351
+      "seconds": 0.0493
     },
     "race exact fixture cleanup": {
       "passed": true,
-      "seconds": 0.122
+      "seconds": 0.056
     }
   },
   "source_sha256": {
@@ -73,8 +73,8 @@
     "database/tests/runtime_acl.sql": "bcbacf0f12fb194aaa9df58ade1cad029d53a5455ddd75ad8ca4cf2597866d08"
   },
   "postgresql": {
-    "version": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
-    "version_num": 160015
+    "version": "PostgreSQL 16.16 (Debian 16.16-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "version_num": 160016
   },
   "seed_idempotency": {
     "passed": true,
@@ -100,5 +100,5 @@
     }
   },
   "fixtures_cleaned": true,
-  "finished_at_utc": "2026-11-13T16:14:19.557002+00:00"
+  "finished_at_utc": "2026-11-17T01:04:51.581497+00:00"
 }

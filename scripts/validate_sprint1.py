@@ -58,6 +58,8 @@ class Sprint1Validator(BaseValidator):
             command += ["--dsn", self.args.dsn]
         if directory:
             command += ["--migrations-dir", str(directory)]
+        else:
+            command += ["--target-version", "2"]
         return command
 
     def migrate(self, label, directory=None, expect_failure=None):
@@ -86,7 +88,7 @@ class Sprint1Validator(BaseValidator):
         source = ROOT/"database/migrations"
         with tempfile.TemporaryDirectory(prefix="sasms-s1-migration-probe-") as tmp:
             directory = Path(tmp)
-            for path in source.glob("V*.sql"):
+            for path in source.glob("V00[12]__*.sql"):
                 shutil.copy2(path, directory/path.name)
             first = sorted(directory.glob("V*.sql"))[0]
             with first.open("a", encoding="utf-8", newline="\n") as stream:
@@ -94,7 +96,7 @@ class Sprint1Validator(BaseValidator):
             self.migrate("changed applied migration is rejected", directory, expect_failure="checksum")
         with tempfile.TemporaryDirectory(prefix="sasms-s1-atomic-probe-") as tmp:
             directory = Path(tmp)
-            paths = sorted(source.glob("V*.sql"))
+            paths = sorted(source.glob("V00[12]__*.sql"))
             for path in paths:
                 shutil.copy2(path, directory/path.name)
             version = max(int(re.match(r"V(\d+)__", path.name).group(1)) for path in paths)+1

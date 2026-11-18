@@ -7,21 +7,21 @@
 | Hạng mục | Bản hiện có / phần bổ sung | Kết luận kỹ thuật |
 |---|---|---|
 | D50 kiến trúc | [D50](../D50-kien-truc-he-thong.md), [căn cứ bổ sung](D50-D54-bo-sung-can-cu-va-kiem-soat.md) | Giữ sơ đồ/thiết kế đã có; D22 hiện đã tìm thấy và được dẫn liên kết |
-| D51 thiết kế DB | [D51](../D51-thiet-ke-co-so-du-lieu.md), [rà soát bổ sung](D51-bo-sung-ra-soat-thiet-ke.md) | Dùng lại bản 37 bảng; hoàn thiện truy vết nguồn–ràng buộc–test và điểm quyết định |
+| D51 thiết kế DB | [D51](../D51-thiet-ke-co-so-du-lieu.md), [thiết kế và truy vết](../D51-thiet-ke-co-so-du-lieu.md) | Dùng lại bản 37 bảng; hoàn thiện truy vết nguồn–ràng buộc–test và điểm quyết định |
 | D57 SQL/DBML | [SQL](../../../database/schema.sql), [DBML](../../../database/schema.dbml), [ERD](../../../database/erd.mmd), [summary](../../../database/evidence/summary.json) | “ĐÃ CÓ” theo workbook; giữ nguyên mã, test và log cũ |
-| D54 bảo mật | [D54](../D54-bao-mat-phan-quyen.md), [đối chiếu phiên bản](D50-D54-bo-sung-can-cu-va-kiem-soat.md) | Giữ ma trận đã soạn; cần BA/PM quyết định danh sách role và quyền nghiệp vụ |
+| D54 bảo mật | [D54](../D54-bao-mat-phan-quyen.md), [đối chiếu phiên bản](D50-D54-bo-sung-can-cu-va-kiem-soat.md) | D34 đã chốt chín role; D54/V005 phản ánh quyền, alias lịch sử và scope; ký nghiệm thu vẫn thuộc người có thẩm quyền |
 | D22 môi trường | [D22 tiền Sprint](../../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) | Đã có hồ sơ và công cụ; không còn là đầu vào thất lạc |
-| D34/FRS_V2 | Chưa tìm thấy trong repo cập nhật | Cần Huy cung cấp để xác nhận đủ yêu cầu trước ký baseline |
-| D35 định dạng hãng | [Hợp đồng kỹ thuật Sprint 1](../../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) chỉ là đề xuất | Cần nguồn/quy tắc được BA/kho xác nhận; không coi hợp đồng kỹ thuật là quy tắc hãng đã duyệt |
+| D34/FRS_V2 | Đã có D34_FRS_V2_SASMS.docx của BA | Đối chiếu FR-01, BR-01/03 và AC; hoàn thành DB không tự chứng minh API/E2E hoặc chữ ký gate |
+| D35 định danh | D35 BA và [hợp đồng DB](../../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) | V003 hiện thực raw/case/128, Luhn và IMEI phụ; profile chỉ theo SKU được duyệt, không suy regex toàn hãng |
 | D70 và các phần QA/PO | Chưa có artifact đầy đủ thuộc người làm chính trong gói DB | PM/QA/PO đối chiếu phần của mình; không ghi đạt thay họ |
 
 ## 2. Cách đọc bằng chứng
 
 Baseline Sprint 0 đã có 56 assertions ràng buộc/lifecycle, 7 assertions quyền SQL, seed lặp trên 37 bảng, tranh chấp hai phiên giữ cùng thiết bị và lookup dữ liệu giả 100.000 thiết bị. Lượt đối chiếu hiện tại xác minh hash nguồn vẫn khớp [summary](../../../database/evidence/summary.json); không chạy lại hay thay log thành một lượt test mới khi nguồn không đổi.
 
-Bằng chứng restore 40 kiểm tra và các run CI trong [hồ sơ tiền Sprint](../../../Ti%E1%BB%81n%20Sprint/DB/evidence) được bổ sung sau đó. Chúng chứng minh những source hash/commit tương ứng, không phải biên bản M1 hoặc số đo camera/HTTP/availability. Các đầu ra Sprint 1 được tách riêng khỏi baseline Sprint 0.
+Bằng chứng restore hiện hành 41 kiểm tra trên schema41 bảng và các run CI trong [hồ sơ tiền Sprint](../../../Ti%E1%BB%81n%20Sprint/DB/evidence) được bổ sung sau đó. Chúng chứng minh những source hash/commit tương ứng, không phải biên bản M1 hoặc số đo camera/HTTP/availability. Các đầu ra Sprint 1 được tách riêng khỏi baseline Sprint 0.
 
-[Biên mục đối chiếu](doi-chieu-sprint-0.json) lưu hash các artifact được giữ, workbook dùng để quyết định, nhánh `DB` và những file bổ sung. Người review có thể kiểm lại chính sách giữ/bổ sung theo từng mục.
+Truy vết yêu cầu giữ trong D51/CSV; hash SQL và kết quả thực chạy nằm trong summary của từng phiên bản. Không dùng biên mục rà soát riêng thay hợp đồng và bằng chứng bàn giao.
 
 ## 3. Điều kiện ký và chuyển giao
 

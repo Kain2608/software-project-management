@@ -1,5 +1,8 @@
 # S0-19 / S0-22 / S0-23 — Hợp đồng bàn giao DB cho API, AI và tích hợp
 
+> Hợp đồng S0/V002 bên dưới là lịch sử. Hiện hành V003: raw/case/128/Luhn/IMEI phụ; V004: quyền/deadline POS10m/ONLINE30m/PENDING; V005: role BA. Dùng D35 DB và DS2 DB khi tích hợp mới.
+
+
 | Thuộc tính | Nội dung |
 |---|---|
 | Người đóng góp | Trần Trung Kiên — Architect / DBA |

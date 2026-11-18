@@ -1,6 +1,6 @@
 # D22 — Môi trường và CI/CD Sprint 2
 
-S2-12, phụ trách **Trần Trung Kiên**, phối hợp **Vũ Duy Thái**. Hạn kế hoạch 20/10/2026, 16 giờ ước lượng; rà soát thực tế 13/11/2026. Trạng thái: có kiểm chứng DB/readiness trong repo; **chưa có bằng chứng deploy Staging thật**.
+S2-12, phụ trách **Trần Trung Kiên**, phối hợp **Vũ Duy Thái**. Hạn kế hoạch 20/10/2026, 16 giờ ước lượng; cập nhật kỹ thuật 17/11/2026. Trạng thái: có kiểm chứng DB/readiness trong repo; **chưa có bằng chứng deploy Staging thật**.
 
 ## 1. Kế thừa kế hoạch môi trường
 
@@ -33,13 +33,13 @@ Các lệnh `psql` phải có `-X -v ON_ERROR_STOP=1`, runner kiểm return code
 
 Artifact kiểm chứng DB gồm `summary.json`, `validation.log` và regression Sprint 1/baseline. Báo cáo phải gắn với SHA/run đã chạy; chưa có URL GitHub Actions mới trong hồ sơ này. Các run Sprint 0/1 cũ trong D22 tiền Sprint không chứng minh Sprint 2 đã qua CI.
 
-Đã chạy local trên PostgreSQL **16.15**, **13/11/2026, 23:14:15–23:14:31 (UTC+7)**: 33 assertions Sprint 2, 76 Sprint 1, 56 ràng buộc và 7 ACL Sprint 0 đạt; xem [summary](../../database/evidence/sprint2/summary.json). Hai [failure probes CLI trên bản sao nguồn](../../database/evidence/sprint2/ci-failure-probes.json) gây lỗi SQL `42703` và lỗi assertion đều trả CLI 1, psql 3, summary failed; DDL extension rollback khi lỗi. Kết quả này kiểm đường truyền lỗi local, không tự tạo một run GitHub Actions hoặc bằng chứng Staging.
+Đã chạy local trên PostgreSQL **16.16**, **17/11/2026**: 33 assertions Sprint 2 và 43 D34/D35, 76 Sprint 1, 56 ràng buộc và 7 ACL Sprint 0 đạt; xem [summary](../../database/evidence/sprint2/summary.json). Hai [failure probes CLI trên bản sao nguồn](../../database/evidence/sprint2/ci-failure-probes.json) gây lỗi SQL `42703` và lỗi assertion đều trả CLI 1, psql 3, summary failed; DDL extension rollback khi lỗi. Kết quả này kiểm đường truyền lỗi local, không tự tạo một run GitHub Actions hoặc bằng chứng Staging.
 
 [Readiness probes local](../../database/evidence/sprint2/ci-readiness-probes.json) đã thực thi đoạn Python workflow với kết quả success/failure/cancelled/skipped mô phỏng: trạng thái READY_FOR_STAGING/FAILED/CANCELLED/BLOCKED tương ứng, exit 0/1/1/1 và `NOT_DEPLOYED` trong mọi ca. Ngữ cảnh GitHub của probe là dữ liệu mô phỏng, không phải run hosted.
 
 ## 3. Nâng cấp và kiểm thử
 
-Database thử mới: baseline/seed/runtime S0 → regression → V001/V002 → runtime S1 → SQL Sprint 2 → ACL/authorization/concurrency/stock. Chi tiết lệnh tại [runbook Sprint 2](../../database/sprint2/README.md). File extension Sprint 2 chưa được ghi vào ledger V001/V002; giữ đúng source/hash đã kiểm, không sửa migration cũ để giả lịch sử.
+Database thử mới: baseline/seed/runtime S0 → regression → V001/V002 → regression S1 → V003…V005 → runtime S1 → SQL Sprint 2 → ACL/authorization/concurrency/stock. Chi tiết lệnh tại [runbook Sprint 2](../../database/sprint2/README.md). Năm migration V001…V005 có ledger; extension S2 quản lý theo source hash; giữ đúng source/hash đã kiểm, không sửa migration cũ để giả lịch sử.
 
 Database có dữ liệu: backup và thử trên bản sao trước; chỉ áp dụng migration còn thiếu rồi SQL Sprint 2 bằng owner/migrator trong transaction. Không chạy lại baseline/seed lên DB đã nâng cấp vì seed có thể khôi phục grant bị thu hồi có chủ ý. Không chạy validator tạo fixture bằng owner trên Prod/Staging có dữ liệu nghiệp vụ.
 
@@ -56,3 +56,5 @@ Theo workbook, S2-12 cần **log GitHub Actions deploy Staging thành công**. R
 5. Phát chạy test ứng dụng và lưu D76/D79; Huy/An xác nhận theo thẩm quyền, lưu run URL/commit/deploy log.
 
 Mục tiêu RPO/RTO và lịch backup tiếp tục theo D22 tiền Sprint, chờ chủ hệ thống chốt. Không còn dùng số “restore < 10 giây” từ bản cũ vì không có phép đo Staging tương ứng. Lỗi DDL đang áp dụng phải rollback transaction; sau commit xử lý bằng thay đổi đã review và đối soát, không xóa schema/dữ liệu nghiệp vụ để thử lại.
+
+Các CLI/readiness probes lưu ngày13/11 là bằng chứng lịch sử theo hash riêng. Lượt mới kiểm fail propagation ngay trong validator và bổ sung catalog41 bảng, raw/case/Luhn, lease/PENDING, vai trò BA; không coi probe cũ là run hosted hoặc source mới.

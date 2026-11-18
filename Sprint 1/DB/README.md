@@ -1,5 +1,8 @@
 # Sprint 1 — Phần DB của Trần Trung Kiên
 
+> Bản S1 dưới đây là snapshot V001/V002, **39 bảng**. Hiện hành V003…V005 có **41 bảng**, Serial raw/case-sensitive, IMEI/Luhn/multi-slot và role BA; dùng D35 DB/runbook Sprint 2. validate_sprint1 kiểm tới V002; không dùng uppercase cũ làm hợp đồng mới.
+
+
 Nhánh thực hiện: **`Kien`**. Kỳ Sprint trong phân công: **27/09–10/10/2026**. Ngày thực hiện bộ bàn giao này: **07/11/2026**; ngày Sprint không được dùng thay ngày ký hoặc ngày chạy kiểm chứng thực tế.
 
 Phần DB gồm nâng cấp từ baseline Sprint 0, danh mục/SKU, định danh Serial/IMEI, nhập kho theo lô và users/roles. Backend đăng nhập JWT, HTTP CRUD, giao diện và quét camera vẫn thuộc đầu việc ứng dụng tương ứng.
@@ -45,8 +48,8 @@ Theo “Theo người”, dòng 25, Kiên hỗ trợ đúng tám đầu việc:
 
 Thực hiện theo [hướng dẫn DB](../../database/README.md), trên database thử riêng. Có thể xem tham số runner bằng `python scripts/migrate_db.py --help` và `python scripts/validate_sprint1.py --help`. Mỗi migration đã áp dụng phải khớp checksum; chạy lại không áp dụng lần hai. Không sửa file migration đã áp dụng hoặc dùng schema initial để ghi đè database đang có.
 
-Lần kiểm chứng **07/11/2026, 11:57:57–11:58:12 (UTC+7)** đã đạt trên **PostgreSQL 16.15**: baseline 56 assertions nghiệp vụ + 7 assertions quyền, nâng cấp giữ 112 dòng của 37 bảng cũ và **76 assertions Sprint 1**. Hai migration chạy lại no-op; sửa checksum bị từ chối; lỗi migration chờ áp dụng rollback toàn bộ thay đổi và ledger. Cả ba ca hai phiên nhập đồng thời đạt: cùng Serial hoặc IMEI chỉ một nhập thành công; cùng request key trả cùng ID và chỉ có một batch. Fixtures được cleanup và nội dung 39 bảng khớp snapshot trước test.
+Kiểm regression lịch sử ngày **17/11/2026** trên **PostgreSQL16.16**, ghim tới V002: **56 + 7 ACL baseline**, **76 assertions S1**, giữ 112 dòng của 37 bảng cũ, reapply/checksum/rollback và ba ca hai phiên nhập đạt. Snapshot S1 vẫn 39 bảng; hợp đồng hiện hành V003…V005 được kiểm riêng trong Sprint2.
 
 [summary.json](../../database/evidence/sprint1/summary.json) lưu hash nguồn/kết quả; [validation.log](../../database/evidence/sprint1/validation.log) lưu đầu ra thực tế. Provision runtime và demo DB đã đạt; [kiểm tra parser](../../database/evidence/sprint1/artifacts-validation.json) xác nhận DBML 39 bảng/67 FK và ERD hợp lệ.
 
-Kiểm tra quyền trong hàm Sprint 1 hiện áp dụng cho **catalog và nhập kho**. Việc gia cố các hàm POS kế thừa không thuộc increment này; backend vẫn phải xác thực JWT và kiểm quyền cho mọi endpoint. Local test không chứng minh đã chạy trên Staging, PR đã merge, HTTP/JWT/E2E đã đạt hoặc PO đã ký. Các điểm thiếu nguồn D34/FRS_V2, D35 theo từng hãng và danh sách 9 business role được ghi trong hồ sơ để BA/PM xác nhận.
+Kiểm tra quyền trong hàm Sprint 1 hiện áp dụng cho **catalog và nhập kho**. Việc gia cố các hàm POS kế thừa không thuộc increment này; backend vẫn phải xác thực JWT và kiểm quyền cho mọi endpoint. Local test không chứng minh đã chạy trên Staging, PR đã merge, HTTP/JWT/E2E đã đạt hoặc PO đã ký. D34/D35 BA đã có; V003…V005 bổ sung định danh, lease và role. QA/PO/PM vẫn xác nhận nghiệm thu theo log/commit tương ứng.

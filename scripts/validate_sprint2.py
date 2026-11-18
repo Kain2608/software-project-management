@@ -39,6 +39,14 @@ class Sprint2Validator(BaseValidator):
         self.summary['concurrency'] = []
 
     def prior_sprints(self):
+        presence, _ = self.run('migration ledger presence', sql="SELECT to_regclass('sasms_meta.schema_migrations') IS NOT NULL")
+        if presence == 't':
+            version, _ = self.run('current migration version', sql='SELECT coalesce(max(version),0) FROM sasms_meta.schema_migrations')
+            if int(version) > 2:
+                if self.args.apply:
+                    raise RuntimeError('--apply requires an empty isolated database')
+                self.summary['prior_sprints'] = {'skipped': 'Already upgraded beyond V002; frozen Sprint 0/1 checks require a separate database'}
+                return
         command = [sys.executable, str(ROOT/'scripts/validate_sprint1.py'),
                    '--psql', self.args.psql, '--evidence-dir',
                    str(self.args.evidence_dir/'sprint1-regression')]
@@ -59,6 +67,59 @@ class Sprint2Validator(BaseValidator):
             'sprint0_regression': prior['baseline_regression'],
             'migration_safety': prior['migration_safety'],
         }
+
+    def current_upgrade(self):
+        version, _ = self.run('migration version before current upgrade', sql='SELECT coalesce(max(version),0) FROM sasms_meta.schema_migrations')
+        actor, request = str(uuid.uuid4()), str(uuid.uuid4())
+        serial = 'Legacy-' + uuid.uuid4().hex
+        upgrading = int(version) < 3
+        if upgrading:
+            output, _ = self.run('legacy payload fixture before V003', sql=f"""
+BEGIN;
+INSERT INTO sasms.users(id,email,full_name,is_active) VALUES('{actor}','{actor}@example.invalid','Synthetic migration actor',true);
+INSERT INTO sasms.user_roles(user_id,role_code,store_id) VALUES('{actor}','ADMIN',NULL),('{actor}','WAREHOUSE',NULL);
+SELECT to_json(sasms.receive_device_batch('{RECEIPT_ITEM}','{request}',
+ '[{{"serial":"{serial}","imei":"123456789012345"}}]'::jsonb,'{actor}'));
+COMMIT;
+""")
+            old_ids = json.loads(next(line for line in output.splitlines() if line.startswith('[')))
+        command = [sys.executable, str(ROOT/'scripts/migrate_db.py'), '--psql', self.args.psql]
+        if self.args.dsn:
+            command += ['--dsn', self.args.dsn]
+        for label in ('current migrations apply', 'current migrations checksum verification and noop'):
+            result = subprocess.run(command,cwd=ROOT,env=self.env,capture_output=True,text=True,encoding='utf-8',timeout=180)
+            self.log(f'\n=== {label} ===\n{result.stdout}{result.stderr}')
+            if result.returncode:
+                raise RuntimeError(label+' failed')
+        if upgrading:
+            before = self.snapshot()
+            output, _ = self.run('legacy receipt retry after V003', sql=f"""
+SELECT to_json(sasms.receive_device_batch('{RECEIPT_ITEM}','{request}',
+ '[{{"serial":"{serial}","imei":"123456789012345"}}]'::jsonb,'{actor}'));
+""")
+            if json.loads(output) != old_ids or self.snapshot() != before:
+                raise RuntimeError('Legacy retry changed identifiers or duplicated effects')
+            output, _ = self.run('legacy source preserved without invented raw data', sql=f"""
+SELECT serial=upper('{serial}') AND serial_raw IS NULL AND EXISTS(
+ SELECT 1 FROM sasms.device_identifiers i WHERE i.device_id=d.id AND i.kind='IMEI' AND i.legacy_unverified)
+FROM sasms.devices d WHERE id='{old_ids[0]}';
+""")
+            if output != 't':
+                raise RuntimeError('Legacy identifiers were rewritten or falsely certified')
+            self.run('exact legacy upgrade fixture cleanup', sql=f"""
+BEGIN;
+DELETE FROM sasms.inventory_import_batches WHERE request_key='{request}';
+DELETE FROM sasms.inventory_movements WHERE actor_id='{actor}';
+DELETE FROM sasms.audit_logs WHERE actor_id='{actor}';
+DELETE FROM sasms.outbox_events WHERE aggregate_id='{old_ids[0]}';
+DELETE FROM sasms.devices WHERE id='{old_ids[0]}';
+DELETE FROM sasms.user_roles WHERE user_id='{actor}';
+DELETE FROM sasms.users WHERE id='{actor}';
+COMMIT;
+""")
+        self.summary['current_upgrade'] = {'version': 5, 'business_tables': 41,
+            'legacy_payload_retry_verified': upgrading,
+            'historical_raw_not_invented': upgrading, 'migration_reapply_verified': True}
 
     def failure_detection(self):
         # Exercise the exact -f / ON_ERROR_STOP command used for real SQL files.
@@ -272,8 +333,12 @@ COMMIT;
                    Path('scripts/validate_sprint1.py'), Path('.github/workflows/sprint2-staging.yml'),
                    Path('database/sprint2/realtime_stock_and_locking.sql'),
                    Path('database/tests/sprint2/test_sprint2_concurrency_and_stock.sql')]
+        sources += [Path('scripts/migrate_db.py'), Path('scripts/provision_d35_rules.sql'),
+                    Path('database/tests/sprint2/identifiers_and_leases.sql')]
+        sources += [p.relative_to(ROOT) for p in sorted((ROOT/'database/migrations').glob('V*.sql'))]
         self.summary['source_sha256'] = {p.as_posix(): hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in sources}
         self.prior_sprints()
+        self.current_upgrade()
         self.failure_detection()
         output, _ = self.run('captured payment guard initially enabled', sql=(
             "SELECT tgenabled='O' FROM pg_trigger WHERE tgrelid='sasms.payments'::regclass "
@@ -290,6 +355,11 @@ COMMIT;
         self.summary['assertions'] = len(re.findall(r'PASS: ', notices))
         if self.summary['assertions'] < 25 or self.snapshot() != before:
             raise RuntimeError('Sprint2 assertions did not run completely or leaked fixtures')
+        _, notices = self.run('D34 D35 identifier and lease regression',
+                              file='database/tests/sprint2/identifiers_and_leases.sql')
+        self.summary['identifier_lease_assertions'] = len(re.findall(r'PASS: ', notices))
+        if self.summary['identifier_lease_assertions'] < 35 or self.snapshot() != before:
+            raise RuntimeError('Identifier/lease regression did not run completely or leaked fixtures')
         for outcome in ('commit', 'rollback'):
             self.concurrent_pos(outcome)
             if self.snapshot() != before:

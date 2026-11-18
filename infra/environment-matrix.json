@@ -5,12 +5,16 @@
   "implemented_toolchain": {
     "database_major": 16,
     "python_minimum": "3.10",
-    "clients": ["psql", "pg_dump", "pg_restore"],
-    "application_backend": "pending Dev Lead choice; no deployed application in current repository"
+    "clients": [
+      "psql",
+      "pg_dump",
+      "pg_restore"
+    ],
+    "application_backend": "Current source: Java 25 / Spring Boot 4.1.1, React/Vite; remote deployment and application acceptance remain pending"
   },
   "environments": {
     "dev": {
-      "source": "feature branches including Kien",
+      "source": "DB work branch; integrate from origin/main and push to origin/DB",
       "database": "isolated developer database, PostgreSQL 16",
       "network": "127.0.0.1 only",
       "data": "synthetic fixtures",
