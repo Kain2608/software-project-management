@@ -21,6 +21,7 @@ public class JdbcReceiptDataAccess implements ReceiptDataAccess {
                 i.product_id,
                 od.device_id,
                 d.serial,
+                d.qr_token,
                 i.unit_price
             FROM sasms.sales_orders o
             LEFT JOIN sasms.sales_order_items i ON i.order_id = o.id
@@ -64,11 +65,13 @@ public class JdbcReceiptDataAccess implements ReceiptDataAccess {
                     do {
                         UUID productId = resultSet.getObject("product_id", UUID.class);
                         UUID deviceId = resultSet.getObject("device_id", UUID.class);
+                        UUID qrToken = resultSet.getObject("qr_token", UUID.class);
                         if (productId != null && deviceId != null) {
                             items.add(new ReceiptLineRecord(
                                     productId,
                                     deviceId,
                                     resultSet.getString("serial"),
+                                    qrToken,
                                     resultSet.getBigDecimal("unit_price")));
                         }
                         UUID rowOrderId = resultSet.getObject("order_id", UUID.class);
