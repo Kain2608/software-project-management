@@ -68,7 +68,7 @@ export default function CrossSellWidget({ accessToken, storeId, warehouseId, car
                 title="Chỉ chuyển đề xuất đã đối chiếu cho luồng xác minh giỏ hàng; không tự ghi đơn hàng"
                 onClick={() => onReviewSuggestion?.({ ...item, requiresServerValidation: true })}
               >
-                Xem để thêm
+                + Thêm vào giỏ
               </button>
             </li>
           ))}

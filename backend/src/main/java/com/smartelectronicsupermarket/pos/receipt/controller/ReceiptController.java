@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.smartelectronicsupermarket.common.web.ResourceNotFoundException;
 import com.smartelectronicsupermarket.common.web.TrustedActorAccess;
+import com.smartelectronicsupermarket.pos.receipt.data.ReceiptLineRecord;
 import com.smartelectronicsupermarket.pos.receipt.data.ReceiptRecord;
 import com.smartelectronicsupermarket.pos.receipt.dto.ReceiptItemResponse;
 import com.smartelectronicsupermarket.pos.receipt.dto.ReceiptResponse;
@@ -32,6 +33,13 @@ public class ReceiptController {
         ReceiptRecord receipt = service
                 .findPaidReceipt(TrustedActorAccess.actorId(authentication), orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Receipt was not found"));
+        String lookupQrToken = receipt.items().stream()
+                .map(ReceiptLineRecord::qrToken)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .map(token -> "SASMS:DEVICE:" + token)
+                .orElse(null);
+
         return new ReceiptResponse(
                 receipt.orderId(),
                 receipt.items().stream()
@@ -44,7 +52,7 @@ public class ReceiptController {
                 "VND",
                 toMinor(receipt.totalAmount()),
                 receipt.paidAt(),
-                null);
+                lookupQrToken);
     }
 
     private static long toMinor(BigDecimal amount) {

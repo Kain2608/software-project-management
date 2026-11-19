@@ -827,3 +827,100 @@ Bổ sung test suite tích hợp `Sprint2OrderPostgreSqlIntegrationTest.java` (7
 - **Frontend Test Suite**: `npm test` $\rightarrow$ **47 tests run: 0 failures, 0 skipped** (PASS 100%).
 - **Frontend Production Build**: `npm run build` $\rightarrow$ **Vite build SUCCESS** (332 modules).
 - **Code Hygiene**: `git diff --check` $\rightarrow$ Không có lỗi khoảng trắng hay định dạng thừa.
+
+## 19. Báo cáo Nghiệm thu Hoàn tất TV4 Sprint 2 (feat/tv4-s2-closeout)
+
+**Thời điểm nghiệm thu:** 19/11/2026
+**Nhánh triển khai:** `feat/tv4-s2-closeout` (phân nhánh từ `origin/main` sau khi merge PR #28 và PR #29)
+**Mục tiêu hoàn tất:** Khép lại toàn diện các hạng mục TV4 trong Sprint 2: S2-02 (POS Checkout), S2-04 (Hóa đơn & QR bảo hành), S2-09 (Tích hợp AI POS).
+
+### 19.1 Chi tiết Triển khai Hạng mục TV4
+
+#### 1. S2-02: Quy trình Bán hàng POS Checkout Hoàn chỉnh (Order-First)
+- **Kiến trúc Server-Side Cash Payment**:
+  - Endpoint: `POST /api/v1/pos/orders/{orderId}/payments/cash` (`PosCashPaymentController`).
+  - Feature Flag: `sasms.features.pos-cash-payment-api.enabled=false` (mặc định tắt trong `application.properties` bảo vệ production).
+  - Xác thực & Phân quyền: Trích xuất `actorId` từ `TrustedActorAuthenticationToken`, xác minh quyền `sales.checkout` tại `store_id` của đơn hàng qua hàm CSDL `sasms.has_permission`. Từ chối nghiêm ngặt nếu thiếu token (401), sai actor hoặc không có quyền (403).
+  - Nghiệp vụ thanh toán:
+    - Kiểm tra trạng thái đơn hàng bắt buộc phải là `RESERVED` trước khi thu tiền.
+    - Đối chiếu số tiền thu: Số tiền thu thực tế phải khớp chính xác `total_amount` của đơn hàng, ngăn ngừa thu thiếu/thừa tiền.
+    - Lưu bản ghi thanh toán vào bảng `sasms.payments` với `status = 'CAPTURED'`, `method = 'CASH'`, `confirmed_by = actorId`, `captured_at = now()`.
+    - Gọi hàm nguyên tử `sasms.complete_sale(orderId, actorId)` của CSDL để chuyển trạng thái `sales_orders.status = 'PAID'`, cập nhật thiết bị sang `devices.status = 'SOLD'`, sinh số hóa đơn `RECEIPT-<order.code>`, ghi nhận biến động kho `inventory_movements` loại `SALE`, nhật ký `audit_logs` hành động `sales.checkout`, và phát sinh sự kiện outbox `outbox_events` loại `OrderPaid`.
+    - Hỗ trợ Replay Idempotent an toàn: Nếu đơn hàng đã ở trạng thái `PAID`, API trả về ngay thông tin thanh toán và hóa đơn hiện có mà không cố gắng chèn thêm bản ghi vào `payments` (tránh xung đột với trigger `guard_order_child`).
+- **Giao diện Frontend POS Checkout**:
+  - `PosCart.jsx`: Mở nút thanh toán ("Tiến hành thanh toán (VNĐ)") khi giỏ hàng có sản phẩm và đã chọn kho hợp lệ.
+  - `PosPage.jsx`: Tích hợp hộp thoại điều hướng đa bước (Checkout Dialog) trực quan:
+    1. **Tạo nháp (DRAFT)**: Gọi `POST /api/v1/pos/orders` với `Idempotency-Key` (UUIDv4) và giá authoritative từ Catalog.
+    2. **Gán Serial/IMEI**: Cho phép nhân viên quầy quét/nhập số Serial/IMEI cho từng dòng thiết bị và gọi `POST /api/v1/pos/orders/{orderId}/items/{orderItemId}/devices` để khóa thiết bị vào đơn nháp.
+    3. **Giữ hàng (RESERVE)**: Gọi `POST /api/v1/pos/orders/{orderId}/reserve` để xác nhận giữ hàng và thiết bị trong thời hạn 10 phút.
+    4. **Thu tiền mặt (CASH)**: Xác nhận số tiền mặt nhận từ khách và gọi `POST /api/v1/pos/orders/{orderId}/payments/cash`.
+    5. **Hóa đơn & QR**: Tự động tải hóa đơn từ server, hiển thị chi tiết thanh toán và mã QR bảo hành.
+
+#### 2. S2-04: Mẫu Hóa đơn POS và Mã QR Bảo hành
+- **Backend Receipt Service**:
+  - Mở rộng `ReceiptLineRecord` và `JdbcReceiptDataAccess` để truy vấn trực tiếp trường `devices.qr_token`.
+  - Cập nhật `ReceiptController`: Trả về trường `lookup_qr_token` với định dạng chuẩn hợp đồng bảo hành thiết bị: `"SASMS:DEVICE:" + qrToken`.
+- **Frontend Receipt & 80mm Printing**:
+  - Cập nhật cả hộp thoại thanh toán hoàn tất lẫn panel tra cứu hóa đơn độc lập (`PosPage.jsx`) để hiển thị khối "QR BẢO HÀNH THIẾT BỊ" rõ ràng, đi kèm mã lookup và hướng dẫn quét mã.
+  - Tối ưu hóa layout in nhiệt 80mm qua CSS `@media print` trong `posCart.css` và `app.css`: Khi mở hộp thoại in (`window.print()`), toàn bộ sidebar, topbar, giỏ hàng và các nút điều khiển được ẩn hoàn toàn; hóa đơn được căn chỉnh chuẩn bề ngang 72mm (chuẩn in giấy cuộn 80mm), phông chữ đơn cách (monospace), phân cách nét đứt rõ ràng và tương phản cao.
+
+#### 3. S2-09: Tích hợp Gợi ý AI Bán kèm (Cross-Selling)
+- **1-Click Thêm vào giỏ**:
+  - Trong `CrossSellWidget.jsx`, cập nhật nút hành động thành `+ Thêm vào giỏ`.
+  - Khi thu ngân bấm nút, sản phẩm gợi ý được thêm trực tiếp vào giỏ hàng cục bộ của POS mà không cần qua nhiều bước trung gian.
+- **Đối chiếu Nghiệp vụ Authoritative (Reconciliation)**:
+  - Trước khi hiển thị, gợi ý AI được đối chiếu nghiêm ngặt qua `aiPosApi.js` và `posCartApi.js` để đảm bảo: SKU tồn tại trong Catalog, đang active, có giá chuẩn (không dùng giá do LLM tự sinh), và số lượng tồn khả dụng tại đúng `warehouse_id` của phiên quầy lớn hơn 0.
+  - Khi tạo đơn DRAFT, server-side `PosOrderService` xác minh lại giá và tồn một lần nữa từ CSDL, đảm bảo gợi ý AI hoàn toàn không có khả năng tạo ra đơn hàng ảo hay sai lệch giá/tồn kho.
+
+---
+
+### 19.2 Kết quả Kiểm thử Toàn diện (Verification Evidence)
+
+1. **Kiểm thử Đơn vị Backend (Unit Tests)**:
+   - `PosPaymentServiceTest`: **8/8 tests PASS** (kiểm thử đầy đủ các nhánh: thanh toán thành công, actor thiếu quyền, actor null, sai trạng thái DRAFT/CANCELLED, số tiền âm, số tiền không khớp tổng đơn, replay đơn đã PAID).
+   - `PosCashPaymentDisabledFeatureFlagIntegrationTest`: **1/1 test PASS** (xác minh trả về 404/503 khi cờ `pos-cash-payment-api.enabled=false`).
+   - `PosCashPaymentSecurityIntegrationTest`: **6/6 tests PASS** (xác minh chặn 401 unauthenticated, chặn 403 khác store, chặn 403 không có quyền checkout, chấp thuận cashier hợp lệ).
+
+2. **Kiểm thử Tích hợp PostgreSQL 16 Cô lập trên Docker (`run_s2_order_it.ps1`)**:
+   - Chạy trên container `tv4_s2_order_it_db` (PostgreSQL 16.15) với đầy đủ baseline schema và 5 migrations của Kiên (V001–V005).
+   - Kết quả Surefire: **7/7 tests PASS, 0 failures, 0 errors, 0 skipped** (thời gian chạy ~5.7s).
+   - Test 7 (`reserveOrderDeviceHoldAndLease`) đã kiểm chứng trọn vẹn chu trình E2E trên CSDL thật:
+     - Tạo DRAFT order atomic qua API.
+     - Khóa thiết bị bằng Serial qua API device selection.
+     - Reserve đơn hàng và quản lý hold 10 phút.
+     - Thực hiện thanh toán tiền mặt qua API cash payment.
+     - Hậu kiểm trực tiếp CSDL: `sales_orders.status = 'PAID'`, `devices.status = 'SOLD'`, `payments` có 1 bản ghi `CAPTURED`, `invoices` có bản ghi `RECEIPT-IT-ORD-xxxx`.
+     - Gọi API Receipt và xác minh `lookup_qr_token` bắt đầu bằng `SASMS:DEVICE:`.
+     - Sử dụng token đó gọi API QR Device Lookup và xác minh trạng thái thiết bị là `SOLD` tại đúng kho hàng.
+
+3. **Toàn bộ Test Suite Backend (Maven)**:
+   - Lệnh: `.\mvnw.cmd test`
+   - Kết quả: **256 tests run: 0 failures, 0 errors, 16 skipped** (BUILD SUCCESS).
+
+4. **Kiểm thử Frontend (Node Test Runner)**:
+   - Bổ sung 4 unit tests mới trong `posApi.test.js` kiểm tra các API client: `createDraftOrder`, `selectDevice`, `reserveOrder`, `completeCashPayment`.
+   - Lệnh: `npm test`
+   - Kết quả: **51 tests run: 0 failures, 0 skipped** (PASS 100%).
+
+5. **Build Production Frontend (Vite)**:
+   - Lệnh: `npm run build`
+   - Kết quả: **332 modules transformed, built in ~3.7s, EXIT 0**.
+
+6. **Code Hygiene & Bảo mật**:
+   - Lệnh: `git diff --check` $\rightarrow$ Không có lỗi khoảng trắng thừa.
+   - Quét secret $\rightarrow$ Không chứa token, password, khóa bí mật hay credential hardcode. Tất cả kết nối IT dùng ephemeral credentials tự sinh và tự hủy trong phiên kiểm thử.
+
+---
+
+### 19.3 Đánh giá Tổng thể & Điều kiện Bàn giao
+
+| Hạng mục | Trạng thái | Đánh giá | Ghi chú nghiệm thu |
+|---|---|---|---|
+| **S2-02 (POS Checkout)** | **DONE** | Hoàn tất đầy đủ từ giỏ hàng, DRAFT, gán Serial, Reserve tới thu tiền mặt PAID | Cờ tính năng `pos-cash-payment-api.enabled` và `pos-order-api.enabled` mặc định `false`. |
+| **S2-04 (Hóa đơn & QR bảo hành)** | **DONE** | Hoàn tất API hóa đơn mang QR token `SASMS:DEVICE:...` và giao diện in nhiệt 80mm | Sẵn sàng cho máy in nhiệt POS tiêu chuẩn qua trình duyệt. |
+| **S2-09 (AI POS Integration)** | **DONE** | Hoàn tất nút 1-click `+ Thêm vào giỏ` với cơ chế đối chiếu Catalog/Stock nghiêm ngặt | An toàn tuyệt đối, không cho phép AI tự động chèn hàng sai lệch giá/tồn. |
+
+- **Yêu cầu Sign-off tiếp theo**:
+  - **BA / Product Owner**: Phê duyệt luồng trải nghiệm người dùng và quyết định bật cờ tính năng (`pos-cash-payment-api`, `pos-order-api`) trên môi trường UAT/Staging.
+  - **Security / Architect Lead**: Rà soát việc sử dụng hàm CSDL `sasms.complete_sale` dưới quyền `sasms_app` trong cấu hình runtime.
+- **Kết luận:** **READY FOR DRAFT PR**. Nhánh `feat/tv4-s2-closeout` đã hoàn tất 100% các cam kết kỹ thuật của TV4 Sprint 2.

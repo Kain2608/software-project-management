@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -155,6 +156,7 @@ class Sprint2OrderPostgreSqlIntegrationTest {
         registry.add("sasms.jwt.jwks-uri", () -> jwksUri);
         registry.add("sasms.features.pos-serial-api.enabled", () -> "true");
         registry.add("sasms.features.pos-order-api.enabled", () -> "true");
+        registry.add("sasms.features.pos-cash-payment-api.enabled", () -> "true");
     }
 
     private static synchronized void ensureJwksServerStarted() {
@@ -605,13 +607,14 @@ class Sprint2OrderPostgreSqlIntegrationTest {
         UUID orderItemId = UUID.fromString(draftNode.get("items").get(0).get("order_item_id").asString());
 
         // Attach device to order item via order_devices to satisfy reserve_order device count
-        UUID orderDeviceId = UUID.fromString("22222222-2222-4222-8222-000000000601");
-        jdbcTemplate.update(
-                """
-                INSERT INTO sasms.order_devices(id, order_item_id, order_id, product_id, device_id, active)
-                VALUES (?, ?, ?, ?, ?, true)
-                """,
-                orderDeviceId, orderItemId, orderId, PRODUCT_A_ID, DEVICE_A_1_ID);
+        // Test PosDeviceSelectionController selecting the device via serial
+        mockMvc.perform(post("/api/v1/pos/orders/{orderId}/items/{orderItemId}/devices", orderId, orderItemId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"store_id\": \"%s\", \"serial\": \"S2-SER-0001\"}".formatted(STORE_A_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.device_id").value(DEVICE_A_1_ID.toString()))
+                .andExpect(jsonPath("$.status").value("SELECTED"));
 
         // Call Reserve API
         mockMvc.perform(post("/api/v1/pos/orders/{id}/reserve", orderId)
@@ -638,6 +641,72 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order_id").value(orderId.toString()))
                 .andExpect(jsonPath("$.status").value("RESERVED"));
+
+        // Call Cash Payment API
+        String orderCode = draftNode.get("code").asText();
+        mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": 10000000.00}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order_id").value(orderId.toString()))
+                .andExpect(jsonPath("$.status").value("PAID"))
+                .andExpect(jsonPath("$.invoice_number").value("RECEIPT-" + orderCode))
+                .andExpect(jsonPath("$.amount").value(10000000.00))
+                .andExpect(jsonPath("$.payment_method").value("CASH"));
+
+        // Verify DB status transitioned to PAID and device to SOLD
+        String paidStatus = jdbcTemplate.queryForObject(
+                "SELECT status FROM sasms.sales_orders WHERE id = CAST(? AS uuid)",
+                String.class, orderId);
+        assertEquals("PAID", paidStatus);
+
+        String soldStatus = jdbcTemplate.queryForObject(
+                "SELECT status FROM sasms.devices WHERE id = CAST(? AS uuid)",
+                String.class, DEVICE_A_1_ID);
+        assertEquals("SOLD", soldStatus);
+
+        Integer paymentCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.payments WHERE order_id = CAST(? AS uuid) AND status = 'CAPTURED'",
+                Integer.class, orderId);
+        assertEquals(1, paymentCount);
+
+        Integer invoiceCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.invoices WHERE order_id = CAST(? AS uuid)",
+                Integer.class, orderId);
+        assertEquals(1, invoiceCount);
+
+        Integer movementCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM sasms.inventory_movements WHERE order_id = CAST(? AS uuid) AND kind = 'SALE'",
+                Integer.class, orderId);
+        assertEquals(1, movementCount);
+
+        // Calling cash payment again is idempotent
+        mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": 10000000.00}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order_id").value(orderId.toString()))
+                .andExpect(jsonPath("$.status").value("PAID"));
+
+        // Query Receipt: must return PAID receipt with masked serial and warranty lookup QR token
+        mockMvc.perform(get("/api/v1/pos/orders/{id}/receipt", orderId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order_id").value(orderId.toString()))
+                .andExpect(jsonPath("$.total_minor").value(10000000L))
+                .andExpect(jsonPath("$.items[0].serial_masked").value("****0001"))
+                .andExpect(jsonPath("$.lookup_qr_token").value("SASMS:DEVICE:22222222-2222-4222-8222-000000000411"));
+
+        // Query QR Device Lookup: must return the SOLD device
+        mockMvc.perform(post("/api/v1/devices/qr-lookup")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"payload\": \"SASMS:DEVICE:22222222-2222-4222-8222-000000000411\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.device_id").value(DEVICE_A_1_ID.toString()))
+                .andExpect(jsonPath("$.status").value("SOLD"));
     }
 
     private String validTokenFor(String subject) {
@@ -718,11 +787,18 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                     WHERE store_id IN (
                         '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
                     );
+                    DELETE FROM sasms.invoices WHERE order_id IN (
+                        SELECT id FROM sasms.sales_orders WHERE store_id IN (
+                            '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
+                        )
+                    );
+                    ALTER TABLE sasms.payments DISABLE TRIGGER guard_payments;
                     DELETE FROM sasms.payments WHERE order_id IN (
                         SELECT id FROM sasms.sales_orders WHERE store_id IN (
                             '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'
                         )
                     );
+                    ALTER TABLE sasms.payments ENABLE TRIGGER guard_payments;
                     DELETE FROM sasms.order_devices WHERE order_id IN (
                         SELECT id FROM sasms.sales_orders WHERE store_id IN (
                             '22222222-2222-4222-8222-000000000201', '22222222-2222-4222-8222-000000000202'

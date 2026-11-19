@@ -24,7 +24,7 @@ function cartMessage(error) {
   return 'Không thể cập nhật giỏ hàng với dữ liệu hiện tại.'
 }
 
-export default function PosCart({ accessToken, storeId, warehouseId, items, onItemsChange, message, onMessageChange }) {
+export default function PosCart({ accessToken, storeId, warehouseId, items, onItemsChange, message, onMessageChange, onCheckout }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searchState, setSearchState] = useState('idle')
@@ -197,8 +197,14 @@ export default function PosCart({ accessToken, storeId, warehouseId, items, onIt
         </div>
         <footer className="pos-cart__summary">
           <div><span>Tạm tính</span><strong>{vnd.format(total)}</strong></div>
-          <button className="pos-cart__checkout-button" type="button" disabled title="Chờ backend xác nhận đơn, giữ Serial và thanh toán nguyên tử">
-            Tiếp tục thanh toán · Chưa khả dụng
+          <button
+            className="pos-cart__checkout-button"
+            type="button"
+            onClick={onCheckout}
+            disabled={!ready || items.length === 0}
+            title={ready && items.length > 0 ? 'Tiến hành tạo đơn hàng và giữ hàng' : 'Cần đăng nhập, chọn kho và có sản phẩm trong giỏ'}
+          >
+            {ready && items.length > 0 ? `Tiến hành thanh toán (${vnd.format(total)})` : 'Tiếp tục thanh toán'}
           </button>
           <p>Giá, tồn kho và Serial phải được backend xác minh lại khi tạo đơn.</p>
         </footer>
