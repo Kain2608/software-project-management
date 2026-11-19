@@ -25,3 +25,10 @@ export function validateQrPayload(rawPayload) {
 export function abbreviateQrToken(qrToken) {
   return `${qrToken.slice(0, 8)}…${qrToken.slice(-6)}`
 }
+
+export function formatWarrantyQrPayload(qrToken) {
+  if (typeof qrToken !== 'string' || !CANONICAL_UUID_PATTERN.test(qrToken.trim())) {
+    throw new Error('qr_token phải là UUID canonical viết thường.')
+  }
+  return `${QR_PREFIX}${qrToken.trim()}`
+}

@@ -16,6 +16,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class JdbcPosPaymentDataAccess implements PosPaymentDataAccess {
 
+    private static final String LOCK_ORDER_PAYMENT_SQL = """
+            SELECT pg_advisory_xact_lock(hashtext('pos_payment_' || ?))
+            """;
+
     private static final String FIND_ORDER_SQL = """
             SELECT
                 id,
@@ -91,6 +95,11 @@ public class JdbcPosPaymentDataAccess implements PosPaymentDataAccess {
 
     public JdbcPosPaymentDataAccess(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public void lockOrderPayment(UUID orderId) {
+        jdbcTemplate.query(LOCK_ORDER_PAYMENT_SQL, ps -> ps.setString(1, orderId.toString()), rs -> null);
     }
 
     @Override

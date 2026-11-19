@@ -11,6 +11,7 @@ import {
 } from './posApi.js'
 import CrossSellWidget from './CrossSellWidget.jsx'
 import PosCart from './PosCart.jsx'
+import WarrantyQrCode from '../qr/WarrantyQrCode.jsx'
 import { addCartItem, toCrossSellCartItems } from './posCartModel.js'
 import {
   createLatestRequestGate,
@@ -48,6 +49,9 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
   const [checkoutStep, setCheckoutStep] = useState('idle') // 'idle' | 'draft' | 'device_selection' | 'reserving' | 'payment' | 'paying' | 'completed' | 'error'
   const [draftOrder, setDraftOrder] = useState(null)
+  const [reservedOrder, setReservedOrder] = useState(null)
+  const [cashierConfirmed, setCashierConfirmed] = useState(false)
+  const [receiptFetchError, setReceiptFetchError] = useState('')
   const [serialInputs, setSerialInputs] = useState({})
   const [deviceLocks, setDeviceLocks] = useState({})
   const [paidResult, setPaidResult] = useState(null)
@@ -111,10 +115,14 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
     setCheckoutStep('draft')
     setCheckoutError('')
     setDraftOrder(null)
+    setReservedOrder(null)
+    setCashierConfirmed(false)
+    setReceiptFetchError('')
     setSerialInputs({})
     setDeviceLocks({})
     setPaidResult(null)
     setCompletedReceipt(null)
+    setCashAmountInput('')
 
     try {
       const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null
@@ -128,7 +136,7 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
         accessToken,
       )
       setDraftOrder(order)
-      setCashAmountInput(String(order.total_amount ?? ''))
+      // DRAFT total_amount is not authoritative for payment; wait for Reserve response
       setCheckoutStep('device_selection')
     } catch (err) {
       const classified = classifyPosError(err)
@@ -170,7 +178,12 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
     setCheckoutStep('reserving')
     try {
       const orderId = draftOrder.id || draftOrder.order_id
-      await reserveOrder(orderId, accessToken)
+      const reserveResult = await reserveOrder(orderId, accessToken)
+      setReservedOrder(reserveResult)
+      // Authoritative total amount must come from the reserveOrder response
+      const authoritativeTotal = Number(reserveResult.total_amount) || 0
+      setCashAmountInput(String(authoritativeTotal))
+      setCashierConfirmed(false)
       setCheckoutStep('payment')
     } catch (err) {
       const classified = classifyPosError(err)
@@ -179,27 +192,37 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
     }
   }
 
+  const authoritativeAmount = Number(reservedOrder?.total_amount)
+  const parsedCashAmount = Number(cashAmountInput)
+  const isCashAmountValid =
+    typeof cashAmountInput === 'string' &&
+    cashAmountInput.trim() !== '' &&
+    !Number.isNaN(parsedCashAmount) &&
+    parsedCashAmount > 0 &&
+    reservedOrder?.total_amount != null &&
+    Math.abs(parsedCashAmount - authoritativeAmount) < 0.001
+
   async function handleCompleteCashPayment() {
+    if (!isCashAmountValid || !cashierConfirmed) {
+      setCheckoutError('Số tiền thu không khớp hoặc nhân viên chưa xác nhận đã thu đủ tiền mặt.')
+      return
+    }
     setCheckoutError('')
     setCheckoutStep('paying')
     try {
       const orderId = draftOrder.id || draftOrder.order_id
-      const amount = Number(cashAmountInput) || draftOrder.total_amount
+      const amount = parsedCashAmount
       const paid = await completeCashPayment({ orderId, amount }, accessToken)
       setPaidResult(paid)
 
-      // Automatically fetch authoritative receipt
+      // Fetch authentic official receipt; no fabricated fallback or multiplying VND by 100
+      setReceiptFetchError('')
       try {
         const rcpt = await getReceipt(orderId, accessToken)
         setCompletedReceipt(rcpt)
       } catch {
-        setCompletedReceipt({
-          order_id: orderId,
-          paid_at: paid.captured_at || new Date().toISOString(),
-          total_minor: Math.round(Number(paid.amount) * 100),
-          lookup_qr_token: null,
-          items: [],
-        })
+        setCompletedReceipt(null)
+        setReceiptFetchError('Không thể nạp hóa đơn chính thức từ hệ thống. Vui lòng bấm "Tải lại hóa đơn".')
       }
 
       // Order completed: clear cart
@@ -212,11 +235,29 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
     }
   }
 
+  async function handleRetryFetchReceipt() {
+    setReceiptFetchError('')
+    const orderId = draftOrder?.id || draftOrder?.order_id || paidResult?.order_id
+    if (!orderId) return
+    try {
+      const rcpt = await getReceipt(orderId, accessToken)
+      setCompletedReceipt(rcpt)
+    } catch {
+      setCompletedReceipt(null)
+      setReceiptFetchError('Không thể nạp hóa đơn chính thức từ hệ thống. Vui lòng bấm "Tải lại hóa đơn".')
+    }
+  }
+
   function closeCheckout() {
     setCheckoutModalOpen(false)
     setCheckoutStep('idle')
     setDraftOrder(null)
+    setReservedOrder(null)
+    setCashierConfirmed(false)
     setCheckoutError('')
+    setReceiptFetchError('')
+    setPaidResult(null)
+    setCompletedReceipt(null)
   }
 
   function handlePrintReceipt() {
@@ -341,7 +382,14 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
               {visibleReceipt.lookup_qr_token && (
                 <div className="receipt-preview__warranty-qr">
                   <p className="receipt-preview__qr-label">QR BẢO HÀNH THIẾT BỊ</p>
-                  <div className="receipt-preview__qr-code">{visibleReceipt.lookup_qr_token}</div>
+                  <WarrantyQrCode
+                    payload={visibleReceipt.lookup_qr_token}
+                    size={140}
+                    ariaLabel="Mã QR tra cứu bảo hành thiết bị"
+                  />
+                  <div className="receipt-preview__qr-code" style={{ fontSize: '11px', color: '#647a91', marginTop: '6px' }}>
+                    {visibleReceipt.lookup_qr_token}
+                  </div>
                   <small>Quét mã để tra cứu tình trạng bảo hành chính hãng</small>
                 </div>
               )}
@@ -462,31 +510,59 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
                 </div>
               )}
 
-              {['payment', 'paying'].includes(checkoutStep) && draftOrder && (
+              {['payment', 'paying'].includes(checkoutStep) && (draftOrder || reservedOrder) && (
                 <>
                   <div className="pos-checkout-order-summary">
                     <div>
-                      <span>Đơn hàng đã giữ: <strong>{draftOrder.code}</strong></span>
+                      <span>Đơn hàng đã giữ: <strong>{draftOrder?.code || shortIdentifier(reservedOrder?.order_id)}</strong></span>
                       <small style={{ display: 'block', color: '#276729' }}>Trạng thái: RESERVED</small>
                     </div>
                     <div>
-                      <span>Cần thanh toán: <strong>{vnd.format(draftOrder.total_amount)}</strong></span>
+                      <span>Cần thanh toán (Reserve): <strong>{vnd.format(authoritativeAmount || 0)}</strong></span>
                     </div>
                   </div>
 
                   <div className="pos-cash-confirm">
                     <h4>Xác nhận thanh toán tiền mặt (Cash)</h4>
                     <p style={{ margin: 0, fontSize: '12px', color: '#647a91' }}>
-                      Theo quy định hệ thống, số tiền thu thực tế phải bằng chính xác tổng giá trị đơn hàng.
+                      Theo quy định hệ thống, số tiền thu thực tế phải bằng chính xác tổng giá trị đơn hàng ({vnd.format(authoritativeAmount || 0)}).
                     </p>
                     <label>
                       Số tiền mặt thu từ khách (VNĐ)
                       <input
                         type="number"
                         value={cashAmountInput}
-                        onChange={(e) => setCashAmountInput(e.target.value)}
-                        placeholder="Số tiền thực thu"
+                        onChange={(e) => {
+                          setCashAmountInput(e.target.value)
+                          setCashierConfirmed(false)
+                        }}
+                        placeholder="Nhập số tiền thực thu"
+                        disabled={checkoutStep === 'paying'}
                       />
+                    </label>
+                    {!isCashAmountValid && cashAmountInput.trim() !== '' && (
+                      <p style={{ color: '#c92a2a', fontSize: '12px', margin: '4px 0 0' }}>
+                        Số tiền nhập không khớp với tổng tiền chính thức ({vnd.format(authoritativeAmount || 0)}).
+                      </p>
+                    )}
+                    <label
+                      className="pos-cash-confirm__checkbox-label"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginTop: '12px',
+                        cursor: isCashAmountValid ? 'pointer' : 'not-allowed',
+                        opacity: isCashAmountValid ? 1 : 0.6,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={cashierConfirmed}
+                        onChange={(e) => setCashierConfirmed(e.target.checked)}
+                        disabled={!isCashAmountValid || checkoutStep === 'paying'}
+                      />
+                      <span>Thu ngân xác nhận đã kiểm đếm và nhận đủ {vnd.format(authoritativeAmount || 0)} tiền mặt từ khách</span>
                     </label>
                   </div>
                 </>
@@ -498,6 +574,21 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
                     <strong>Thanh toán thành công!</strong> Đơn hàng đã chuyển sang trạng thái PAID, thiết bị chuyển sang SOLD.
                   </div>
 
+                  {receiptFetchError && (
+                    <div className="pos-cart__notice" style={{ background: '#fff5f5', color: '#c92a2a', borderColor: '#ffc9c9' }} role="alert">
+                      <strong>Lỗi tải hóa đơn:</strong> {receiptFetchError}
+                      <div style={{ marginTop: '8px' }}>
+                        <button
+                          type="button"
+                          className="pos-checkout-btn-secondary"
+                          onClick={handleRetryFetchReceipt}
+                        >
+                          Tải lại hóa đơn
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {completedReceipt && (
                     <article className="receipt-preview" aria-label="Bản xem trước hóa đơn đã thanh toán">
                       <header>
@@ -507,14 +598,14 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
                       </header>
                       <dl>
                         <div><dt>Phương thức</dt><dd>TIỀN MẶT (CASH)</dd></div>
-                        <div><dt>Thời gian</dt><dd>{new Date(paidResult.captured_at || Date.now()).toLocaleString('vi-VN')}</dd></div>
+                        <div><dt>Thời gian</dt><dd>{new Date(paidResult.paid_at || paidResult.captured_at || Date.now()).toLocaleString('vi-VN')}</dd></div>
                         <div><dt>Đã thanh toán</dt><dd>{vnd.format(paidResult.amount)}</dd></div>
                       </dl>
                       {completedReceipt.items && completedReceipt.items.length > 0 && (
                         <ul>
                           {completedReceipt.items.map((item) => (
                             <li key={item.device_id}>
-                              <span>{shortIdentifier(item.sku_id)} · {item.serial_masked}</span>
+                              <span>{shortIdentifier(item.sku_id || item.product_id)} · {item.serial_masked}</span>
                               <strong>{formatMinor(item.price_minor)}</strong>
                             </li>
                           ))}
@@ -523,7 +614,14 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
                       {completedReceipt.lookup_qr_token && (
                         <div className="receipt-preview__warranty-qr">
                           <p className="receipt-preview__qr-label">QR BẢO HÀNH THIẾT BỊ</p>
-                          <div className="receipt-preview__qr-code">{completedReceipt.lookup_qr_token}</div>
+                          <WarrantyQrCode
+                            payload={completedReceipt.lookup_qr_token}
+                            size={140}
+                            ariaLabel="Mã QR bảo hành thiết bị"
+                          />
+                          <div className="receipt-preview__qr-code" style={{ fontSize: '11px', color: '#647a91', marginTop: '6px' }}>
+                            {completedReceipt.lookup_qr_token}
+                          </div>
                           <small>Quét mã bằng camera hoặc máy đọc QR để tra cứu bảo hành</small>
                         </div>
                       )}
@@ -550,7 +648,12 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
                   <button type="button" className="pos-checkout-btn-secondary" onClick={() => setCheckoutStep('device_selection')}>
                     Quay lại
                   </button>
-                  <button type="button" className="pos-checkout-btn-primary" onClick={handleCompleteCashPayment}>
+                  <button
+                    type="button"
+                    className="pos-checkout-btn-primary"
+                    onClick={handleCompleteCashPayment}
+                    disabled={!isCashAmountValid || !cashierConfirmed}
+                  >
                     Xác nhận thu đủ tiền & Hoàn tất bán
                   </button>
                 </>
@@ -564,9 +667,11 @@ export default function PosPage({ accessToken = null, storeId = null, warehouseI
 
               {checkoutStep === 'completed' && (
                 <>
-                  <button type="button" className="pos-checkout-btn-secondary" onClick={handlePrintReceipt}>
-                    In hóa đơn (80mm)
-                  </button>
+                  {completedReceipt && (
+                    <button type="button" className="pos-checkout-btn-secondary" onClick={handlePrintReceipt}>
+                      In hóa đơn (80mm)
+                    </button>
+                  )}
                   <button type="button" className="pos-checkout-btn-primary" onClick={closeCheckout}>
                     Đơn hàng mới
                   </button>

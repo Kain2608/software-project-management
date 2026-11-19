@@ -642,18 +642,55 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.order_id").value(orderId.toString()))
                 .andExpect(jsonPath("$.status").value("RESERVED"));
 
-        // Call Cash Payment API
-        String orderCode = draftNode.get("code").asText();
+        // Payment amount validation: missing or mismatched amounts are rejected with 422 Unprocessable Content
         mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\": 10000000.00}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.order_id").value(orderId.toString()))
-                .andExpect(jsonPath("$.status").value("PAID"))
-                .andExpect(jsonPath("$.invoice_number").value("RECEIPT-" + orderCode))
-                .andExpect(jsonPath("$.amount").value(10000000.00))
-                .andExpect(jsonPath("$.payment_method").value("CASH"));
+                        .content("{}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.field").value("amount"));
+
+        mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": 5000000.00}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.field").value("amount"));
+
+        // Call Cash Payment API with two concurrent requests to verify race-free execution and idempotency
+        String orderCode = draftNode.get("code").asText();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Callable<MvcResult> payTask = () -> mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 10000000.00}"))
+                    .andReturn();
+            Future<MvcResult> f1 = executor.submit(payTask);
+            Future<MvcResult> f2 = executor.submit(payTask);
+            MvcResult res1 = f1.get();
+            MvcResult res2 = f2.get();
+
+            assertEquals(200, res1.getResponse().getStatus());
+            assertEquals(200, res2.getResponse().getStatus());
+
+            JsonNode n1 = objectMapper.readTree(res1.getResponse().getContentAsString());
+            JsonNode n2 = objectMapper.readTree(res2.getResponse().getContentAsString());
+
+            assertEquals(orderId.toString(), n1.get("order_id").asText());
+            assertEquals("PAID", n1.get("status").asText());
+            assertEquals("RECEIPT-" + orderCode, n1.get("invoice_number").asText());
+            assertEquals(10000000.00, n1.get("amount").asDouble());
+            assertEquals("CASH", n1.get("payment_method").asText());
+
+            // Concurrent calls receive identical authentic payment record
+            assertEquals(n1.get("payment_id").asText(), n2.get("payment_id").asText());
+            assertEquals(n1.get("paid_at").asText(), n2.get("paid_at").asText());
+        } finally {
+            executor.shutdown();
+        }
 
         // Verify DB status transitioned to PAID and device to SOLD
         String paidStatus = jdbcTemplate.queryForObject(
@@ -681,14 +718,71 @@ class Sprint2OrderPostgreSqlIntegrationTest {
                 Integer.class, orderId);
         assertEquals(1, movementCount);
 
-        // Calling cash payment again is idempotent
+        // Calling cash payment replay with mismatched amount on already PAID order is rejected
+        mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": 999999.00}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.field").value("amount"));
+
+        // Calling cash payment again with matching amount is idempotent and returns authentic details
         mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", orderId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amount\": 10000000.00}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order_id").value(orderId.toString()))
-                .andExpect(jsonPath("$.status").value("PAID"));
+                .andExpect(jsonPath("$.status").value("PAID"))
+                .andExpect(jsonPath("$.payment_method").value("CASH"));
+
+        // Verify an order already PAID using another method (e.g. CARD) rejects cash payment replay without fabricating data
+        MvcResult draft2Result = mockMvc.perform(post("/api/v1/pos/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "store_id": "%s",
+                                  "warehouse_id": "%s",
+                                  "items": [
+                                    { "product_id": "%s", "quantity": 1 }
+                                  ]
+                                }
+                                """.formatted(STORE_A_ID, WAREHOUSE_A_ID, PRODUCT_A_ID)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode draft2Node = objectMapper.readTree(draft2Result.getResponse().getContentAsString());
+        UUID order2Id = UUID.fromString(draft2Node.get("order_id").asString());
+        UUID order2ItemId = UUID.fromString(draft2Node.get("items").get(0).get("order_item_id").asString());
+
+        mockMvc.perform(post("/api/v1/pos/orders/{orderId}/items/{orderItemId}/devices", order2Id, order2ItemId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"store_id\": \"%s\", \"serial\": \"S2-SER-0002\"}".formatted(STORE_A_ID)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/pos/orders/{id}/reserve", order2Id)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        // Simulate CARD payment capture directly and complete sale
+        UUID cardPaymentId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO sasms.payments(id, order_id, amount, method, status, provider_reference, confirmed_by, captured_at)
+                VALUES (CAST(? AS uuid), CAST(? AS uuid), 10000000.00, 'CARD', 'CAPTURED', ?, CAST(? AS uuid), now())
+                """, cardPaymentId, order2Id, "CARD-" + order2Id, ACTOR_STORE_A_CASHIER);
+        jdbcTemplate.queryForObject("SELECT sasms.complete_sale(CAST(? AS uuid), CAST(? AS uuid))",
+                UUID.class, order2Id, ACTOR_STORE_A_CASHIER);
+
+        // Attempting CASH payment on the CARD-paid order must return 409 Conflict (no fake cash record)
+        mockMvc.perform(post("/api/v1/pos/orders/{id}/payments/cash", order2Id)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": 10000000.00}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
 
         // Query Receipt: must return PAID receipt with masked serial and warranty lookup QR token
         mockMvc.perform(get("/api/v1/pos/orders/{id}/receipt", orderId)

@@ -9,6 +9,8 @@ import com.smartelectronicsupermarket.pos.order.data.PosOrderRecord;
 
 public interface PosPaymentDataAccess {
 
+    void lockOrderPayment(UUID orderId);
+
     Optional<PosOrderRecord> findOrderById(UUID orderId);
 
     boolean hasCheckoutPermission(UUID actorId, UUID storeId);
