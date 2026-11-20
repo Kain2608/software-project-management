@@ -2,6 +2,8 @@
 
 Các đầu ra này bổ sung trực tiếp thiết kế DB của Trần Trung Kiên, đối chiếu tài liệu BA/PM/Tester/AI/Fullstack. Không thay tài liệu hoặc chữ ký của các chủ trì khác.
 
+Rà soát tài liệu **20/11/2026**: cập nhật hiện trạng source, nguồn BA và evidence được dẫn. Các mô tả S0/V002 bên dưới là snapshot lịch sử; hợp đồng V003…V005 hiện hành xem [D35 DB](../../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) và [DS2 DB](../../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md). Giữ mô hình hàng có Serial; phụ kiện/dịch vụ không Serial cần BA/Fullstack chốt trước khi bổ sung.
+
 | Nội dung | Bàn giao |
 |---|---|
 | Kiến trúc/bảo mật | [Căn cứ D50/D54](D50-D54-bo-sung-can-cu-va-kiem-soat.md), [D54](../D54-bao-mat-phan-quyen.md) theo D34 và role hiện hành |

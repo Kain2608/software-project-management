@@ -1,6 +1,6 @@
 # Sprint 2 — Phần DB của Trần Trung Kiên
 
-Kỳ kế hoạch: **11/10–24/10/2026**, chủ đề POS tại quầy và AI gợi ý; phạm vi US-04, US-05, US-06 (Should), US-07. Mốc kế hoạch M3: 20/10, M4: 24/10. Ngày rà soát thực tế: **17/11/2026**; không hồi tố ngày thực hiện hoặc chữ ký.
+Kỳ kế hoạch: **11/10–24/10/2026**, chủ đề POS tại quầy và AI gợi ý; phạm vi US-04, US-05, US-06 (Should), US-07. Mốc kế hoạch M3: 20/10, M4: 24/10. Rà soát tài liệu: **20/11/2026** trên nguồn `main` tại `6544a00`; evidence SQL hiện có là lần chạy **17/11/2026**, không hồi tố ngày thực hiện hoặc chữ ký.
 
 ## Phân công và phạm vi bàn giao
 
@@ -31,11 +31,14 @@ Kiên hỗ trợ S2-08 do **Nguyễn Tiến Vũ** chủ trì (AI), S2-15 do **Tr
 
 Kiểm local **17/11/2026** đã đạt **33 assertions S2 + 43 D34/D35**, regression Sprint 1 **76**, Sprint 0 **56 + 7 ACL**, cùng hai ca tranh Serial commit/rollback trên PostgreSQL **16.16**. Xem [hợp đồng và giới hạn](DS2-thiet-ke-va-ban-giao-DB.md), [summary](../../database/evidence/sprint2/summary.json) và [failure probes CLI](../../database/evidence/sprint2/ci-failure-probes.json). Chưa có run GitHub Actions mới hoặc deploy Staging trong hồ sơ này.
 
+Lịch sử Git đã có merge PR #29 phần DB (`06423f0`), PR #33 phần TV4 (`4f5df6f`) và PR #34 hardening POS/QR (`6544a00`). Báo cáo TV4 mục 19–20 mô tả cash checkout/receipt, payment đồng thời và QR SVG với test roundtrip; đó là kết quả thành phần do TV4 cung cấp, chưa chứng minh browser E2E, QR in/quét thật hoặc PO nghiệm thu. Các vấn đề số lượng nhiều chiếc, IMEI phụ, phụ kiện không Serial và lịch chạy QA được ghi tại [bàn giao tích hợp](DS2-thiet-ke-va-ban-giao-DB.md#bàn-giao-tích-hợp-còn-mở).
+
 Nguồn phân công ghi trạng thái tại **05/11/2026**, không phải kết quả test của phiên bản hiện tại. Dấu chọn DoR/DoD chỉ được cập nhật khi có minh chứng và người xác nhận.
 
-- [ ] Kiên/Thái review SQL và hợp đồng API trên phiên bản cuối; PR được duyệt và merge.
+- [x] Nguồn DB và increment TV4 đã được tích hợp vào `main` qua PR #29/#33, kiểm bằng lịch sử Git.
+- [ ] Kiên/Thái xác nhận review SQL/hợp đồng API trên phiên bản cuối; BA/QA xác nhận các điểm tích hợp còn mở.
 - [ ] Đối chiếu `database/evidence/sprint2/summary.json` và log với nguồn thực tế, gồm hai backend PID khác nhau, conflict và kiểm quyền.
-- [ ] Phát kiểm E2E, QR < 1 giây, POS < 2 giây; Vũ/Phát đo AI p95 < 3 giây với 50 request đồng thời.
+- [ ] Phát kiểm browser E2E; QR p95 <1 giây từ decode thành công tới hiển thị (không gồm lấy nét, 100 lượt Chrome mobile/Wi-Fi ổn định); POS p95 <2 giây theo NFR-02; Vũ/Phát đo AI p95 <3 giây với 50 request đồng thời.
 - [ ] Staging được cấp phát, deploy thật, kiểm health và lưu URL run/commit/log.
 - [ ] Huy/An và các trưởng bộ phận xác nhận DoR/DoD, M3/M4 và Sprint Review.
 

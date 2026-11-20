@@ -3,7 +3,9 @@
 DB hiện hành theo D34/D35 BA: **41 bảng, V001…V005**, Serial raw/phân biệt hoa-thường, IMEI phụ/Luhn, giữ hàng POS10m/ONLINE30m và chín role canonical. [Chạy nâng cấp/kiểm chứng](database/sprint2/README.md), [hợp đồng liên nhóm](Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md). Snapshot S0/S1 giữ nguyên để truy vết.
 
 
-Nhánh làm việc hiện hành **`DB`** chứa phần Architect / DBA của Kiên cho tiền Sprint, Sprint 0, Sprint 1 và Sprint 2. Nhãn `Kien` trong các hồ sơ trước là provenance của lần tạo bản gốc. Các giả định nghiệp vụ, kết quả chạy thật và phần chờ BA/PM ký được ghi riêng trong hồ sơ bàn giao.
+Phần Architect / DBA của Kiên cho Tiền Sprint, Sprint 0, Sprint 1 và Sprint 2 đã được tích hợp vào `main`; `DB` là nhánh phát triển phần DB. Nhãn `Kien` trong các hồ sơ trước ghi nguồn gốc của bản ban đầu. Lượt rà soát tài liệu **20/11/2026** phân biệt kết quả kiểm kỹ thuật đã lưu, giới hạn tích hợp và phần chờ BA/PM/QA xác nhận.
+
+Các quy tắc DB hiện hành theo D34/D35 được mô tả trong [D35 DB](Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) và [DS2 DB](Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md). Một số quyết định trong D53 Fullstack còn dùng quy tắc V002 cũ; không lấy nhãn APPROVED ở đó làm căn cứ thay thế V003…V005 hoặc chữ ký nghiệp vụ. Mô hình hiện tại phục vụ hàng có Serial; phụ kiện/dịch vụ không Serial cần BA/Fullstack chốt hợp đồng riêng trước khi tích hợp.
 
 **Tiền Sprint:** KD-10 — kế hoạch thiết bị D21, môi trường và CI/CD D22; đóng góp kỹ thuật cho KD-02/04/09.
 

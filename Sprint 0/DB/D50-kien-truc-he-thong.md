@@ -4,10 +4,10 @@
 | --- | --- |
 | Công việc | S0-17 — Thiết kế kiến trúc hệ thống |
 | Phụ trách | Trần Trung Kiên — Architect / DBA |
-| Phiên bản | 1.1 — Bổ sung môi trường FE/BE và phân tách tài khoản DB runtime (Kiên xác nhận) |
-| Ngày lập thực tế | 07/11/2026 (Cập nhật: 11/11/2026) |
+| Phiên bản | 1.2 — đối chiếu source và nguồn BA hiện hành; tách cập nhật kỹ thuật khỏi phê duyệt |
+| Ngày lập thực tế | 07/11/2026; có cập nhật 11/11; rà soát tài liệu 20/11/2026 |
 | Kỳ Sprint theo phân công | 12–25/09/2026; không dùng ngày này làm ngày ký giả định |
-| Trạng thái | Đối chiếu source hiện hành 17/11/2026: Java25/Spring Boot4.1.1, FE/BE tại root, runtime sasms_app; không thay biên bản ký |
+| Trạng thái | Source hiện hành: Java 25/Spring Boot 4.1.1, FE/BE tại root, runtime sasms_app; chờ review bản tài liệu cập nhật, không thay biên bản ký |
 
 ## 1. Cơ sở và giới hạn thiết kế
 
@@ -19,9 +19,10 @@ Thiết kế phục vụ hệ thống siêu thị điện máy SASMS với kho t
 | [D06](../PM/D06.docx), mục 2–3 | Hướng kiến trúc microservices; Kiên phụ trách kiến trúc, schema và security | Chưa có kế hoạch hạ tầng đã chọn |
 | [D08](../PM/D08.docx), mục 2, 3 và 5 | Giao dịch checkout atomic; AI timeout/fallback; bản MVP ưu tiên kho/POS | Backend, phạm vi máy in và lịch trình khác D05/D06/D33 |
 | [D33](../BA/D33.docx), KS35–KS46 | Cần xác nhận phân quyền, lưu giữ, QR, kiểm kê, thanh toán và in | Là bộ câu hỏi, chưa có câu trả lời hoặc người xác nhận thực tế |
-| Bảng phân công Sprint 0, S0-17/18/21 | D50, D51, D54, D57 là đầu ra của Kiên | D34 FRS_V2 và D22 không có trong repo tại lúc thiết kế |
+| Bảng phân công Sprint 0, S0-17/18/21 | D50, D51, D54, D57 là đầu ra của Kiên | Ghi nhận nguồn phân công lịch sử, không tự chứng minh nghiệm thu |
+| [D34 FRS](../BA/D34_FRS_V2_SASMS.docx), [D35](../BA/D35_Quy_tac_Serial_IMEI_SASMS.docx), [D22 tiền Sprint](../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) | Đã có trong repo; quy tắc nghiệp vụ, định danh, môi trường và CI/backup | V003…V005 hiện thực phần DB; xác nhận triển khai ứng dụng và ký gate vẫn cần người sở hữu |
 
-Mọi quyết định ghi **đề xuất** ở dưới cần BA/PM/Dev Lead review cùng D34/D22 khi có. Không suy diễn trạng thái ký trong một tài liệu PM thành phê duyệt tài liệu D50 này.
+Mọi nội dung ghi **đề xuất** ở dưới cần BA/PM/Dev Lead review cùng D34/D35/D22 đã có. Lựa chọn source quan sát được không tự là baseline được phê duyệt. Không suy diễn trạng thái ký trong một tài liệu PM thành phê duyệt phiên bản D50 này.
 
 ## 2. Bối cảnh hệ thống
 
@@ -43,7 +44,7 @@ flowchart LR
     Web --> Print[Xem trước / máy in theo adapter]
 ```
 
-Trình duyệt chỉ gọi API qua HTTPS; không kết nối PostgreSQL, Redis hoặc nhà cung cấp bằng khóa bí mật. QR thiết bị mang mã định danh hoặc token tra cứu, không mang thông tin khách hàng hay mật khẩu. Nội dung QR cụ thể chờ KS41.
+Trình duyệt chỉ gọi API qua HTTPS; không kết nối PostgreSQL, Redis hoặc nhà cung cấp bằng khóa bí mật. QR thiết bị dùng payload `SASMS:DEVICE:<qr_token>` theo D35/[hợp đồng DB](../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md), không mang thông tin khách hàng hay mật khẩu. Sinh hình QR và kiểm quét/in thuộc ứng dụng/QA, không được chứng minh chỉ bằng cột token DB.
 
 ## 3. Thành phần và quyền sở hữu dữ liệu
 
@@ -145,18 +146,18 @@ Worker xử lý sự kiện theo cơ chế ít nhất một lần; consumer ph�
 
 ### 5.1 Cấu trúc mã nguồn tại root repository (`TV4-S0-ARCH-01` — Phương án A1)
 
-Đồng thuận đặt toàn bộ mã nguồn ứng dụng và hạ tầng tại thư mục gốc repository để đảm bảo tính liên tục của lịch sử git (`git log`, `git blame`) qua các Sprint:
+Source hiện hành đặt mã nguồn ứng dụng và hạ tầng tại gốc repository, giữ lịch sử git (`git log`, `git blame`) qua các Sprint:
 - `backend/`: Mã nguồn dịch vụ backend Spring Boot (POS, Catalog, Inventory, IAM integration), kèm `backend/.gitignore` riêng.
 - `frontend/`: Mã nguồn ứng dụng frontend React / Vite (Web POS, Mobile Scanner), kèm `frontend/.gitignore` riêng.
 - `database/`: Schema, DBML, migrations, seed, tests và role provisioning của PostgreSQL.
 - `infra/`: Ma trận môi trường, kịch bản triển khai và tài liệu vận hành.
 - `scripts/`: Bộ công cụ tự động hóa kiểm tra, migration (`migrate_db.py`, `validate_sprint1.py`, `provision_s1_db.ps1`).
 
-Việc đặt tại root tránh phân mảnh mã nguồn theo từng thư mục Sprint con (`Sprint 0/Fullstack/`), triệt tiêu rủi ro lỗi công cụ build do khoảng trắng đường dẫn Windows và thống nhất với cấu trúc phân phối của nhóm.
+Việc đặt tại root tránh phân mảnh mã nguồn theo từng thư mục Sprint con (`Sprint 0/Fullstack/`) và thống nhất cấu trúc phân phối. Các lệnh vẫn phải quote đường dẫn workspace nếu có khoảng trắng.
 
 ### 5.2 Môi trường thực thi của Frontend và Backend (`TV4-S0-ARCH-02` — Phương án B1)
 
-Chốt baseline công nghệ chính thức theo hiện trạng mã nguồn đã được kiểm chứng bằng thực nghiệm:
+Đối chiếu cấu hình source khi rà soát 20/11/2026; thông tin sau không tự chứng minh đã chạy lại build ứng dụng hoặc phê duyệt thay đổi toolchain:
 
 - **Backend (BE):**
   - **Runtime & SDK:** Java **25** theo backend/pom.xml hiện hành. Hồ sơ Fullstack trước ghi Java26 cần người sở hữu đồng bộ; bằng chứng build cũ không tự xác nhận source mới.
@@ -166,9 +167,9 @@ Chốt baseline công nghệ chính thức theo hiện trạng mã nguồn đã 
   - **Bảo mật ứng dụng:** OAuth2 / JWT Resource Server với cơ chế fail-closed (chỉ mở các status endpoint công khai khi chưa cấu hình JWT, mọi route nghiệp vụ đều yêu cầu Bearer token hợp lệ).
 
 - **Frontend (FE):**
-  - **Runtime:** **Node.js 18+ / 22** và trình quản lý gói `npm`.
+  - **Runtime:** Node.js/npm do Fullstack chốt theo `frontend/package.json` và môi trường build; phần DB không tự ấn định một version Node đã được nghiệm thu.
   - **Framework & Bundler:** **React** với công cụ xây dựng **Vite** (`vite.config.js`).
-  - **Thư viện chuyên dụng:** Quét mã vạch/QR qua camera HTML5 bằng `@zxing/browser` (khóa version `0.1.5` tương thích Node 22) và `@zxing/library` (`0.21.3`).
+  - **Thư viện chuyên dụng:** `frontend/package.json` khai báo `@zxing/browser` `0.1.5` để đọc barcode/QR qua camera; decoder này không chứng minh đã có bộ sinh QR để in.
   - **Kết nối API:** HTTP client dùng chung (`httpClient.js`) kết nối đến backend thông qua biến môi trường `VITE_API_BASE_URL` (mặc định `http://127.0.0.1:8080/api`).
 
 ### 5.3 Phân tách tài khoản CSDL: Phân quyền `sasms_app` cho Backend Runtime (`TV4-S0-ARCH-03` — Phương án C2)
@@ -210,15 +211,15 @@ Theo dõi độ trễ query/checkout, số kết nối, transaction chờ khóa/
 | ARC-01 | D34/D35 và D22 đã có | Huy, Thái, Kiên, PM | Đối chiếu BR-01/03, SER-01…10 và vai trò; V003…V005 xử lý DB, tích hợp/triển khai cần người sở hữu xác nhận |
 | ARC-02 | Sáu module toàn hệ thống và demo kho/POS | Huy, PM, Sponsor | Phạm vi từng Sprint và chấp nhận phần nào đã được ký |
 | ARC-03 | Máy in nhiệt 80 mm trong D33 và HTML/PDF theo D08 | Huy, Thái, PM | Quyết định phạm vi + model/giao tiếp thử nếu dùng máy in |
-| ARC-04 | Chín vai trò, phạm vi cửa hàng, phê duyệt giao dịch | Huy, PM | Ma trận D54 được xác nhận |
-| ARC-05 | QR/Serial theo hãng, giữ hàng, thanh toán, kiểm kê | Huy, trưởng kho, thu ngân | Trả lời KS41–KS46 và D35; cập nhật ràng buộc |
+| ARC-04 | D34 đã có chín vai trò; D54/V005 đã có mapping | Huy, Kiên, PM | Kiểm assignment/scope thực tế và review phiên bản; không dùng role alias lịch sử thay role canonical |
+| ARC-05 | D35/V003 đã có định danh; D34/V004 đã có deadline/PENDING | Huy, Thái, trưởng kho, thu ngân | Cấu hình profile theo SKU, tích hợp IMEI phụ/worker expiry/đối soát; kiểm kê và hậu bán còn cần workflow riêng |
 | ARC-06 | Source FE/BE và runtime | Thái, Kiên, PM | Source hiện hành Java25/Spring Boot4.1.1, React/Vite, FE/BE tại root; LOGIN thuộc sasms_app. Toolchain ứng dụng và Cloud/PITR cần người sở hữu cập nhật/phê duyệt theo phiên bản |
 | ARC-07 | Mâu thuẫn mã tài liệu: workbook gọi D05 Charter, repo D05 là Scope, D06 là Charter | PM | Danh mục tài liệu thống nhất, không đổi tên mất dấu nguồn |
 
 Review cần kiểm tra: các miền có chủ sở hữu; kho/POS có transaction atomic và chống lặp; thiết bị không bán trùng; provider lỗi không chặn bán hàng; security mặc định từ chối; SQL/DBML/D51 khớp nhau; log chạy thử có thật; các giả định còn mở được ghi nhận. D50 không thay thế biên bản Quality Gate M1.
 
-| Trạng thái | Đối chiếu source hiện hành 17/11/2026: Java25/Spring Boot4.1.1, FE/BE tại root, runtime sasms_app; không thay biên bản ký |
+| Người / vai trò | Phạm vi | Trạng thái phiên bản 1.2 | Căn cứ / việc còn chờ |
 | --- | --- | --- | --- |
-| Trần Trung Kiên | Kiến trúc, dữ liệu và quyền DB runtime | Cập nhật kỹ thuật | 17/11/2026; đối chiếu source, không phải chữ ký nghiệm thu mới |
-| Vũ Duy Thái — Dev Lead | Khả năng hiện thực, triển khai | Chờ review/ký | Đã đề xuất và kiểm chứng kỹ thuật tại bàn giao TV4 |
-| Trịnh Quốc An — PM | Phạm vi, vận hành, mốc M1 | Chờ review/ký | Đã chấp thuận A1, B1, C2 ngày 07/11/2026 |
+| Trần Trung Kiên — Architect / DBA | Kiến trúc, dữ liệu và quyền DB runtime | Đã cập nhật tài liệu; chờ review/ký | Rà soát 20/11/2026, không tạo chữ ký nghiệm thu mới |
+| Vũ Duy Thái — Dev Lead | Khả năng hiện thực, toolchain và triển khai | Chờ review/ký phiên bản hiện hành | Hồ sơ TV4 ghi lịch sử A1/B1/C2; B1 Java 26 trong nguồn cũ khác source Java 25 hiện tại |
+| Trịnh Quốc An — PM | Phạm vi, vận hành, mốc M1 | Chờ xác nhận phiên bản/baseline được duyệt | [Báo cáo TV4 Phase 2](../Fullstack/TV4/TV4_PHASE2_SOURCE_INTEGRATION_REPORT.md) ghi PM đồng ý A1/B1/C2 theo thông tin đã cung cấp; không dùng nó làm chữ ký cho D50 sửa ngày 20/11 |

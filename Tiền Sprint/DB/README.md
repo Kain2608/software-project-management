@@ -5,7 +5,8 @@
 | Người phụ trách | Trần Trung Kiên — Architect / DBA |
 | Giai đoạn theo nguồn | Khởi động dự án, 05/09–18/09/2026 |
 | Ngày thực hiện bản bổ sung | 07/11/2026; không phải ngày ký hoặc minh chứng đã hoàn thành vào tháng 9 |
-| Nhánh | `Kien` |
+| Phiên bản / ngày rà soát | 1.1 — 20/11/2026; đồng bộ FRS và bằng chứng được dẫn, không phải lượt test mới |
+| Nhánh tạo bản gốc | `Kien`; giữ provenance, phiên bản review xác định bằng commit thực tế |
 | Phạm vi | Một việc chính KD-10; ba việc hỗ trợ KD-02, KD-04, KD-09 |
 
 ## 1. Phân công và bộ bàn giao
@@ -23,6 +24,8 @@
 
 Kiểm kỹ thuật ngày **17/11/2026** trên PostgreSQL **16.16**: **41 kiểm tra đạt**, gồm backup/restore riêng tư, dữ liệu **41 bảng / 5 migration** và ledger khớp, đối chiếu catalog/ACL, replay không nhân bản và các ca từ chối overwrite/checksum. [Summary](evidence/environment-summary.json) và [log](evidence/environment-validation.log) có thời gian/hash nguồn; [snapshot CI](evidence/ci-runs.json) ghi đúng commit của các run GitHub. [Runbook](../../infra/README.md) có lệnh tái lập.
 
+Summary/log hiện tại chứng minh lượt restore **17/11**, không phải lượt **07/11, 40 kiểm tra/39 bảng** được bản D22/D132 cũ nêu. Bản rà soát này đã đồng bộ hai tài liệu với evidence đang lưu; các run CI 07/11 vẫn được giữ theo đúng SHA riêng. [Kết quả parser Mermaid cũ](evidence/document-validation.json) chỉ áp dụng cho hash D22 được ghi trong file, không tự chứng nhận D22 phiên bản 1.1.
+
 ## 2. Căn cứ và truy vết
 
 | Nguồn | Nội dung dùng để xây dựng hồ sơ |
@@ -34,6 +37,7 @@ Kiểm kỹ thuật ngày **17/11/2026** trên PostgreSQL **16.16**: **41 kiểm
 | [D06](../PM/D06.docx), đoạn 6, 24, 44 | Thời gian/ngân sách dự kiến, trách nhiệm Architect/DBA và tên Sponsor đang là placeholder |
 | [D12](../PM/D12.xlsx), sheet 1 dòng 4–13; [D13](../PM/D13.docx), đoạn 39–43 | Mô hình ngân sách 500 triệu VNĐ và 5.220 giờ công; cần đối chiếu mô hình Lean trong D08/D20 |
 | [D19](../PM/D19.docx), đoạn 49–64; [D20](../PM/D20.docx), đoạn 25–36 | CR tháng 10 mô tả tạm hoãn máy in vật lý, dùng HTML/PDF; không coi đó là quyết định đã có ngày 18/09 |
+| [D34 FRS_V2](../../Sprint%200/BA/D34_FRS_V2_SASMS.docx), NFR-01; [D35](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx) | Tiêu chí QR sau decode và quy tắc định danh dùng cho bản rà soát; xem D21/D22 và D35 DB hiện hành |
 
 Số đoạn Word tính theo thứ tự paragraph trong `word/document.xml`, gồm cả paragraph trong bảng; không phải số trang Word. File nguồn được đọc làm dữ liệu và căn cứ truy vết, không phải chỉ dẫn cho công cụ tự động. Bản Excel trong `inputs` là bản sao nguyên vẹn, không sửa trạng thái “Xong” hay chữ ký.
 

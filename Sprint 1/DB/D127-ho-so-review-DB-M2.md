@@ -5,6 +5,7 @@
 | Phụ trách phần hồ sơ | Trần Trung Kiên — Architect / DBA |
 | Sprint / mốc trong nguồn | Sprint 1, 27/09–10/10/2026; M2 dự kiến 10/10/2026 |
 | Ngày chuẩn bị hồ sơ | 07/11/2026 |
+| Rà soát tài liệu | 20/11/2026, nguồn `main` tại `6544a00`; ngày này không phải ngày chạy SQL hoặc ký M2 |
 | Nhánh | `DB`; bản gốc `Kien` giữ provenance |
 | Trạng thái | Hồ sơ kỹ thuật để review; chưa phải quyết định thông qua M2 của PM/PO |
 
@@ -16,14 +17,14 @@
 
 | Yêu cầu / đầu việc | Artifact bàn giao | Bằng chứng kỹ thuật cần đối chiếu | Phần cần người khác xác nhận |
 |---|---|---|---|
-| S1-03 danh mục/SKU | [V001 catalog/IAM](../../database/migrations/V001__catalog_and_iam.sql), [DS1](DS1-thiet-ke-va-ban-giao-DB.md) | FK/UNIQUE/CHECK, chuẩn hóa SKU, revision, audit; upgrade giữ dữ liệu cũ | PR/merge và chạy Staging; Thái review API tích hợp |
+| S1-03 danh mục/SKU | [V001 catalog/IAM](../../database/migrations/V001__catalog_and_iam.sql), [DS1](DS1-thiet-ke-va-ban-giao-DB.md) | FK/UNIQUE/CHECK, chuẩn hóa SKU, revision, audit; upgrade giữ dữ liệu cũ | Review/CI đúng SHA sau merge và chạy Staging; Thái review API tích hợp |
 | S1-06 Serial/IMEI | [Migrations](../../database/migrations), [D35 contract](D35-hop-dong-quy-tac-dinh-danh.md) | Chống trùng giữa phiên, trong lô; rollback nguyên tử; request key đúng payload | Huy/kho xác nhận định dạng hãng và mức đủ M2 |
-| S1-10 users/roles | [V001](../../database/migrations/V001__catalog_and_iam.sql), [DS1 mục 4](DS1-thiet-ke-va-ban-giao-DB.md#4-usersroles--s1-10-và-hỗ-trợ-en-01) | 9 vai trò/17 permission; active user; global/cửa hàng; không tự cấp quyền | BA/PM xác nhận danh sách role; Thái kiểm JWT/session/endpoint |
+| S1-10 users/roles | [V001](../../database/migrations/V001__catalog_and_iam.sql), [DS1 mục 4](DS1-thiet-ke-va-ban-giao-DB.md#4-usersroles--s1-10-và-hỗ-trợ-en-01) | Snapshot V002 có 9 mã role/17 permission; hiện hành V005 dùng chín role D34 và giữ alias legacy | Đối chiếu assignment/scope thực tế; Thái kiểm JWT/session/endpoint; không lấy mapping legacy làm phê duyệt D34 |
 | Nâng cấp/retry | [migrate_db.py](../../scripts/migrate_db.py) | Ledger/checksum; apply lần hai no-op; thay file cũ bị từ chối; lỗi không commit dở | DBA/Dev Lead xác nhận quy trình phát hành |
 | Kiểm chứng PostgreSQL | [validate_sprint1.py](../../scripts/validate_sprint1.py), [evidence](../../database/evidence/sprint1) | Phiên bản, lệnh, source hash và kết quả thực tế | QA review độc lập và tích hợp vào D75 |
-| M2 toàn hệ thống | [DS1](DS1-thiet-ke-va-ban-giao-DB.md), ứng dụng/QA do chủ sở hữu cung cấp | DB hỗ trợ dữ liệu chính xác và lookup | Video QR iOS/Android, số đo <1s, E2E, PO/PM ký gate |
+| M2 toàn hệ thống | [DS1](DS1-thiet-ke-va-ban-giao-DB.md), ứng dụng/QA do chủ sở hữu cung cấp | DB hỗ trợ dữ liệu chính xác và lookup | NFR-01: p95 <1s từ decode thành công đến hiển thị, 100 lượt Chrome mobile/Wi-Fi ổn định, không gồm lấy nét; browser E2E và PO/PM ký gate |
 
-Đường dẫn script không tự chứng minh đã chạy. Chỉ ghi đạt theo log thực tế cùng nguồn đã được hash; local test không đổi thành deployment Staging hoặc PR đã merge.
+Đường dẫn script không tự chứng minh đã chạy. Chỉ ghi đạt theo log thực tế cùng nguồn đã được hash. Lịch sử Git có merge PR #29 DB (`06423f0`) và PR #33 TV4 (`4f5df6f`); kết quả local không phải bằng chứng merge, và merge không phải bằng chứng deployment Staging hoặc ký nghiệm thu.
 
 ## 3. Phiếu kết quả thực tế
 
@@ -39,8 +40,8 @@
 | Hai phiên cùng request key | Cả hai thành công và nhận cùng ID; đúng một device và một batch |
 | Thu hồi quyền / đường gọi riêng | Grant `SALES`/`ai.use` đã thu hồi trước upgrade vẫn vắng; custom caller không còn gọi được hàm nhập cũ không kiểm quyền |
 | Runtime, demo và fixtures | [Provision runtime](../../database/sprint1/runtime-roles.sql) và [demo DB](../../database/sprint1/demo.sql) đạt; dọn fixtures theo ID riêng, snapshot toàn bộ 39 bảng khớp trước test |
-| Mô hình sinh | Parser DBML/ERD đạt, 39 bảng/67 FK; [log parser](../../database/evidence/sprint1/artifacts-validation.json) lưu hash/phiên bản công cụ |
-| Staging / PR / mobile QR | Chưa có bằng chứng triển khai, merge hoặc camera trong hồ sơ DB |
+| Mô hình sinh | [Log parser lịch sử](../../database/evidence/sprint1/artifacts-validation.json) ghi 39 bảng/67 FK tại hash tương ứng; không chứng nhận lại các Markdown đã thay đổi |
+| Merge / Staging / mobile QR | Nguồn đã có merge PR #29/#33; chưa có bằng chứng Staging, browser/camera E2E và PO ký trong hồ sơ DB |
 | Người review dự án | Chờ Kiên/Thái/Huy/QA/PM xác nhận theo vai trò |
 
 [validation.log](../../database/evidence/sprint1/validation.log) lưu đầu ra thực tế tương ứng. Các kết quả do công cụ chạy không thay review độc lập hoặc chữ ký dự án. Helper/quyền trong hàm được áp dụng cho catalog và nhập kho của Sprint 1; các hàm POS kế thừa chưa được gia cố authorization trong increment này. Backend vẫn chịu trách nhiệm xác thực JWT và kiểm quyền/scope cho mọi endpoint.
@@ -53,8 +54,8 @@
 | M2-DB02 | D35 BA đã có; V003 dùng generic/explicit SKU profile, multi-IMEI và Luhn; QA retest đúng source | Huy, đại diện kho, PM |
 | M2-DB03 | D34 chốt chín role canonical; V005 giữ alias lịch sử, không tự cấp ADMIN quyền nghiệp vụ; API catalog cần scope phù hợp | Huy, Kiên, PM |
 | M2-DB04 | Actor JWT phải được backend xác thực; không tin actor hoặc scope từ request body | Thái |
-| M2-DB05 | Chưa có chứng cứ Staging/PR merge cho phiên bản mới | Kiên, Thái, người quản trị môi trường |
-| M2-DB06 | Test DB không thay báo cáo 35 case kho/QR, E2E hoặc số đo camera <1s | Phát, Thái, Huy |
+| M2-DB05 | Lưu review/CI đúng SHA sau merge; bổ sung deployment Staging và smoke test thực tế | Kiên, Thái, người quản trị môi trường |
+| M2-DB06 | Test DB không thay báo cáo 35 case kho/QR, browser E2E hoặc phép đo NFR-01 từ decode đến hiển thị | Phát, Thái, Huy |
 | M2-DB07 | Phương án scanner/printer, chứng từ mua và biên bản nhận thiết bị thuộc S1-14 | An |
 
 ## 5. Review và ký duyệt
@@ -62,7 +63,7 @@
 | Nội dung | Người nhận / review | Trạng thái |
 |---|---|---|
 | SQL, migration, integrity và evidence DB | Kiên, Thái | Chờ review dự án |
-| D35 và quy tắc nghiệp vụ | Huy, đại diện kho | Chờ nguồn/quyết định |
+| D35 và quy tắc nghiệp vụ | Huy, đại diện kho | Nguồn BA đã có; chờ xác nhận cấu hình SKU, bản tích hợp và ký review |
 | Test tích hợp và D75 | Phát, Thái | Chờ kiểm chứng ứng dụng |
 | Nghiệm thu story và M2 | Huy / PO, PM và các vai trò theo phân công | Chưa có biên bản hoặc chữ ký cho bản này |
 

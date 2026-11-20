@@ -9,6 +9,7 @@
 | Mốc dự kiến trong nguồn | M1 — 25/09/2026 |
 | Người phụ trách phần hồ sơ | Trần Trung Kiên — Architect / DBA |
 | Nhánh công việc | `Kien` |
+| Rà soát hồ sơ | 20/11/2026 trên source đã đồng bộ main; nhánh Kien là provenance của bản gốc |
 | Trạng thái | Chờ review; chưa có quyết định gate hoặc chữ ký cho phiên bản dựng lại |
 
 Ngày của mốc trong nguồn không phải ngày ký hồ sơ mới. Không suy ra có cuộc họp, người tham dự hoặc việc phê duyệt mới từ trạng thái “đã phê duyệt” trong các tài liệu PM trước đây.
@@ -29,7 +30,7 @@ Theo workbook `02 - Sprint 0 (12-09 đến 25-09) - Phân chia công việc.xlsx
 | Dữ liệu phát triển | [seed.sql](../../database/seed.sql) | Dữ liệu mô phỏng rõ ràng; không có bí mật hoặc dữ liệu khách hàng thật | Cần kiểm tra nội dung |
 | Kiểm thử DB | [constraints.sql](../../database/tests/constraints.sql), [validate_db.py](../../scripts/validate_db.py) | Có ca hợp lệ và ca bị từ chối, rollback và kiểm tra tính toàn vẹn | Cần đối chiếu ca kiểm tra và kết quả |
 | Kết quả thực thi | [validation.log](../../database/evidence/validation.log) | Có phiên bản PostgreSQL và đầu ra thực tế; không bỏ qua lỗi | Chỉ ghi đạt nếu log chứng minh đạt |
-| S0-21 / D54 | [D54](D54-bao-mat-phan-quyen.md) | Ma trận 9 vai trò, quyền và phạm vi dữ liệu; kiểm soát ứng dụng/DB rõ ràng | Vai trò đề xuất, chờ BA/PM xác nhận |
+| S0-21 / D54 | [D54](D54-bao-mat-phan-quyen.md) | Chín vai trò D34, mapping V005 và phạm vi dữ liệu; kiểm soát ứng dụng/DB rõ ràng | Đã đối chiếu quy tắc BA và DB hiện hành; review/ký nghiệm thu còn chờ |
 | Bàn giao môi trường | [database/README.md](../../database/README.md) | Người khác dựng lại môi trường và chạy kiểm tra theo hướng dẫn | Chờ người nhận xác nhận |
 | Hỗ trợ các đầu việc khác | [README phần DB](README.md) | Giao dịch API, quyền, thanh toán và điểm mở được chuyển đúng người sở hữu | Đóng góp của Kiên; chưa thay thế tài liệu của người làm chính |
 
@@ -56,13 +57,13 @@ Các chỉ tiêu tải 100.000 thiết bị, độ trễ POS/QR và availability
 
 | Mã | Nội dung | Người cần xác nhận | Trạng thái |
 |---|---|---|---|
-| M1-01 | Bổ sung FRS_V2/D34 và D22 còn thiếu; đối chiếu với thiết kế được dựng lại | Huy, Kiên, Thái | Mở |
+| M1-01 | D34/D35 và D22 đã có; đối chiếu thiết kế dựng lại và mapping BA 15/25 Use Case | Huy, Kiên, Thái | Đã có đầu vào; còn review phạm vi/phiên bản và ký |
 | M1-02 | Chấp thuận baseline 37 bảng mới: đây là thiết kế dựng lại, không phải bản nháp cũ đã khôi phục | Kiên, Huy, Sponsor | Mở |
-| M1-03 | Chốt tên, quyền và phạm vi dữ liệu của 9 vai trò; số lượng 9 đã có trong workbook nhưng danh sách chưa có | Huy, Kiên, PM | Mở |
+| M1-03 | D34 đã có chín role; kiểm D54/V005, alias lịch sử và assignment thật | Huy, Kiên, PM | Đã đồng bộ quy tắc DB; còn xác nhận triển khai/ký |
 | M1-04 | Phân biệt phạm vi 6 module toàn hệ thống trong D05/D11 với phạm vi demo thu hẹp trong D19/D20; xác nhận các chức năng chỉ có khung schema | PM, Huy, Thái | Mở |
 | M1-05 | Thống nhất ngày M1 25/09 trong workbook/D11 với ngày sign-off 18/09 trong D20 | PM | Mở |
-| M1-06 | Chốt phạm vi unique Serial/IMEI, quy tắc hãng và nội dung QR; D33 là câu hỏi khảo sát, chưa phải câu trả lời | Huy, đại diện kho | Mở |
-| M1-07 | Chốt thời hạn giữ hàng, khóa kiểm kê và đối soát thanh toán chưa rõ kết quả | Huy, Thái, đại diện vận hành | Mở |
+| M1-06 | D35 đã quy định Serial/IMEI/QR; kiểm V003 và hồ sơ profile theo SKU, phần IMEI phụ qua HTTP | Huy, đại diện kho, Thái | Đã có quy tắc và SQL; còn cấu hình/kiểm tích hợp/ký |
+| M1-07 | D34 BR-03/V004 đã có deadline POS10m/ONLINE30m và bảo vệ PENDING; cần worker expiry, đối soát và luồng kiểm kê | Huy, Thái, đại diện vận hành | SQL đã có; tích hợp và quy trình còn mở |
 | M1-08 | Chốt căn cứ xác nhận tiền: VietQR chỉ là phương tiện chỉ dẫn thanh toán, không chứng minh tiền đã về | Huy, Thái, PM | Mở |
 | M1-09 | Xác nhận D52/OpenAPI đầy đủ do Thái sở hữu; hợp đồng giao dịch DB chỉ là phần Kiên hỗ trợ | Thái, Kiên | Mở |
 | M1-10 | Chốt backup, phục hồi, quyền truy cập và chính sách lưu giữ dữ liệu trước triển khai thật | Kiên, PM, chủ hệ thống | Mở |

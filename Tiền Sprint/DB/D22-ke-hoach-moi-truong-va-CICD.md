@@ -6,23 +6,24 @@
 | Phụ trách | Trần Trung Kiên — Architect / DBA; phối hợp Trịnh Quốc An và Vũ Duy Thái |
 | Kỳ kế hoạch trong nguồn | Tiền Sprint, 05–18/09/2026; hạn KD-10 là 18/09/2026 |
 | Ngày hoàn thiện hồ sơ thực tế | 07/11/2026 — bổ sung hồ sơ còn thiếu, không hồi tố ngày ký hoặc triển khai |
-| Phiên bản | 1.0, nhánh `Kien` |
+| Ngày rà soát hiện hành | 20/11/2026 — đồng bộ source và evidence; không phải lần deploy hoặc chạy lại DB |
+| Phiên bản | 1.1; `Kien` là nhánh tạo bản gốc, các thay đổi DB tích hợp qua PR vào `main` |
 | Trạng thái | Kế hoạch kỹ thuật để review; CI DB có bằng chứng thật; Staging/Prod còn chờ hạ tầng và phê duyệt phát hành |
 
 ## 1. Căn cứ và phạm vi
 
 Workbook tiền Sprint do người dùng cung cấp, sheet “Theo người” dòng 24–27, giao Kiên KD-10 với hai đầu ra D21 và D22; sheet “Tài liệu và minh chứng” dòng 27 yêu cầu sơ đồ môi trường và log pipeline thành công. [D09](../PM/D09.docx), WBS 3.0–3.2, xác định kiến trúc, DB/security và CI/CD thuộc phần Kiên phụ trách. [D19](../PM/D19.docx) và [D20](../PM/D20.docx) là nguồn quản lý thay đổi/phạm vi để đối chiếu việc phát hành.
 
-Tài liệu phân biệt ba thời điểm: kế hoạch khởi động tháng 9; những thay đổi được các tài liệu PM mô tả vào tháng 10; trạng thái repo và bằng chứng thực thi kiểm tra ngày 07/11. Một phát biểu “đã phê duyệt” trong nguồn PM không tự phê duyệt D22 hoặc một lần triển khai mới.
+Tài liệu phân biệt kế hoạch khởi động tháng 9, thay đổi phạm vi trong nguồn PM tháng 10, bằng chứng thực chạy tháng 11 và ngày rà soát hồ sơ hiện hành. CI ngày 07/11 và diễn tập restore ngày 17/11 là hai nguồn bằng chứng khác nhau. Một phát biểu “đã phê duyệt” trong nguồn PM không tự phê duyệt D22 hoặc một lần triển khai mới.
 
-Phần đang có trong repo là DB PostgreSQL và công cụ Python: baseline 37 bảng của Sprint 0, hai migration nâng lên 39 bảng nghiệp vụ của Sprint 1, seed mô phỏng, kiểm tra SQL, runtime group role và CI. Repo chưa có mã frontend/backend hoàn chỉnh, host Staging/Prod hoặc secret nhà cung cấp để chứng minh toàn ứng dụng đã được triển khai. Các lựa chọn React/Spring Boot/JDK/Node trong tài liệu PM cần Thái chốt cùng mã nguồn ứng dụng; pipeline DB hiện không giả lập build ứng dụng đó.
+DB hiện hành gồm baseline Sprint 0 **37 bảng**, snapshot V001/V002 Sprint 1 **39 bảng**, và V001–V005 Sprint 2 **41 bảng**, cùng seed mô phỏng, runtime group role, công cụ Python và CI. Repo đã có [backend](../../backend/pom.xml) Java 25/Spring Boot 4.1.1 và [frontend](../../frontend/package.json) React/Vite. Phiên bản khai báo trong source là căn cứ build hiện tại; các giá trị JDK khác trong hồ sơ cũ không tự thay `pom.xml`. Node/npm chưa được ghim bằng `engines`. Việc review baseline toolchain thuộc Kiên/Thái; build và kiểm thử ứng dụng thuộc Fullstack. Chưa có bằng chứng Staging/Prod hoặc triển khai toàn ứng dụng chỉ từ pipeline DB.
 
 ## 2. Ma trận môi trường
 
 | Môi trường | Cấu hình và mục đích | Dữ liệu / kết nối | Mức hiện thực |
 |---|---|---|---|
-| Dev | PostgreSQL 16 local/container; Python 3.10+ và client `psql`; chạy baseline, migration, demo và test DB | Dữ liệu giả; Compose bind `127.0.0.1:5432`; database riêng cho từng lượt validation | Có [Compose](../../docker-compose.yml), [hướng dẫn DB](../../database/README.md) và [nâng cấp Sprint 1](../../database/sprint1/README.md) |
-| CI | GitHub-hosted Ubuntu; PostgreSQL 16 service tạm; Python 3.13; job backup/restore pin Ubuntu 24.04 và client 16 | Chỉ fixtures mô phỏng; mật khẩu CI chỉ cho service cô lập của job; hủy cùng runner | Có ba workflow; đối chiếu các run theo đúng SHA ở mục 5 |
+| Dev | PostgreSQL 16 local/container; Python 3.10+ và client `psql`; chạy baseline, migration, demo và test DB | Dữ liệu giả; Compose bind `127.0.0.1:5432`; database riêng cho từng lượt validation | Có [Compose](../../docker-compose.yml), [hướng dẫn baseline](../../database/README.md) và [nâng cấp hiện hành Sprint 2](../../database/sprint2/README.md) |
+| CI | GitHub-hosted Ubuntu; PostgreSQL 16 service tạm; Python 3.13; job backup/restore pin Ubuntu 24.04 và client 16 | Chỉ fixtures mô phỏng; mật khẩu CI chỉ cho service cô lập của job; hủy cùng runner | Có bốn workflow DB/readiness; đối chiếu các run theo đúng SHA ở mục 5 |
 | Staging | Đề xuất một môi trường riêng, cùng major PostgreSQL 16 và cùng migration đã kiểm trên CI; app sau HTTPS, DB private | Dữ liệu giả hoặc đã ẩn danh; provider sandbox; secret và credential tách Dev/Prod | Chưa có host, DNS, tài khoản cloud hoặc deployment log trong repo; cần cấu hình và chạy nghiệm thu thật |
 | Prod | Đề xuất app HTTPS, DB private, storage/backup tách máy; connection pool và quan sát vận hành | Dữ liệu thật theo quyền; không mở PostgreSQL ra Internet; không dùng credential owner trong app | Thiết kế triển khai, chưa phải môi trường đã cấp phát hoặc phát hành |
 
@@ -30,11 +31,11 @@ Cấu hình khởi điểm để dự toán thử: Dev 2 CPU / 2–4GiB RAM; Sta
 
 [Ma trận cấu hình có phiên bản](../../infra/environment-matrix.json) ghi trạng thái Dev/Staging/Prod và toolchain. [Runbook thao tác](../../infra/README.md) cung cấp lệnh backup, restore và diễn tập tái lập.
 
-Ở đợt kiểm chứng local, một cluster thử PostgreSQL 16.15 từng được chạy trên `127.0.0.1:55416` để tránh đụng cổng Dev. Đây là runtime thử riêng, không phải địa chỉ Staging, không đưa cấu hình trust local vào môi trường dùng dữ liệu thật.
+Cluster PostgreSQL 16.15 tại `127.0.0.1:55416` là cấu hình thử lịch sử ngày 07/11, không phải endpoint Staging hoặc hướng dẫn kết nối hiện hành. Diễn tập được lưu hiện tại dùng PostgreSQL 16.16 ngày 17/11; thông tin môi trường phải lấy từ summary/log của đúng lần chạy. Không đưa cấu hình trust local vào môi trường dùng dữ liệu thật.
 
 ```mermaid
 flowchart TB
-    Dev[Kiên / Dev Lead: nhánh Kien] --> PR[Pull request vào main]
+    Dev[Kiên / Dev Lead: nhánh làm việc DB] --> PR[Pull request vào main]
     PR --> CI[CI PostgreSQL 16: baseline, upgrade, assertions]
     CI --> Evidence[Log và artifact kiểm chứng]
     Evidence --> Review[Review kỹ thuật và điều kiện phát hành]
@@ -46,6 +47,8 @@ flowchart TB
 ```
 
 Luồng nét đứt là thiết kế cần hiện thực; sơ đồ không khẳng định Staging/Prod hoặc CD đã hoạt động. Browser chỉ tới API qua HTTPS 443. PostgreSQL 5432 chỉ cho backend, worker và nguồn quản trị được cho phép trong private network; SSH/bastion nếu dùng phải theo danh tính cá nhân và hạn chế nguồn.
+
+[document-validation.json](evidence/document-validation.json) là kết quả Mermaid của bản D22 có SHA-256 ghi trong file đó. Bản 1.1 đã đổi source, nên kết quả cũ được giữ làm lịch sử và không chứng nhận cú pháp của bản mới; chỉ bổ sung kết quả kiểm mới sau khi parser thực sự chạy trên đúng source.
 
 ## 3. Cấu hình, danh tính và bí mật
 
@@ -59,7 +62,7 @@ Luồng nét đứt là thiết kế cần hiện thực; sơ đồ không khẳ
 | Backup / restore | Credential riêng đủ quyền công cụ và phạm vi database đã định | Hạn chế người đọc backup; mã hóa lưu trữ; phục hồi thật theo runbook và quyền được cấp, không cấp credential này cho app |
 | Tích hợp ứng dụng | Secret provider, JWT/session, bucket và callback URL do Thái/Vũ triển khai khi có dịch vụ | Chỉ server/secret manager, tách sandbox/Prod; chưa có các dịch vụ này trong pipeline DB |
 
-[Runtime role Sprint 0](../../database/runtime-roles.sql) và [provision Sprint 1](../../database/sprint1/runtime-roles.sql) tạo group role `NOLOGIN`; không tạo mật khẩu hoặc login nhân viên. `sasms_app` là lớp backend tin cậy có quyền đọc rộng, không phải cơ chế RLS cho từng người dùng. Helper Sprint 1 kiểm active/permission/scope trên các hàm catalog và nhập kho; việc bảo vệ mọi endpoint và các hàm POS ngoài phạm vi đó vẫn cần service thực hiện và kiểm thử.
+[Runtime role Sprint 0](../../database/runtime-roles.sql) và [provision Sprint 1](../../database/sprint1/runtime-roles.sql) tạo group role `NOLOGIN`; không tạo mật khẩu hoặc login nhân viên. `sasms_app` là lớp backend tin cậy có quyền đọc rộng, không phải cơ chế RLS cho từng người dùng. Các hàm catalog, nhập kho và POS hiện hành kiểm active actor/permission/scope theo hợp đồng [DS2 DB](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md); API vẫn phải xác thực JWT, ánh xạ trusted actor và bảo vệ mọi đường đọc/ghi. Quyền gọi SQL không thay việc xác thực người dùng ở backend.
 
 Không commit password file, dump có dữ liệu thật, `.env` thật, private key hoặc token. Khi cần chuyển dữ liệu Prod sang Staging phải có mục đích được duyệt, ẩn danh PII và loại secret trước chuyển. Ảnh/chứng từ dùng quyền truy cập hạn chế; AI không nhận PII, credential hoặc payload thanh toán thô. Backup cần được bảo vệ như database gốc, không coi file dump là dữ liệu công khai.
 
@@ -67,11 +70,11 @@ Không commit password file, dump có dữ liệu thật, `.env` thật, private
 
 1. Clone repo, checkout nhánh làm việc; tạo `.env` từ mẫu và thay mật khẩu riêng nếu dùng Docker. Kiểm tra `python --version`, `psql --version` và PostgreSQL server major 16.
 2. Dựng Dev theo [hướng dẫn baseline](../../database/README.md). Dùng database mới cho `schema.sql`; không nạp lại baseline trên DB đã có dữ liệu.
-3. Với DB baseline hiện có, áp dụng [migration runner](../../scripts/migrate_db.py), rồi chạy runtime provisioning Sprint 1 theo [runbook nâng cấp](../../database/sprint1/README.md). Không reseed quyền baseline để thay quản trị grant sau nâng cấp.
-4. Dùng [validator Sprint 1](../../scripts/validate_sprint1.py) trên database thử cô lập và [demo SQL](../../database/sprint1/demo.sql). Validators dùng owner và fixtures phục vụ kiểm chứng, không chạy trên DB sản xuất.
-5. Đối chiếu [DBML/ERD Sprint 1](../../database/sprint1/README.md) bằng generator; commit nguồn SQL, migration, tài liệu và evidence đúng phiên bản cùng nhau.
+3. Với DB baseline hiện có, backup và thử trên bản sao trước, áp dụng V001–V005 bằng [migration runner](../../scripts/migrate_db.py), rồi runtime provisioning Sprint 1 và extension Sprint 2 theo [runbook hiện hành](../../database/sprint2/README.md). Không reseed quyền baseline để thay quản trị grant sau nâng cấp.
+4. Dùng [validator Sprint 2](../../scripts/validate_sprint2.py) trên database thử cô lập. `--apply` chỉ dành cho DB thử mới; runner regression S0/S1 tại V002 trước khi nâng cấp V003–V005. Không chạy regression V002 trên DB hiện hành đã nâng cấp hoặc validators tạo fixture bằng owner trên DB nghiệp vụ.
+5. Đối chiếu [DBML/ERD/từ điển Sprint 2](../../database/sprint2/README.md) cho catalog 41 bảng bằng generator. Snapshot 37/39 bảng giữ riêng để truy vết; commit nguồn SQL, migration, tài liệu và evidence đúng phiên bản cùng nhau.
 
-Python 3.10+ là yêu cầu công cụ DB hiện tại; CI đang chọn 3.13. PostgreSQL major 16 là điều kiện kiểm chứng; bản vá cụ thể do môi trường xác định và phải ghi vào log. Tag Docker `16`/`16-alpine` trong repo cố định major, chưa pin digest; trước phát hành thật cần ghi version/digest đã thử, review bản vá và cập nhật có kiểm soát. Không tự kết luận các phiên bản JDK/Node đã đồng bộ khi repo chưa có ứng dụng để build.
+Python 3.10+ là yêu cầu công cụ DB hiện tại; CI đang chọn 3.13. PostgreSQL major 16 là điều kiện kiểm chứng; bản vá cụ thể do môi trường xác định và phải ghi vào log. Tag Docker `16`/`16-alpine` trong repo cố định major, chưa pin digest; trước phát hành thật cần ghi version/digest đã thử, review bản vá và cập nhật có kiểm soát. Toolchain Java/Node và kết quả build ứng dụng được đối chiếu với source và bằng chứng của Fullstack; pipeline DB không xác nhận thay phần đó.
 
 ## 5. CI đang hiện thực và bằng chứng
 
@@ -80,8 +83,9 @@ Python 3.10+ là yêu cầu công cụ DB hiện tại; CI đang chọn 3.13. Po
 | [database.yml](../../.github/workflows/database.yml) | Checkout; Python; PostgreSQL 16; nạp baseline; seed lặp; constraints/lifecycle/ACL; hai phiên giữ hàng; lookup 100.000 thiết bị; đối chiếu artifact 37 bảng | `postgresql16-validation` |
 | [sprint1-database.yml](../../.github/workflows/sprint1-database.yml) | Regression baseline trước nâng cấp; bảo toàn dữ liệu; migration checksum/no-op/rollback; catalog/IAM/batch; ba ca cạnh tranh; đối chiếu artifact 39 bảng | `sprint1-postgresql16-validation` |
 | [pre-sprint-environments.yml](../../.github/workflows/pre-sprint-environments.yml) | Database nguồn mới; backup custom; restore target mới riêng tư; so dữ liệu/catalog/ledger/ACL; replay runtime; chặn overwrite/checksum sai | `pre-sprint-environment-evidence`; không upload dump |
+| [sprint2-staging.yml](../../.github/workflows/sprint2-staging.yml) | Regression S0/S1, nâng cấp V001–V005, ACL/lease/định danh, hai POS tranh Serial và báo readiness | Artifact DB/readiness theo workflow; `NOT_DEPLOYED`, chưa phải deploy Staging |
 
-Hai workflow chạy khi push/PR có thay đổi trong `database/**`, `scripts/**` hoặc chính workflow, và cho phép chạy thủ công qua `workflow_dispatch`. Quyền token workflow chỉ đọc contents; secret service CI không phải credential của Staging/Prod. Cấu hình hiện tại không chạy toàn bộ pipeline chỉ vì sửa một file tài liệu thuần túy ngoài các path đó.
+Các workflow đều hỗ trợ `workflow_dispatch`; điều kiện push/PR lấy từ `paths` trong từng file. Baseline/Sprint 1 theo dõi `database/**`, `scripts/**` và chính workflow. Diễn tập backup/restore theo dõi `database/**`, `scripts/db_ops.py`, `scripts/validate_environment.py`, `scripts/migrate_db.py`, `infra/**`, `Tiền Sprint/DB/**` và chính workflow, để thay đổi schema/migration cũng yêu cầu diễn tập lại. Workflow Sprint 2 còn theo dõi source ứng dụng và thư mục Sprint 2 theo danh sách riêng. Quyền token workflow chỉ đọc contents; secret service CI không phải credential Staging/Prod. Có cấu hình workflow không đồng nghĩa phiên bản vừa sửa đã có run thành công; phải lưu run/SHA thực tế sau khi CI chạy.
 
 **Bằng chứng thật tại commit `d28c95afe03be36e00ca73a245f0e18ee0cb09ce`, ngày 07/11/2026:** [run PostgreSQL baseline 42340988289](https://github.com/Kain2608/software-project-management/actions/runs/42340988289) và [run Sprint 1 42340988364](https://github.com/Kain2608/software-project-management/actions/runs/42340988364) đã thành công. Các run này chứng minh bộ DB ở commit đó đã qua CI; không ghi chúng thành pipeline đã chạy ngày 18/09 hoặc thành chứng cứ deploy remote. Phiên bản thay đổi sau đó phải có run/evidence tương ứng trước phát hành.
 
@@ -91,7 +95,7 @@ Hai workflow chạy khi push/PR có thay đổi trong `database/**`, `scripts/**
 
 ## 6. Git, review và CD có kiểm soát
 
-Luồng làm việc: `Kien` → push → PR vào `main` → review → CI trên SHA cuối → merge theo quyền của nhóm. Kiên review DB/migration/security, Thái review khả năng tích hợp, Phát review test và Huy xác nhận quy tắc nghiệp vụ; PM chịu trách nhiệm quyết định phạm vi/lịch phát hành. Không dùng kết quả CI của commit trước để thông qua thay đổi sau.
+Luồng làm việc: nhánh DB đang làm việc → push → PR vào `main` → review → CI trên SHA cuối → merge theo quyền của nhóm. Tên `Kien` chỉ giữ provenance của bản gốc, không bắt buộc checkout lại nhánh đó. Kiên review DB/migration/security, Thái review khả năng tích hợp, Phát review test và Huy xác nhận quy tắc nghiệp vụ; PM chịu trách nhiệm quyết định phạm vi/lịch phát hành. Không dùng kết quả CI của commit trước để thông qua thay đổi sau.
 
 **Chính sách đề xuất cần quản trị repo bật:** bảo vệ `main`, yêu cầu PR và check DB cần thiết, không push thẳng/force push vào nhánh bảo vệ, không tự duyệt PR của chính mình; cân nhắc một reviewer đủ trách nhiệm theo nhóm. Chưa có bằng chứng cấu hình branch protection hoặc required reviewers nên không đánh dấu những cơ chế đó đã được bật.
 
@@ -120,7 +124,9 @@ Script [db_ops.py](../../scripts/db_ops.py) cung cấp `backup --dsn <source> --
 
 Diễn tập cần chứng minh file dump đọc được, restore không lỗi, dữ liệu/catalog và ledger migration khớp, quyền runtime được kiểm lại và nghiệp vụ mẫu chạy được trong môi trường cô lập. Logical backup có thể không mang global role/secret của cluster; DBA phải chuẩn bị LOGIN/group role phù hợp và không khôi phục credential thật sang môi trường thử. Không bật worker hoặc webhook ở DB phục hồi trước khi đối soát để tránh gửi sự kiện hay xử lý thanh toán lặp.
 
-**Kết quả thực chạy 07/11/2026, 19:49:43–19:49:49 (UTC+7):** PostgreSQL/psql/pg_dump/pg_restore 16.15; **40 kiểm tra đạt**. Target mới khớp dữ liệu của 39 bảng nghiệp vụ và ledger; đối chiếu 255 cột, 229 constraints, 106 indexes, 14 routines, 6 triggers, 1 view cùng ACL. Runtime `sasms_app` replay lô trả đúng UUID cũ, không thêm tác dụng phụ; `PUBLIC CONNECT` bị chặn. Archive đã tồn tại, target đã tồn tại và dump bị sửa đều bị từ chối; dữ liệu nguồn không đổi và fixtures nguồn được dọn đúng UUID. [Summary](evidence/environment-summary.json) lưu hash nguồn và SHA-256 archive.
+**Kết quả thực chạy đang được lưu: 17/11/2026, 08:09:08–08:09:15 (UTC+7).** [Summary](evidence/environment-summary.json) ghi PostgreSQL/psql/pg_dump/pg_restore **16.16**, **41 kiểm tra đạt**, **41 bảng nghiệp vụ / 5 migration** và ledger khớp. Catalog được đối chiếu gồm **285 cột, 243 constraints, 112 indexes, 24 routines, 10 triggers, 2 views và 71 mục ACL**. Runtime `sasms_app` replay lô trả đúng UUID cũ, không thêm tác dụng phụ; `PUBLIC CONNECT` bị chặn. Archive đã tồn tại, target đã tồn tại và dump bị sửa đều bị từ chối; dữ liệu nguồn không đổi và fixtures nguồn được dọn đúng UUID. Summary/log lưu thời gian, hash nguồn và SHA-256 archive; đây không phải lần chạy mới ngày rà soát 20/11.
+
+Các số **07/11, 16.15, 40 kiểm tra, 39 bảng** trong bản D22 trước thuộc lần diễn tập lịch sử. File summary/log ở đường dẫn hiện tại đã được thay bằng lần 17/11, nên không dùng chúng để chứng minh lại kết quả 07/11; muốn viện dẫn lần cũ phải phục hồi đúng artifact theo commit và lưu liên kết phiên bản riêng.
 
 Local restore pass chỉ chứng minh quy trình trên máy thử và dataset tương ứng. Để xác nhận RTO Prod phải đo cả thời gian lấy backup, cấp phát, restore, kiểm tra, đối soát và chuyển lưu lượng với dung lượng thực; chưa có số đo đó thì giữ trạng thái mục tiêu đề xuất.
 
@@ -152,7 +158,7 @@ Ngưỡng trên cần hiệu chỉnh bằng số đo, chưa phải alert đang v
 |---|---|
 | Ma trận Dev/CI/Staging/Prod, sơ đồ và ranh giới bí mật | Đã soạn để review |
 | Bộ DB dựng/test được và CI thật | Có script/workflow và hai run thành công nêu ở mục 5 |
-| Backup/restore an toàn và log diễn tập mới | Đã đạt 40 kiểm tra trên database thử mới; đối chiếu summary/log và hash nguồn; chưa suy thành PITR hoặc SLA Prod |
+| Backup/restore an toàn và log diễn tập đang lưu | 41 kiểm tra đạt ngày 17/11 trên DB thử 41 bảng/5 migration; đối chiếu summary/log và hash nguồn; chưa suy thành PITR hoặc SLA Prod |
 | Host/domain/secret, branch protection và CD vào Staging/Prod | Chờ cấu hình/triển khai và kiểm chứng theo môi trường thật |
 | Ngân sách, RPO/RTO, lưu giữ và trách nhiệm vận hành | Đề xuất cần PM/Sponsor/chủ dữ liệu chốt |
 | Kiên / Thái / PM review và ký | Chờ xác nhận, chưa có ngày ký cho bản này |

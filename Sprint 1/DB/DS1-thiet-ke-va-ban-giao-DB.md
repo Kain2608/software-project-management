@@ -7,8 +7,8 @@
 |---|---|
 | Phụ trách | Trần Trung Kiên — Architect / DBA |
 | Đầu việc | S1-03, S1-06, S1-10; hỗ trợ tám đầu việc theo workbook |
-| Phiên bản / ngày thực hiện | 1.0 / 07/11/2026 |
-| Nhánh / baseline đầu vào | `Kien`; phần DB Sprint 0 đã có trong repo |
+| Phiên bản / ngày thực hiện | 1.1 / rà soát tài liệu 20/11/2026; bản gốc 07/11/2026 |
+| Nhánh / baseline đầu vào | Bản gốc `Kien`; rà soát trên `main` tại `6544a00`, giữ snapshot DB Sprint 0 và V001/V002 |
 | Phạm vi nghiệm thu | Increment DB của DS1; chờ review kỹ thuật/nghiệp vụ, không đại diện nghiệm thu toàn ứng dụng |
 
 ## 1. Căn cứ và phần thay đổi
@@ -45,9 +45,11 @@ Catalog là dữ liệu dùng chung toàn chuỗi. Vì vậy người chỉ có 
 
 ## 3. Serial/IMEI và nhập lô — S1-06
 
-`devices.serial`, `devices.imei` và `devices.qr_token` tiếp tục được bảo vệ bằng unique index. CHECK/đường nhập dùng Serial canonical; FK ghép giữ đúng sản phẩm của dòng phiếu nhận. Bảng cấu hình `sasms.identifier_rules` đã được thiết kế và đối chiếu khớp 100% với [hợp đồng D35](D35-hop-dong-quy-tac-dinh-danh.md) (tiếp nhận từ hồ sơ D35 của BA: Sony TV 7 chữ số `^[0-9]{7}$`, Apple bắt buộc IMEI 15 chữ số, Samsung và LG generic).
+Trong snapshot V002, `devices.serial`, `devices.imei` và `devices.qr_token` được bảo vệ bằng unique index; Serial dùng uppercase/1–100, IMEI một trường 15 chữ số. FK ghép giữ đúng sản phẩm của dòng phiếu nhận. `sasms.identifier_rules` là cấu hình theo brand của phiên bản cũ, không có regex hãng được seed sẵn. Đây là mô tả lịch sử, không phải hợp đồng D35 hiện hành.
 
-Hợp đồng chính: `receive_device_batch(receipt_item uuid, request_key uuid, devices jsonb, actor uuid) → uuid[]`. Payload là mảng có **1–500** object `{ "serial": "...", "imei": "..." }`; IMEI có thể NULL khi quy tắc áp dụng cho phép. Backend truyền một request key ổn định cho cùng ý định nhập và truyền actor từ phiên đã xác thực. Kết quả giữ thứ tự phần tử đầu vào.
+V003 thay đường kiểm định danh bằng Serial raw/trim/phân biệt hoa thường/1–128, Luhn và registry IMEI slot 1/2; profile được cấp theo **product/SKU được phê duyệt**, không suy quy tắc cho toàn hãng. Sony TV 7 chữ số chỉ áp cho SKU có profile tương ứng; không tự buộc mọi sản phẩm Apple có IMEI. [D35 DB](D35-hop-dong-quy-tac-dinh-danh.md) mô tả quy tắc và cách provision hiện hành. Cấu hình `identifier_rules` cũ giữ để truy vết, không được tự chuyển thành profile mới.
+
+Hợp đồng chính: `receive_device_batch(receipt_item uuid, request_key uuid, devices jsonb, actor uuid) → uuid[]`. Payload snapshot V002 là mảng có **1–500** object `{ "serial": "...", "imei": "..." }`; IMEI có thể NULL khi quy tắc áp dụng cho phép. V003 giữ chữ ký hàm và bổ sung `imei2` trong JSON SQL; backend HTTP hiện chỉ nhận `serial`/`imei`, cần bổ sung trước khi nhập IMEI phụ qua UI/API. Backend truyền một request key ổn định cho cùng ý định nhập và truyền actor từ phiên đã xác thực. Kết quả giữ thứ tự phần tử đầu vào.
 
 Trong một transaction, hàm xác định kho/cửa hàng từ phiếu, kiểm tra actor có `inventory.receive`, kiểm tra payload và quy tắc, khóa các hàng nghiệp vụ cần thiết, so định mức phiếu/PO và tạo toàn bộ thiết bị cùng biến động/audit/outbox. Một phần tử không hợp lệ làm rollback toàn lô; không trả thành công cho các phần tử đã chèn trước lỗi.
 
@@ -57,26 +59,27 @@ UNIQUE xử lý tranh chấp thực tế giữa các phiên nhập; kiểm tra �
 
 ## 4. Users/roles — S1-10 và hỗ trợ EN-01
 
-Chín vai trò giữ theo [D54](../../Sprint%200/DB/D54-bao-mat-phan-quyen.md): `ADMIN`, `STORE_MANAGER`, `WAREHOUSE`, `CASHIER`, `SALES`, `DISPATCHER`, `TECHNICIAN`, `CUSTOMER_SERVICE`, `ANALYST`.
+Snapshot V002 giữ chín mã role của thời điểm đó: `ADMIN`, `STORE_MANAGER`, `WAREHOUSE`, `CASHIER`, `SALES`, `DISPATCHER`, `TECHNICIAN`, `CUSTOMER_SERVICE`, `ANALYST`. Đây là lịch sử trước khi V005 đồng bộ [D54 hiện hành](../../Sprint%200/DB/D54-bao-mat-phan-quyen.md) với D34 BA.
 
-### 4.1 Bảng ánh xạ chính thức giữa DB Role và Chức danh BA (D34 FRS)
+### 4.1 Vai trò hiện hành sau V005 và tương thích snapshot
 
-Để giải quyết triệt để quyết định `DEC-01`, CSDL giữ nguyên mã role chuẩn kiểm thử, tầng Backend và giao diện ánh xạ chính thức như sau:
+V005 dùng trực tiếp chín mã role nghiệp vụ D34 dưới đây. Đây là hợp đồng kỹ thuật đã triển khai, không phải biên bản phê duyệt `DEC-01`. Sổ quyết định D53 của Fullstack vẫn có phương án cũ; người sở hữu cần cập nhật trạng thái thay thế trước khi dùng làm căn cứ ký duyệt. Các quyền liệt kê là phạm vi cho phép, không bảo đảm một assignment hoặc grant cụ thể đã được cấp.
 
-| Mã Role trong CSDL | Quyền chính (Permissions) | Chức danh nghiệp vụ BA (D34) | Ghi chú tích hợp |
+| Mã role canonical | Phạm vi quyền chính theo V005 | Chức danh nghiệp vụ D34 | Ghi chú tích hợp |
 |---|---|---|---|
-| `ADMIN` | Quản trị toàn hệ thống, `catalog.write`, `iam.manage` | **ADMIN** | Quản trị hệ thống, cấp tài khoản |
-| `STORE_MANAGER` | Quản lý cửa hàng, `catalog.write`, `inventory.adjust`, `sales.approve` | **STORE_MANAGER** | Quản lý siêu thị, duyệt đổi trả/hàng lỗi |
-| `ADMIN` / `STORE_MANAGER` (có `catalog.write`) | `catalog.read`, `catalog.write` | **CATALOG_MANAGER** | Quản lý danh mục SKU, thông số, giá |
-| `WAREHOUSE` | `inventory.read`, `inventory.receive` | **WAREHOUSE_STAFF** | Nhân viên kho, tạo/xác nhận nhập lô, tra cứu kho |
+| `ADMIN` | `iam.manage`, `audit.read` | **ADMIN** | Không tự có quyền bán hàng, sửa catalog hoặc duyệt hoàn tiền |
+| `STORE_MANAGER` | `inventory.adjust`, `sales.approve`, `payments.refund`, `reports.read` và quyền đọc được cho phép | **STORE_MANAGER** | Quyền phụ thuộc assignment/scope và grant thực tế |
+| `CATALOG_MANAGER` | `catalog.read`, `catalog.write` | **CATALOG_MANAGER** | Sửa catalog chung cần assignment global |
+| `WAREHOUSE_STAFF` | `inventory.read`, `inventory.receive` và quyền đọc được cho phép | **WAREHOUSE_STAFF** | Nhập/tra kho trong phạm vi được giao |
 | `CASHIER` | `sales.read`, `sales.checkout`, `payments.read` | **CASHIER** | Thu ngân, bán POS, in biên nhận |
-| `SALES` | `catalog.read`, `inventory.read`, `sales.read`, `ai.use` | **SALES_STAFF** | Nhân viên bán hàng, tra tồn, dùng AI tư vấn |
+| `SALES_STAFF` | `catalog.read`, `inventory.read`, `sales.read`, `ai.use` | **SALES_STAFF** | Nhân viên bán hàng, tra tồn, dùng AI tư vấn |
 | `DISPATCHER` | `logistics.manage`, `sales.read` | **DISPATCHER** | Điều phối viên, phân công giao hàng & lắp đặt |
 | `TECHNICIAN` | `logistics.execute`, `warranty.manage` | **TECHNICIAN** | Kỹ thuật viên, kích hoạt bảo hành, thực hiện lắp đặt |
 | `CUSTOMER_SERVICE` | `sales.read`, `warranty.manage` | **CUSTOMER_SERVICE** | Chăm sóc khách hàng, tiếp nhận bảo hành / đổi trả |
-| `ANALYST` | `reports.read`, `audit.read` | Chuyên viên báo cáo (FR-15 BI Dashboard) | Báo cáo doanh thu, tồn kho và AI |
 
-Migration nạp snapshot role/permission theo allowlist tường minh. Chỉ role chưa tồn tại trước migration nhận các grant mặc định; grant của role đã có, kể cả quyền đã được chủ ý thu hồi, được giữ khi nâng cấp lần đầu. Chạy lại migration đã ghi nhận sẽ bỏ qua phần seed, không tự khôi phục quyền đã thu hồi sau đó. Không tự gán role cho tài khoản demo, không tạo mật khẩu công khai, không tự bật user chưa được cấp quyền. Thay đổi grant tiếp theo phải qua quy trình quản trị/migration được review.
+`WAREHOUSE`/`SALES` được giữ dưới dạng alias legacy để không viết lại assignment lịch sử; `ANALYST` được giữ nhưng không còn quyền tự động. V005 không đổi toàn bộ assignment cũ thành assignment mới, không cấp thêm quyền đã bị DBA thu hồi và không dùng `ADMIN`/`STORE_MANAGER` thay `CATALOG_MANAGER`. Quản trị gán quyền/role thực tế cần review riêng.
+
+Trong snapshot V001/V002, migration nạp role/permission theo allowlist tường minh: chỉ role mới nhận grant mặc định, grant của role đã có và quyền đã bị thu hồi được bảo toàn. V005 tiếp tục thu hồi quyền ngoài allowlist D34, không khôi phục quyền đã bị DBA thu hồi; vì vậy không dùng cam kết bảo toàn của V001/V002 để bỏ qua hardening V005. Chạy lại migration đã ghi ledger không chạy lại seed. Không tự gán role cho tài khoản demo, tạo mật khẩu công khai hoặc bật user chưa được cấp quyền. Thay đổi grant tiếp theo cần quy trình quản trị/migration được review.
 
 | Hàm | Ý nghĩa |
 |---|---|
@@ -101,7 +104,7 @@ Khi tham số store là NULL, chỉ assignment global được xét. Role/permis
 | S1-14 thiết bị — An | Xác nhận scanner đọc được token/Serial và giữ nguyên ký tự; model/driver/biên bản mua thuộc hồ sơ thiết bị |
 | S1-02, S1-16 — Huy | Chốt D35, phạm vi uniqueness/IMEI, chín role và các điểm chưa đủ DoR của Sprint 2 |
 
-Độ trễ lookup DB và test nhập đồng thời chỉ chứng minh phần DB. Yêu cầu QR dưới một giây cần video/số đo trên trình duyệt iOS/Android và API thực tế. Tương tự, test SQL không phải báo cáo Postman, E2E, login JWT hoặc endpoint AI 200.
+Độ trễ lookup DB và test nhập đồng thời chỉ chứng minh phần DB. NFR-01 BA đo **p95 < 1 giây từ khi giải mã QR thành công đến khi hiển thị dữ liệu**, không gồm lấy nét camera, trên 100 lượt Chrome mobile với Wi-Fi thử ổn định; ghi thiết bị/mạng/build/median/p95/lỗi. Các cấu hình iOS/Android khác cần kiểm tương thích riêng. Test SQL không thay kết quả HTTP, browser E2E, login JWT hoặc endpoint AI 200.
 
 ## 6. Migration và triển khai
 
@@ -113,7 +116,7 @@ Nếu migration lỗi, rollback transaction thay đổi đang áp dụng; không
 
 ## 7. Kiểm chứng và điểm chờ
 
-Lần chạy cuối **07/11/2026, 11:57:57–11:58:12 (UTC+7)** trên PostgreSQL **16.15** đạt các kiểm tra sau; [summary.json](../../database/evidence/sprint1/summary.json) lưu timestamp UTC và SHA-256 nguồn, [validation.log](../../database/evidence/sprint1/validation.log) lưu đầu ra.
+Evidence đang được dẫn là lần regression **17/11/2026**, PostgreSQL **16.16**, ghim tới V002: [summary.json](../../database/evidence/sprint1/summary.json) lưu timestamp UTC và SHA-256 nguồn, [validation.log](../../database/evidence/sprint1/validation.log) lưu đầu ra. Lần thực hiện 07/11 là provenance của bản gốc; không dùng các file evidence hiện tại để chứng minh số đo của lần cũ hoặc việc kiểm lại tài liệu ngày 20/11.
 
 | Nhóm kiểm chứng | Kết quả thực tế |
 |---|---|
@@ -126,8 +129,8 @@ Lần chạy cuối **07/11/2026, 11:57:57–11:58:12 (UTC+7)** trên PostgreSQL
 | Hai phiên cùng IMEI | Hai PO độc lập; một thành công, một lỗi unique `23505`; chỉ một bộ bản ghi nghiệp vụ commit |
 | Hai phiên cùng request key | Cả hai nhận thành công cùng ID, chỉ một device và một batch được tạo |
 | Provision/demo/cleanup | Script runtime và demo DB đạt; fixtures được dọn theo ID riêng, nội dung 39 bảng khớp snapshot trước test |
-| Artifacts | Parser DBML xác nhận 39 bảng/67 FK; ERD Mermaid hợp lệ; xem [evidence parser](../../database/evidence/sprint1/artifacts-validation.json) |
+| Artifacts | [Evidence parser lịch sử](../../database/evidence/sprint1/artifacts-validation.json) ghi DBML 39 bảng/67 FK và Mermaid tại đúng hash; không chứng nhận các Markdown đã sửa sau lần kiểm đó |
 
 [Demo DB](../../database/sprint1/demo.sql) chạy bằng dữ liệu mô phỏng và rollback, không tạo login/JWT. [Hồ sơ M2](D127-ho-so-review-DB-M2.md) tập hợp các kết quả trên cho người review dự án.
 
-D34/FRS_V2, quy tắc hãng D35 có nguồn xác nhận, danh sách role được duyệt, video QR, PR/merge, deployment Staging và chữ ký PO/PM vẫn cần người sở hữu cung cấp hoặc thực hiện. Không lấy nội dung “đã có/một phần” của workbook làm bằng chứng các việc đó đã diễn ra cho phiên bản mới.
+D34/FRS_V2 và D35 BA đã có trong repo; V003…V005 triển khai hợp đồng định danh/lease/role hiện hành. Git đã có merge PR #29 DB (`06423f0`) và PR #33 TV4 (`4f5df6f`); đó là bằng chứng tích hợp nguồn, không thay review/nghiệm thu. Profile SKU cần nguồn phê duyệt thật; video QR, deployment Staging và chữ ký PO/PM vẫn cần người sở hữu cung cấp. Các phần cần phối hợp tiếp được ghi ở [DS2 DB](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md#bàn-giao-tích-hợp-còn-mở), không lấy trạng thái workbook làm kết quả kiểm chứng mới.

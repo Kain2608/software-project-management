@@ -4,14 +4,14 @@
 |---|---|
 | Đầu việc | Kiên hỗ trợ Thái ở S0-24; phần DB của D63/D64/D65 |
 | Căn cứ | [Workbook Sprint 0](../inputs/phan-cong-sprint-0.xlsx), sheet “Theo người” dòng 22; “Phân chia công việc” dòng 5; “Tài liệu và minh chứng” dòng 27–29 |
-| Ngày / nhánh làm việc | 07/11/2026; `DB` |
+| Ngày / phiên bản | Lập 07/11/2026; rà soát 20/11/2026; phần DB đã tích hợp vào main |
 | Trạng thái | Bàn giao DB bổ sung để review; scaffold/SQL/CI DB đã có được giữ nguyên |
 
-Workbook ghi D63/D65 chưa có file và D64 một phần. Repo hiện có scaffold DB, script kiểm tra và CI; bản này bổ sung quy ước và cách chạy còn thiếu từ phía Kiên. Thái chủ trì bộ D63–D65 toàn dự án, gồm khung frontend/backend và phiên bản ứng dụng. Không tạo thêm ứng dụng để thay phần việc của Thái.
+Workbook ghi D63/D65 chưa có file và D64 một phần tại thời điểm lập phân công. Repo hiện có DB, script/CI và source ứng dụng tại `backend/`, `frontend/`; bản này bổ sung quy ước và hướng dẫn phía DB. Thái chủ trì D63–D65 toàn dự án, gồm toolchain và build ứng dụng.
 
 ## 1. D63 — Nhánh và quy ước thay đổi DB
 
-Theo yêu cầu hiện tại của Kiên, công việc này làm và push trên [nhánh DB](https://github.com/Kain2608/software-project-management/tree/DB). Chủ repo/nhóm phụ trách review và merge vào main khi cần. Các tài liệu trước ghi `Kien` phản ánh nhánh lịch sử; không đổi chúng thành bằng chứng rằng đã làm hoặc đã được duyệt trên DB từ tháng 9.
+Phần DB đã có trong `main`; [nhánh DB](https://github.com/Kain2608/software-project-management/tree/DB) là nhánh phát triển có thể dùng cho thay đổi tiếp theo. Chủ repo/nhóm phụ trách review và merge theo quy trình. Nhãn `Kien` phản ánh nhánh lịch sử, không chứng minh phê duyệt vào tháng 9. Ví dụ bên dưới chỉ áp dụng khi chủ thay đổi chọn làm việc trên nhánh DB.
 
 Chạy từ thư mục repo; trước khi đổi nhánh/pull, xem và giữ các thay đổi chưa commit của mình. Nếu pull không fast-forward thì dừng cập nhật để giải quyết lịch sử, không reset/force để xóa thay đổi:
 
@@ -19,7 +19,7 @@ Chạy từ thư mục repo; trước khi đổi nhánh/pull, xem và giữ các
 git status --short --branch
 git fetch origin
 git switch DB
-git pull --ff-only origin DB
+git merge --ff-only origin/main
 git branch --show-current
 ```
 
@@ -40,10 +40,10 @@ Lệnh push ở trên chỉ gửi DB; không push main, force-push hoặc tự m
 | Định danh / kiểu | Giữ `snake_case`, schema-qualify `sasms.*` trong code gọi DB; UUID cho ID, numeric cho tiền, timestamptz cho thời điểm, FK cho tham chiếu; không dùng float cho tiền |
 | API / query | Bind tham số; actor từ phiên đã xác thực; kiểm active/quyền/cửa hàng; chỉ SELECT cột DTO cần dùng. Không ghép SQL từ Serial hoặc đưa owner credential vào app |
 | Transaction / khóa | Mọi chuyển trạng thái cốt lõi cùng movement/audit/outbox trong transaction. Giữ thứ tự khóa đã có: nhận hàng PO → phiếu → dòng; POS khóa đơn rồi thiết bị UUID tăng dần. Không gọi mạng trong transaction đang giữ khóa |
-| Lịch sử / tiền | Không sửa/xóa CAPTURED qua app, không sửa tồn bằng UPDATE tùy ý; nghiệp vụ bù cần thiết kế riêng. Không dùng xóa bảng/disable trigger để “sửa lỗi test” |
-| Phiên bản | Baseline S0 37 bảng giữ nguyên. V001/V002 đã áp dụng là bất biến; sửa tiếp bằng migration version mới. Không đổi checksum cũ hoặc chạy cùng migration bằng hai runner |
+| Lịch sử / tiền | Không sửa/xóa CAPTURED qua app, không sửa tồn bằng UPDATE tùy ý; nghiệp vụ bù cần thiết kế riêng. Validator S2 có ngoại lệ cleanup bằng owner cho đúng UUID payment mô phỏng trên DB cô lập, khôi phục trigger trong cùng transaction; không áp dụng trên dữ liệu nghiệp vụ hoặc để bỏ qua test |
+| Phiên bản | Baseline S0 37 bảng giữ nguyên; V001/V002 là snapshot 39 bảng, V003…V005 hiện hành 41 bảng. Migration đã áp dụng là bất biến; sửa tiếp bằng version mới, không đổi checksum hoặc chạy cùng migration bằng hai runner |
 | Quyền / seed | Mỗi đường ghi mới cần quyền tối thiểu và review ACL; không GRANT ALL/PUBLIC/owner cho app. Seed baseline dùng dữ liệu giả, không dùng reseed để khôi phục quyền đã chủ ý thu hồi trên DB S1 |
-| Artifacts / evidence | Sinh vào đúng phiên bản; S1 dùng `database/sprint1`, không ghi đè artifact S0. Log mới ghi riêng và gắn hash/commit, không thay log cũ để mô phỏng lần chạy mới |
+| Artifacts / evidence | Sinh vào đúng phiên bản: S1 dùng `database/sprint1`, hiện hành dùng `database/sprint2`, không ghi đè artifact S0. Log mới ghi riêng và gắn hash/commit; cập nhật tài liệu dẫn tới kết quả khi công bố phiên bản mới |
 
 Checklist review cho thay đổi SQL thực sự:
 
@@ -65,18 +65,19 @@ Thay đổi chỉ bổ sung văn bản không cần chạy lại toàn bộ DB n
 | [generate_db_artifacts.py](../../../scripts/generate_db_artifacts.py) | Kiểm/sinh DBML, ERD và từ điển từ PostgreSQL thật |
 | [migrations](../../../database/migrations), [hướng dẫn S1](../../../database/sprint1/README.md), [validate_sprint1.py](../../../scripts/validate_sprint1.py) | Upgrade riêng, kiểm giữ dữ liệu/quyền và nhập lô; không ghi đè baseline |
 | [CI S0](../../../.github/workflows/database.yml), [CI S1](../../../.github/workflows/sprint1-database.yml), [CI môi trường](../../../.github/workflows/pre-sprint-environments.yml) | Job kiểm DB và diễn tập backup/restore; chỉ coi run đạt khi có kết quả tương ứng đúng commit |
+| [Runbook S2](../../../database/sprint2/README.md), [CI S2](../../../.github/workflows/sprint2-staging.yml) | Nâng cấp hiện hành 41 bảng, định danh/lease/quyền và hai POS tranh Serial; readiness chưa là deploy |
 | [D22 môi trường](../../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md), [infra](../../../infra/README.md) | Kế hoạch Dev/Staging/Prod, bí mật, migration và vận hành; chưa có host Staging/Prod thật |
 
-Repo DB không có cấu hình build ứng dụng Java/Node hay endpoint HTTP hoàn chỉnh. Việc scaffold DB chạy được chưa chứng minh toàn ứng dụng đã build, đăng nhập hoặc deploy.
+Repo có `backend/pom.xml`, Maven wrapper, `frontend/package.json` và các endpoint ứng dụng. Phần DB không thay cấu hình build hoặc nghiệm thu các endpoint đó; việc DB chạy được chưa chứng minh toàn ứng dụng đã build, đăng nhập hoặc deploy.
 
 ## 3. D65 — Toolchain và thông tin kết nối
 
 | Thành phần | Phiên bản / sử dụng trong phần DB |
 |---|---|
-| PostgreSQL server / client | Major 16; client `psql`, `createdb`; backup/restore dùng bộ công cụ PG16 theo D22. Evidence đã có dùng server 16.15; tag Compose `postgres:16-alpine` không khóa patch nên ghi phiên bản thực tế khi chạy |
+| PostgreSQL server / client | Major 16; client `psql`, `createdb`; backup/restore dùng bộ công cụ PG16 theo D22. Evidence S0 ngày 07/11 dùng 16.15; S1/S2/restore ngày 17/11 dùng 16.16. Tag Compose `postgres:16-alpine` không khóa patch nên ghi phiên bản thực tế mỗi lần chạy |
 | Python | 3.10+ theo script hiện có; CI cấu hình 3.13. Validator dùng stdlib và `psql`, không cần cài package từ requirements |
 | Docker | Tùy chọn cung cấp server local; cần Compose hỗ trợ `up --wait`. Host chạy validator vẫn cần Python và `psql` trên PATH |
-| JDK / Node | Workbook D65 nêu JDK 17, Node 18+, Python 3.10 như cấu hình kế hoạch. Thái chốt toolchain app theo mã nguồn ứng dụng; phần DB không cài hoặc chạy build JDK/Node giả |
+| JDK / Node | Workbook D65 nêu JDK 17/Node 18+ là kế hoạch lịch sử. Source hiện hành dùng Java 25/Spring Boot 4.1.1 và React/Vite; Thái chốt phiên bản Node/npm cho ứng dụng, không suy build pass từ kiểm DB |
 | Credential | Database thử riêng, owner có quyền tạo role phục vụ test. App dùng LOGIN bí mật thuộc group phù hợp, không dùng owner. Browser không nhận credential DB |
 
 Lệnh dưới chạy từ gốc repo. DSN chỉ có host/port/user/dbname; mật khẩu lấy từ password file hoặc secret local. Không ghi mật khẩu vào Git, câu lệnh/log hoặc evidence. Windows có thể dùng password file `%APPDATA%\postgresql\pgpass.conf`; Linux dùng `~/.pgpass` với quyền 0600. Tạo/chỉnh file bằng trình soạn thảo riêng với dòng theo định dạng libpq `host:port:database:user:password`.
@@ -138,9 +139,9 @@ psql -X --dbname "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/checks.sql
 
 Nếu đã có PostgreSQL 16 local thay vì Docker, tạo database thử bằng `createdb` của server đó và đổi DSN, bỏ các lệnh Compose. Nếu cổng 5432 đang dùng, chọn server/port riêng và giữ DSN/client đồng bộ. Kết thúc phiên có thể dùng `docker compose stop` để dừng server và giữ dữ liệu; không cần xóa volume.
 
-### Nâng cấp S1 là đường riêng
+### Nâng cấp theo đúng phiên bản
 
-Nếu muốn đối chiếu increment đã có, tạo database thử khác rồi chạy `validate_sprint1.py --apply`; xem [hướng dẫn S1](../../../database/sprint1/README.md). Trên database S0 cần nâng cấp thật, dùng `migrate_db.py --status`, `migrate_db.py`, rồi `database/sprint1/runtime-roles.sql`. Trước đó backup và thử trên bản sao. Không nạp lại `schema.sql`, reseed quyền baseline hoặc sửa V001/V002 đã áp dụng. S1 có 39 bảng nghiệp vụ và ledger `sasms_meta.schema_migrations` riêng.
+Để đối chiếu increment S1, dùng database thử riêng và `validate_sprint1.py --apply`; xem [hướng dẫn S1](../../../database/sprint1/README.md). Tái lập riêng snapshot S1 dùng `migrate_db.py --target-version 2`; không dùng nó để hạ cấp DB hiện hành. Triển khai hiện tại làm theo [runbook S2](../../../database/sprint2/README.md): kiểm status, áp V001…V005, runtime S1 rồi SQL extension S2. Backup và thử trên bản sao trước; không nạp lại baseline/seed hoặc sửa migration đã áp dụng.
 
 ## 4. Cách đọc kết quả và giới hạn
 
@@ -148,4 +149,4 @@ Nếu muốn đối chiếu increment đã có, tạo database thử khác rồi
 
 Các lệnh hướng dẫn ở trên chưa tự được ghi là một lượt chạy mới trong phần bổ sung văn bản. Khi Dev chạy, xem exit code, summary/log và hash nguồn đúng lượt; `checks.sql` dự kiến không có dòng sai lệch ở truy vấn đối soát. Workflow dùng path filter DB/script nên một commit chỉ sửa tài liệu có thể không kích hoạt lại CI DB; không suy ra CI fail hoặc đã có run mới từ việc không thấy job cho commit tài liệu.
 
-Các phần ngoài DB còn chờ Thái/chủ repo: boilerplate ứng dụng, toolchain/build app, cấu hình bảo vệ main và review/merge; host/domain/secret để Staging/Prod và deployment log thật theo D22. Tài liệu này hoàn thành phần hỗ trợ DB có thể soạn, không thay việc người sở hữu xác nhận hoặc ký duyệt.
+Source/boilerplate ứng dụng đã có và được tích hợp vào main. Phần ngoài DB cần người sở hữu xác nhận theo phiên bản: toolchain/build, CI/review, cấu hình bảo vệ main, kiểm browser/HTTP và host/domain/secret/deployment log thật theo D22. Tài liệu này bàn giao hướng dẫn DB, không thay xác nhận hoặc ký duyệt của người sở hữu.

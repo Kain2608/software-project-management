@@ -1,6 +1,6 @@
 # D22 — Môi trường và CI/CD Sprint 2
 
-S2-12, phụ trách **Trần Trung Kiên**, phối hợp **Vũ Duy Thái**. Hạn kế hoạch 20/10/2026, 16 giờ ước lượng; cập nhật kỹ thuật 17/11/2026. Trạng thái: có kiểm chứng DB/readiness trong repo; **chưa có bằng chứng deploy Staging thật**.
+S2-12, phụ trách **Trần Trung Kiên**, phối hợp **Vũ Duy Thái**. Hạn kế hoạch 20/10/2026, 16 giờ ước lượng; rà soát tài liệu **20/11/2026** trên nguồn `main` tại `6544a00`, evidence SQL hiện có ngày **17/11/2026**. Trạng thái: nguồn đã merge, có kiểm chứng DB/readiness trong repo; **chưa có bằng chứng deploy Staging thật**.
 
 ## 1. Kế thừa kế hoạch môi trường
 
@@ -31,7 +31,7 @@ Job `validate-db-and-concurrency` chạy validator; `staging-readiness` tổng h
 
 Các lệnh `psql` phải có `-X -v ON_ERROR_STOP=1`, runner kiểm return code; pipeline ghi log qua `tee` phải giữ mã lỗi bằng `pipefail`. Upload evidence dùng `if: always()` để còn log khi thất bại; upload thành công không có nghĩa test thành công. Không dùng `continue-on-error` để bỏ lỗi test/SQL và không xuất `backend_health: UP` hoặc `database_status: MIGRATIONS_UP_TO_DATE` từ JSON hằng.
 
-Artifact kiểm chứng DB gồm `summary.json`, `validation.log` và regression Sprint 1/baseline. Báo cáo phải gắn với SHA/run đã chạy; chưa có URL GitHub Actions mới trong hồ sơ này. Các run Sprint 0/1 cũ trong D22 tiền Sprint không chứng minh Sprint 2 đã qua CI.
+Artifact kiểm chứng DB gồm `summary.json`, `validation.log` và regression Sprint 1/baseline. Báo cáo phải gắn với SHA/run đã chạy; chưa có URL GitHub Actions mới trong hồ sơ này. Git có merge PR #29 DB (`06423f0`) và PR #33 TV4 (`4f5df6f`); không suy từ merge rằng workflow trên đúng nguồn sau merge đã đạt. Các run Sprint 0/1 cũ trong D22 tiền Sprint không chứng minh Sprint 2 đã qua CI.
 
 Đã chạy local trên PostgreSQL **16.16**, **17/11/2026**: 33 assertions Sprint 2 và 43 D34/D35, 76 Sprint 1, 56 ràng buộc và 7 ACL Sprint 0 đạt; xem [summary](../../database/evidence/sprint2/summary.json). Hai [failure probes CLI trên bản sao nguồn](../../database/evidence/sprint2/ci-failure-probes.json) gây lỗi SQL `42703` và lỗi assertion đều trả CLI 1, psql 3, summary failed; DDL extension rollback khi lỗi. Kết quả này kiểm đường truyền lỗi local, không tự tạo một run GitHub Actions hoặc bằng chứng Staging.
 
@@ -52,8 +52,8 @@ Theo workbook, S2-12 cần **log GitHub Actions deploy Staging thành công**. R
 1. An/Thái/Kiên cấu hình môi trường được phép: host, network, secret, runtime login và artifact ứng dụng có phiên bản.
 2. Lưu backup và manifest, kiểm khả năng restore trên database cô lập; dùng credential migrator riêng để nâng cấp.
 3. Deploy backend/frontend đúng commit, áp dụng SQL/ACL đã kiểm, kiểm migration/schema thực tế.
-4. Gọi health và smoke nghiệp vụ thật, lưu response/exit code/timestamp; `/api/pos/status` hiện trả skeleton nên không đủ nghiệm thu POS.
-5. Phát chạy test ứng dụng và lưu D76/D79; Huy/An xác nhận theo thẩm quyền, lưu run URL/commit/deploy log.
+4. Gọi health và smoke nghiệp vụ thật, lưu response/exit code/timestamp; `/api/pos/status` trả skeleton nên không đủ nghiệm thu POS. TV4 đã có order/cash/receipt và báo cáo PostgreSQL + MockMvc; kiểm cờ tính năng theo cấu hình triển khai, rồi chạy browser E2E với chính các endpoint nghiệp vụ.
+5. Phát chạy test ứng dụng và lưu D76/D79 đúng ngày thực thi/SHA/môi trường; xác minh các ngày chưa khớp ở D76/D80 theo [DS2 DB](DS2-thiet-ke-va-ban-giao-DB.md#bàn-giao-tích-hợp-còn-mở). Huy/An xác nhận theo thẩm quyền, lưu run URL/commit/deploy log.
 
 Mục tiêu RPO/RTO và lịch backup tiếp tục theo D22 tiền Sprint, chờ chủ hệ thống chốt. Không còn dùng số “restore < 10 giây” từ bản cũ vì không có phép đo Staging tương ứng. Lỗi DDL đang áp dụng phải rollback transaction; sau commit xử lý bằng thay đổi đã review và đối soát, không xóa schema/dữ liệu nghiệp vụ để thử lại.
 

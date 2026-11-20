@@ -20,7 +20,8 @@ Extension Sprint 2 bọc DDL/ACL trong transaction và chạy lại được; c�
 ```powershell
 createdb -h 127.0.0.1 -U postgres sasms_sprint2_validation
 $env:DATABASE_URL = 'host=127.0.0.1 user=postgres dbname=sasms_sprint2_validation'
-python scripts/validate_sprint2.py --dsn $env:DATABASE_URL --apply --evidence-dir database/evidence/sprint2
+$dbRunEvidence = Join-Path $env:TEMP ('sasms-s2-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+python scripts/validate_sprint2.py --dsn $env:DATABASE_URL --apply --evidence-dir $dbRunEvidence
 psql -X --dbname $env:DATABASE_URL -v ON_ERROR_STOP=1 -f database/sprint2/demo.sql
 ```
 
@@ -40,6 +41,8 @@ Runner chỉ cần thư viện chuẩn Python và `psql`, không cần driver Py
 
 `summary.json` lưu trạng thái `passed`/`failed`, source SHA-256, assertions và các ca concurrency; `validation.log` lưu đầu ra. Phiên bản PostgreSQL được ghi trong `sprint1-regression/summary.json`. Chỉ dùng kết quả của nguồn khớp hash. Workflow lưu artifact cả khi lỗi; readiness ghi `NOT_DEPLOYED`, không phải deploy Staging.
 
+Evidence đã lưu trong repo là lượt **17/11/2026**; rà soát tài liệu **20/11/2026** không tạo thêm kết quả chạy SQL. Dùng thư mục riêng cho mỗi lần kiểm để giữ đúng nguồn/ngày của các báo cáo; chỉ cập nhật liên kết bàn giao khi đã có kết quả tương ứng.
+
 File [test_sprint2_concurrency_and_stock.sql](../tests/sprint2/test_sprint2_concurrency_and_stock.sql) kiểm ACL/luồng nghiệp vụ trong một phiên và rollback; **chạy file SQL này riêng chưa kiểm hai kết nối đồng thời**. Dùng validator để thực hiện contention.
 
 ## Hợp đồng và giới hạn
@@ -47,9 +50,14 @@ File [test_sprint2_concurrency_and_stock.sql](../tests/sprint2/test_sprint2_conc
 - View có một hàng theo product active/kho thuộc store active; bảng warehouse không có cột `is_active`. `price` là alias của cột vật lý `list_price`; không thêm cột `products.price`.
 - `available_stock` đếm IN_STOCK, gồm Serial được chọn trong DRAFT nhưng chưa reserve. `reserved_stock` đếm RESERVED, `sold_stock` đếm SOLD. `total_physical_stock` là tổng bản ghi device kể cả SOLD, không phải lượng hàng vật lý tại kho.
 - Chọn Serial dùng NOWAIT và deadline từ lần giữ đầu POS 10 phút / ONLINE 30 phút, không gia hạn khi quét/reserve; release lấy store từ đơn để kiểm `sales.checkout`. Backend xác thực/ánh xạ actor và kiểm scope mọi đường đọc/ghi; SQL không xác thực JWT hay có RLS toàn hệ thống.
+- `find_and_lock_device_for_pos` nhận **Serial**, chưa nhận IMEI hoặc payload QR thay cho Serial. Mỗi dòng số lượng N phải có N liên kết thiết bị active trước `reserve_order`; consumer cần cho gán đủ từng chiếc.
+- `receive_device_batch` nhận `imei2` ở JSON SQL; DTO/validator HTTP hiện chỉ nhận `serial`/`imei`. Bổ sung IMEI phụ qua UI/API thuộc hợp đồng Fullstack cần hoàn thiện.
+- Mô hình hiện tại quản lý tồn theo thiết bị có Serial. Phụ kiện/dịch vụ không Serial cần BA/Fullstack thống nhất cách quản lý tồn và checkout; không tạo Serial giả để vượt kiểm tra số lượng thiết bị. Theo phạm vi chỉnh sửa ngày 20/11/2026, chưa mở rộng schema cho nhóm hàng đó.
 - Fallback SQL gộp một hàng theo product, tổng IN_STOCK trong store và limit 1–10; là heuristic candidate, chưa là luật tương thích phụ kiện đã duyệt, chưa nối vào engine Java. Cache cross-sell hiện 5 phút theo D55/`AiCacheManager`.
 - [Demo](demo.sql) chỉ đọc dữ liệu mô phỏng baseline trong transaction rồi rollback; không tạo phiên POS, payment, in hóa đơn hoặc gọi LLM.
 - Tồn được đọc theo snapshot; kiểm query sau commit không chứng minh UI zero-lag hoặc p95 AI/50 request. Cart/payment/lock REST và hiệu năng E2E còn thuộc tích hợp ứng dụng.
+
+Fullstack đã bổ sung order/reserve/cash payment, hardening payment đồng thời và QR SVG trong báo cáo mục 19–20; PR #34 tại `6544a00` có source encode QR và test roundtrip. Kiểm thử browser, quét/in trên thiết bị thật, chính sách QR đa thiết bị, số lượng nhiều chiếc/SKU, hiệu năng và ký nghiệm thu vẫn cần evidence riêng. Token `SASMS:DEVICE:<uuid>` là payload định danh; test encode/decode không tự chứng minh toàn luồng camera hoặc máy in đã được nghiệm thu.
 
 ## Hợp đồng D34/D35 hiện hành
 

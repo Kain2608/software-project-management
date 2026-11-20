@@ -1,5 +1,6 @@
 {
-  "version": 1,
+  "version": 2,
+  "reviewed_on": "2026-11-20",
   "status": "proposed operational baseline; remote Staging and Production are not provisioned by this repository",
   "owner": "Tran Trung Kien (Architect / DBA)",
   "implemented_toolchain": {
@@ -14,7 +15,7 @@
   },
   "environments": {
     "dev": {
-      "source": "DB work branch; integrate from origin/main and push to origin/DB",
+      "source": "DB changes are integrated in main; develop on a DB work branch and merge reviewed changes through a pull request",
       "database": "isolated developer database, PostgreSQL 16",
       "network": "127.0.0.1 only",
       "data": "synthetic fixtures",
