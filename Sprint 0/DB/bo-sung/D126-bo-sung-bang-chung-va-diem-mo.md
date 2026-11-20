@@ -1,6 +1,6 @@
 # D126 — Bổ sung đối chiếu hồ sơ M1 của Kiên
 
-Đây là đóng góp của Kiên cho S0-27 do PM làm chính. Bản [hồ sơ M1 trước](../D126-ho-so-review-M1.md) được giữ nguyên; tài liệu này cập nhật danh mục đầu vào và bằng chứng hiện có để người review dùng đúng phiên bản. Không tạo biên bản họp, chữ ký hoặc quyết định gate thay PM/Sponsor.
+Đây là đóng góp của Kiên cho S0-27 do PM làm chính. Bản [hồ sơ M1](../D126-ho-so-review-M1.md) và phụ lục được rà soát ngày **20/11/2026** để thống nhất đầu vào, phiên bản và evidence. Giữ nguyên SQL, artifact và log lịch sử; rà soát tài liệu không tạo biên bản họp, chữ ký hoặc quyết định gate thay PM/Sponsor.
 
 ## 1. Tình trạng tài liệu để review
 
@@ -13,7 +13,7 @@
 | D22 môi trường | [D22 tiền Sprint](../../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) | Đã có hồ sơ và công cụ; không còn là đầu vào thất lạc |
 | D34/FRS_V2 | Đã có D34_FRS_V2_SASMS.docx của BA | Đối chiếu FR-01, BR-01/03 và AC; hoàn thành DB không tự chứng minh API/E2E hoặc chữ ký gate |
 | D35 định danh | D35 BA và [hợp đồng DB](../../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) | V003 hiện thực raw/case/128, Luhn và IMEI phụ; profile chỉ theo SKU được duyệt, không suy regex toàn hãng |
-| D70 và các phần QA/PO | Chưa có artifact đầy đủ thuộc người làm chính trong gói DB | PM/QA/PO đối chiếu phần của mình; không ghi đạt thay họ |
+| D70 và các phần QA/PO | [D70 Test Plan](../../Tester/D70_Ke_hoach_Kiem_thu_Test_Plan_SASMS_v1.0.docx) đã có; evidence chạy QA/gate cần người sở hữu đối chiếu | Test Plan không thay kết quả thực thi; PM/QA/PO xác nhận phạm vi của mình |
 
 ## 2. Cách đọc bằng chứng
 

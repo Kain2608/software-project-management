@@ -2,6 +2,8 @@
 
 **Trần Trung Kiên · Architect / DBA · bản hỗ trợ PM ngày 07/11/2026.** Workbook tiền Sprint, sheet “Theo người” dòng 27, giao Kiên hỗ trợ ba đầu việc này. Trịnh Quốc An vẫn là người làm chính của các tài liệu PM; nội dung dưới đây là phần đánh giá và dữ liệu để An tích hợp, không thay chữ ký hoặc quyết định của PM/Sponsor.
 
+**Rà soát phiên bản 1.1 ngày 20/11/2026:** cập nhật căn cứ BA và source DB hiện hành; không hồi tố ngày thực hiện, quyết định baseline hoặc kết quả test.
+
 ## 1. KD-02 — Nội dung kỹ thuật cho Charter và phạm vi
 
 Căn cứ [D05 Scope](../PM/D05.docx) và [D06 Charter](../PM/D06.docx). Workbook đánh mã Charter/Scope ngược tên thực của hai file; cần PM thống nhất danh mục trước khi đóng baseline.
@@ -9,7 +11,7 @@ Căn cứ [D05 Scope](../PM/D05.docx) và [D06 Charter](../PM/D06.docx). Workboo
 | Nội dung để PM đưa vào baseline | Đề xuất / điều kiện xác nhận |
 |---|---|
 | Ranh giới dữ liệu lõi | Một SKU là mẫu hàng; từng thiết bị là bản ghi riêng với Serial/IMEI, vị trí và lịch sử giao dịch. Không dùng một số tồn nhập tay độc lập làm nguồn chân lý thứ hai |
-| Tính duy nhất | Bảo vệ định danh bằng UNIQUE/FK tại DB; BA xác nhận phạm vi global, quy tắc hãng và trường hợp nhiều IMEI. Kiểm tra “chưa có” trên UI không đủ chống nhập đồng thời |
+| Tính duy nhất | Áp dụng D35 BA và [D35 DB hiện hành](../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md): Serial raw/trim/phân biệt hoa-thường, 1–128; IMEI slot 1/2, Luhn và unique chéo slot toàn chuỗi. Profile hãng áp theo SKU đã được phê duyệt; không suy regex toàn hãng. Kiểm tra “chưa có” trên UI không đủ chống nhập đồng thời |
 | Giao dịch quan trọng | Nhập kho/giữ hàng/chốt bán/hủy hợp lệ phải có transaction và kiểm tra trạng thái; lỗi không để chứng từ, tồn và audit dở dang |
 | Chia trách nhiệm | Kiên sở hữu thiết kế dữ liệu, quyền DB, migration, môi trường và khôi phục; Thái sở hữu API/UI/JWT; Huy sở hữu FRS/quy tắc nghiệp vụ; Vũ sở hữu AI; Phát sở hữu QA/E2E; An tổng hợp kế hoạch/gate |
 | Nguồn quyền và tích hợp | Credential DB chỉ ở backend tin cậy; actor/scope phải do API đã xác thực cung cấp. AI và scanner không được tự đặt trạng thái thanh toán hoặc chỉnh quyền |
@@ -21,11 +23,11 @@ Căn cứ [D05 Scope](../PM/D05.docx) và [D06 Charter](../PM/D06.docx). Workboo
 |---|---|---|
 | Serial unique; không lệch tồn do cạnh tranh | Hai phiên độc lập nhập cùng Serial/IMEI, kiểm tra một bản ghi và không có side effect thừa | Là bằng chứng DB, không thay khảo sát định dạng từng hãng |
 | 100.000 thiết bị | Dataset giả có số lượng xác nhận, query plan/lookup và tải đồng thời trên cấu hình ghi rõ | Lookup nhanh không tự chứng minh khả năng xử lý camera/API |
-| QR <1s; POS <2s; AI <3s | Định nghĩa điểm bắt đầu/kết thúc, thiết bị/mạng, tỷ lệ lỗi và percentile; QA đo E2E | SQL test không đủ chứng minh độ trễ toàn hệ thống |
+| QR <1s; POS <2s; AI <3s | Theo D34 NFR-01: QR p95 <1s từ decode thành công tới hiển thị, không gồm lấy nét; 100 lượt Chrome mobile/Wi-Fi ổn định. POS đo từ xác nhận nội bộ tới PAID/xuất kho, loại nhập liệu và chờ gateway ngoài. AI p95 <3s dưới tải 50 request đồng thời; QA lưu thiết bị/mạng/build và lỗi | SQL test không đủ chứng minh các khoảng đo ứng dụng đã đạt; bộ tiêu chí hiện hành lấy từ FRS |
 | Uptime 99,9% | Cửa sổ đo, nguồn giám sát, cách tính downtime, lịch bảo trì và người xử lý sự cố | Chỉ là mục tiêu nếu chưa có dữ liệu vận hành |
 | Khôi phục dữ liệu | RPO/RTO được chủ hệ thống duyệt; diễn tập backup/restore và đối soát | Logical dump hằng ngày không tự đạt RPO 15 phút |
 
-Kiến trúc mục tiêu có ranh giới dịch vụ rõ, nhưng triển khai DB chung ở giai đoạn đầu giúp giữ transaction kho/POS cục bộ. Tách database/dịch vụ chỉ sau khi có hợp đồng sự kiện, idempotency và cơ chế bù trừ đã thử lỗi; không giả định transaction phân tán tồn tại vì tài liệu dùng từ “microservices”. Chi tiết hiện thực các Sprint sau có tại [D50](../../Sprint%200/DB/D50-kien-truc-he-thong.md), [D51](../../Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md) và [DS1 DB](../../Sprint%201/DB/DS1-thiet-ke-va-ban-giao-DB.md).
+Kiến trúc mục tiêu có ranh giới dịch vụ rõ, nhưng triển khai DB chung ở giai đoạn đầu giúp giữ transaction kho/POS cục bộ. Tách database/dịch vụ chỉ sau khi có hợp đồng sự kiện, idempotency và cơ chế bù trừ đã thử lỗi; không giả định transaction phân tán tồn tại vì tài liệu dùng từ “microservices”. Chi tiết có tại [D50](../../Sprint%200/DB/D50-kien-truc-he-thong.md), [D51](../../Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md), [DS1 DB](../../Sprint%201/DB/DS1-thiet-ke-va-ban-giao-DB.md) và [DS2 DB hiện hành](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md). Snapshot 37/39 bảng được giữ để truy vết; catalog hiện hành V001–V005 có 41 bảng.
 
 ## 2. KD-04 — Đánh giá khả thi và đối chiếu business case
 
@@ -34,7 +36,7 @@ Kiến trúc mục tiêu có ranh giới dịch vụ rõ, nhưng triển khai DB
 | Khía cạnh | Cơ sở đánh giá | Việc cần hoàn thành trước khi kết luận |
 |---|---|---|
 | Dữ liệu | PostgreSQL 16 cung cấp transaction, khóa, UNIQUE/FK và migration có kiểm soát; repo hiện có mã/schema thực thi | Chạy trên môi trường mục tiêu, kiểm tra nâng cấp với dữ liệu hiện hữu và tải đã chốt |
-| Phát triển | Repo có baseline và migration DB; toolchain DB dùng Python/psql độc lập với ứng dụng | Thái chốt backend/framework cùng D22; không triển khai đồng thời mọi phương án Java/Node được nêu trong D08 |
+| Phát triển | Repo có baseline/migration DB và source backend Java 25/Spring Boot 4.1.1, frontend React/Vite; toolchain DB dùng Python/psql độc lập | Thái/Kiên review toolchain theo `backend/pom.xml` và `frontend/package.json`; chốt Node/npm chưa ghim, không suy kết quả build ứng dụng từ CI DB |
 | Tích hợp | AI/provider ở adapter, có timeout/fallback và request identity; không gọi mạng khi giữ khóa DB | Có thông tin provider/sandbox, xác nhận tiền, hợp đồng dữ liệu và test lỗi mạng |
 | Vận hành | Có kế hoạch tách credential, sao lưu, restore và theo dõi lỗi/khóa/dung lượng | Chọn host, owner, secret manager, lưu backup ngoại vi và diễn tập thật trước Prod |
 | Thiết bị | Browser camera/scan, token QR và in HTML/PDF hỗ trợ hướng demo hiện tại | Đối chiếu model/driver và tiêu chí D21 nếu mua hoặc mượn thiết bị thật |

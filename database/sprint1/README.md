@@ -1,11 +1,11 @@
 # DB Sprint 1 — nâng cấp từ Sprint 0
 
-> Bản S1 dưới đây là snapshot V001/V002, **39 bảng**. Hiện hành V003…V005 có **41 bảng**, Serial raw/case-sensitive, IMEI/Luhn/multi-slot và role BA; dùng D35 DB/runbook Sprint 2. validate_sprint1 kiểm tới V002; không dùng uppercase cũ làm hợp đồng mới.
+> Bản S1 dưới đây là snapshot V001/V002, **39 bảng**. Hiện hành V003…V005 có **41 bảng**, Serial raw/phân biệt hoa-thường, IMEI/Luhn/multi-slot và role BA; dùng [D35 DB](../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) và [runbook Sprint 2](../sprint2/README.md). `validate_sprint1` kiểm tới V002; các mô tả uppercase/một IMEI/quyền POS cũ bên dưới chỉ áp dụng cho snapshot đó.
 
 
 Phần DB của Kiên: S1-03 (danh mục/SKU), S1-06 (Serial/IMEI) và S1-10 (users/roles). Xem [bộ bàn giao](../../Sprint%201/DB/README.md) để đối chiếu phân công và phần hỗ trợ Dev/BA.
 
-## Nâng cấp database hiện có
+## Tái lập nâng cấp Sprint 1 tới V002
 
 Yêu cầu PostgreSQL 16, Python 3.10+, client `psql` và kết nối owner/migrator. Sao lưu và thử migration trên bản sao trước khi triển khai thật. Đặt `DATABASE_URL` bằng DSN không ghi mật khẩu trong repo; dùng password file hoặc secret của môi trường.
 
@@ -25,27 +25,30 @@ V001 giữ dữ liệu cũ, bổ sung kiểm tra SKU/name/specification, revisio
 
 V002 thêm hai bảng `identifier_rules`, `inventory_import_batches`: tổng 39 bảng nghiệp vụ, ledger ở schema riêng. SQL/ERD Sprint 0 được giữ nguyên để truy vết phiên bản.
 
+`--target-version 2` dành cho tái lập lịch sử và regression trên database riêng; không hạ cấp database đã có V003…V005. Khi tích hợp ứng dụng hiện tại, tiếp tục [nâng cấp Sprint 2](../sprint2/README.md) trước khi kiểm D34/D35 hiện hành.
+
 ## Kiểm chứng tái lập trên database thử mới
 
 ```powershell
 createdb -h 127.0.0.1 -U postgres sasms_sprint1_validation
 $env:DATABASE_URL = 'host=127.0.0.1 user=postgres dbname=sasms_sprint1_validation'
-python scripts/validate_sprint1.py --dsn $env:DATABASE_URL --apply
+$dbRunEvidence = Join-Path $env:TEMP ('sasms-s1-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+python scripts/validate_sprint1.py --dsn $env:DATABASE_URL --apply --evidence-dir $dbRunEvidence
 python scripts/generate_db_artifacts.py --dsn $env:DATABASE_URL --expected-tables 39 --output-dir database/sprint1 --check
 psql -X --dbname $env:DATABASE_URL -v ON_ERROR_STOP=1 -f database/sprint1/demo.sql
 ```
 
-Validator dùng owner và fixtures riêng, chạy regression Sprint 0 trước nâng cấp, rồi kiểm tra bảo toàn dữ liệu, rollback/checksum, quyền, catalog, quy tắc định danh, batch và các phiên nhập đồng thời. Chỉ chạy trên DB thử cô lập. [Log](../evidence/sprint1/validation.log) và [summary](../evidence/sprint1/summary.json) lưu kết quả thực tế; chúng không chứng minh Staging hoặc PO đã nghiệm thu.
+Validator dùng owner và fixtures riêng, chạy regression Sprint 0 trước nâng cấp, rồi kiểm tra bảo toàn dữ liệu, rollback/checksum, quyền, catalog, quy tắc định danh, batch và các phiên nhập đồng thời. Chỉ chạy trên DB thử cô lập. [Log](../evidence/sprint1/validation.log) và [summary](../evidence/sprint1/summary.json) đã lưu là kết quả ngày **17/11/2026, PostgreSQL 16.16**, không phải một lần chạy mới sau khi sửa tài liệu. Giữ evidence theo từng lần chạy và source hash; chúng không chứng minh Staging hoặc PO đã nghiệm thu.
 
 Demo chỉ thao tác SQL, tạo danh mục và hai thiết bị giả, retry cùng request key rồi rollback toàn bộ. Không đăng nhập ứng dụng, không dùng camera hoặc provider thật.
 
-## Hợp đồng tích hợp
+## Hợp đồng tích hợp của snapshot V002
 
 - `create_product`/`update_product` yêu cầu `catalog.write` toàn hệ thống; role quản lý chỉ có scope một cửa hàng không được sửa catalog chung. Cập nhật dùng revision hiện tại; revision cũ lỗi `40001` để API yêu cầu tải lại.
 - `receive_device_batch(receipt_item, request_key, devices, actor)` nhận 1–500 object `{serial, imei?}`. Serial trim/uppercase; IMEI trim, rỗng thành NULL, nếu có đúng 15 chữ số. Thứ tự phần tử là một phần của payload.
 - Cùng key, actor, receipt và payload đã chuẩn hóa trả lại đúng UUID cũ; đổi một thành phần bị từ chối. Quyền active/scope luôn kiểm tra lại trước khi trả retry. Cả lô lỗi thì không để thiết bị, movement, audit hoặc batch record dở dang.
 - `receive_device` đơn lẻ vẫn hoạt động nhưng đã kiểm quyền giống batch. Đường nhập cũ không kiểm quyền đã chuyển thành hàm private và thu hồi EXECUTE của mọi caller ngoài owner.
-- Rule riêng theo hãng chỉ hoạt động khi có source/approver/thời điểm xác nhận; không seed regex Sony/Samsung/LG/Apple khi D35 chưa được cung cấp. Đây là workflow metadata cho DBA, chưa có endpoint duyệt rule. D35 còn chờ BA/kho xác nhận.
+- `identifier_rules` là cơ chế metadata theo hãng của snapshot V002, cần source/approver/thời điểm xác nhận và chưa có endpoint duyệt rule. Hiện tại D35 BA đã có; V003 dùng `product_identifier_profiles` theo SKU, không tự chuyển rule toàn hãng thành profile hoặc áp regex toàn hãng. Cách provision hồ sơ đã duyệt nằm trong [D35 DB](../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md).
 - `has_permission` là kiểm quyền theo actor tin cậy, **không xác thực JWT**. API phải xác thực token, ánh xạ user, không tin actor/role do trình duyệt gửi. Các hàm POS của Sprint 0 chưa thuộc phạm vi hardening RBAC Sprint 1 này.
 
 Artifacts [DBML](schema.dbml), [ERD](erd.mmd) và [từ điển](data-dictionary.md) được sinh từ catalog đã nâng cấp. Muốn cập nhật sau migration mới, chạy generator không có `--check`; kiểm tra lại trước khi commit.

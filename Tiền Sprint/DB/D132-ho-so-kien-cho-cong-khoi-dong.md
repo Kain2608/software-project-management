@@ -7,7 +7,8 @@
 | Người chuẩn bị phần Kiên | Trần Trung Kiên — Architect / DBA |
 | Giai đoạn trong phân công | 05/09–18/09/2026; cổng dự kiến 18/09/2026 |
 | Ngày chuẩn bị bản bổ sung | 07/11/2026 |
-| Nhánh | `Kien` |
+| Phiên bản / ngày rà soát | 1.1 — 20/11/2026; cập nhật truy vết evidence, không ghi thêm lượt test hoặc chữ ký |
+| Nhánh nguồn bản gốc | `Kien`; phiên bản được review phải ghi commit thực tế, không suy theo tên nhánh cũ |
 | Trạng thái ký | Chờ review và chữ ký thật cho phiên bản mới |
 
 ## 1. Phạm vi review
@@ -31,14 +32,16 @@
 |---|---|
 | CI baseline và Sprint 1 đã có | Commit `d28c95a`; run [42340988289](https://github.com/Kain2608/software-project-management/actions/runs/42340988289) và [42340988364](https://github.com/Kain2608/software-project-management/actions/runs/42340988364) hoàn thành thành công ngày 07/11/2026; snapshot API trong evidence cần ghi thời điểm lấy |
 | Bản bổ sung tiền Sprint | [Snapshot GitHub CI](evidence/ci-runs.json) ghi đúng SHA và trạng thái từng workflow; đối chiếu mã được review với nguồn đã kiểm, không hồi tố run tháng 11 thành ngày tháng 9 |
-| Backup/restore | [Summary](evidence/environment-summary.json), [log](evidence/environment-validation.log): ngày 07/11/2026, 19:49:43–19:49:49 (UTC+7), PostgreSQL 16.15, 40 kiểm tra đạt; hash nguồn khớp bộ bàn giao |
-| Dữ liệu và quyền sau restore | 39 bảng nghiệp vụ + ledger khớp; 255 cột, 229 constraints, 106 indexes, 14 routines, 6 triggers, 1 view và ACL được đối chiếu; target mới không có PUBLIC CONNECT |
+| Backup/restore | [Summary](evidence/environment-summary.json), [log](evidence/environment-validation.log) hiện lưu lần **17/11/2026, 08:09:08–08:09:15 (UTC+7)**, PostgreSQL/clients **16.16**, **41 kiểm tra đạt**; đối chiếu hash nguồn trong summary với mã phát hành |
+| Dữ liệu và quyền sau restore | **41 bảng nghiệp vụ / 5 migration** và ledger khớp; **285 cột, 243 constraints, 112 indexes, 24 routines, 10 triggers, 2 views và 71 mục ACL** được đối chiếu; target mới không có PUBLIC CONNECT |
 | Hành vi và nhánh từ chối | Runtime replay trả UUID cũ/không nhân bản; chặn ghi đè archive, restore vào target đã có và archive sai checksum; dữ liệu nguồn không đổi, fixtures nguồn được dọn |
 | Staging/Prod | Cần host, cấu hình secret/quyền, release log và kiểm nhận môi trường thật; CI/restore local không chứng minh triển khai remote |
 | Thiết bị | Cần báo giá/đơn mua/biên bản nhận và test thực tế nếu được duyệt; D21 là kế hoạch, chưa thay các chứng từ này |
-| NFR / gate | Số đo DB không chứng minh QR camera, API, SLA uptime hoặc PO ký nghiệm thu |
+| NFR / gate | Số đo DB không chứng minh NFR-01 từ decode QR thành công tới hiển thị, API, SLA uptime hoặc PO ký nghiệm thu |
 
 Ngày kiểm chứng tháng 11 không được đổi thành ngày 18/09/2026. Kết quả do công cụ thực thi không phải chữ ký của Kiên, PM hoặc Sponsor.
+
+Bản trước dẫn đường dẫn summary/log này cho lần **07/11, PostgreSQL 16.15, 40 kiểm tra, 39 bảng**. Đường dẫn hiện lưu lần 17/11; số cũ chỉ là lịch sử và không được chứng minh bằng file hiện tại. Muốn đưa lần 07/11 vào hồ sơ review phải gắn đúng artifact/commit riêng. Các run CI ngày 07/11 ở bảng là bằng chứng độc lập, không đổi ngày để khớp diễn tập restore.
 
 ## 4. Các quyết định chờ trước khi đóng gate
 

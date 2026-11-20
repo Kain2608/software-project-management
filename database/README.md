@@ -1,6 +1,6 @@
 # Chạy DB SASMS — PostgreSQL 16
 
-> Các bước baseline bên dưới phục vụ snapshot Sprint0. Triển khai hiện hành dùng [runbook Sprint2](sprint2/README.md): V001…V005,41 bảng, raw/case/Luhn/multi-IMEI, deadline POS10m/ONLINE30m và vai trò D34. Không nạp lại schema/seed lên DB đã nâng cấp.
+> Các bước baseline bên dưới phục vụ snapshot Sprint 0 (37 bảng). Triển khai hiện hành dùng [runbook Sprint 2](sprint2/README.md): V001…V005, 41 bảng, Serial raw/phân biệt hoa-thường, Luhn/IMEI phụ, deadline POS 10 phút/ONLINE 30 phút và vai trò D34. Các mô tả uppercase, user demo hoặc quyền POS ở snapshot S0 không phải hợp đồng bảo mật hiện hành. Không nạp lại schema/seed lên DB đã nâng cấp.
 
 
 Đây là DB baseline Sprint 0 của Kiên: 37 bảng, dữ liệu mô phỏng, 4 giao dịch DB, bộ kiểm tra và artifacts ERD. Xem [D51](../Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md) và [D57](../Sprint%200/DB/D57-luoc-do-va-kiem-thu.md) trước khi tích hợp.
@@ -18,10 +18,11 @@ Ví dụ tạo DB mới qua client PostgreSQL:
 ```powershell
 createdb -h 127.0.0.1 -p 5432 -U postgres sasms_validation
 $env:DATABASE_URL = 'host=127.0.0.1 port=5432 user=postgres dbname=sasms_validation'
-python scripts/validate_db.py --dsn $env:DATABASE_URL --apply --benchmark
+$dbRunEvidence = Join-Path $env:TEMP ('sasms-s0-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+python scripts/validate_db.py --dsn $env:DATABASE_URL --apply --benchmark --evidence-dir $dbRunEvidence
 ```
 
-Lệnh validator có quyền tạo role thử và dữ liệu fixtures nên chỉ dùng trên môi trường thử cô lập. `--apply` từ chối nếu đã có schema `sasms`; để kiểm lại schema đã nạp, bỏ `--apply` theo trợ giúp `--help`. Bộ test rollback/cleanup fixtures theo ID riêng, không xóa schema/database.
+Lệnh validator có quyền tạo role thử và dữ liệu fixtures nên chỉ dùng trên môi trường thử cô lập. `--apply` từ chối nếu đã có schema `sasms`; để kiểm lại schema đã nạp, bỏ `--apply` theo trợ giúp `--help`. Bộ test rollback/cleanup fixtures theo ID riêng, không xóa schema/database. Mỗi lần chạy dùng thư mục evidence riêng; khi công bố kết quả mới, lưu ngày/phiên bản/source hash và cập nhật các tài liệu dẫn tới kết quả đó.
 
 ## 2. Server local bằng Docker (tùy chọn)
 
@@ -39,7 +40,7 @@ Port chỉ bind `127.0.0.1:5432`; volume giữ dữ liệu qua các lần restar
 ## 3. Tái lập và đồng bộ artifacts
 
 ```powershell
-python scripts/validate_db.py --dsn $env:DATABASE_URL
+python scripts/validate_db.py --dsn $env:DATABASE_URL --evidence-dir $dbRunEvidence
 python scripts/generate_db_artifacts.py --dsn $env:DATABASE_URL --check
 # Khi chủ động đổi schema bằng migration đã review:
 python scripts/generate_db_artifacts.py --dsn $env:DATABASE_URL

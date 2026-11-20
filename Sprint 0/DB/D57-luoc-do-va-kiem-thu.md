@@ -2,6 +2,8 @@
 
 **S0-18 — Trần Trung Kiên · PostgreSQL 16 · thực hiện 07/11/2026 · chờ review.**
 
+Rà soát tài liệu **20/11/2026**: bộ SQL/DBML/ERD/từ điển dưới đây giữ snapshot S0 37 bảng. Tích hợp hiện hành dùng V001…V005 và [runbook Sprint 2](../../database/sprint2/README.md); cập nhật văn bản không tạo một lượt kiểm thử SQL mới.
+
 ## 1. Bộ bàn giao
 
 | Tệp | Vai trò |
@@ -30,7 +32,7 @@ Kết quả và môi trường chạy thực tế nằm trong [log kiểm chứn
 
 Lookup Serial, IMEI và QR trên 100.000 thiết bị mô phỏng đều dùng Index Scan; số đo/query plan thực tế nằm trong [summary.json](../../database/evidence/summary.json), cùng hash nguồn kiểm thử. Không suy ra độ trễ camera/API hoặc availability từ những số đo này. `generate_db_artifacts.py --check` cũng khớp catalog PostgreSQL cuối.
 
-[Log parser artifacts](../../database/evidence/artifacts-validation.json) ghi kiểm tra cú pháp bằng `@dbml/core` 11.1.0 và Mermaid 12.3.0: DBML 37 bảng/63 FK, ERD đầy đủ, ba sơ đồ D50 và ERD lõi D51 đều đạt. Quan hệ một đơn có tối đa một hóa đơn đã khớp UNIQUE trong SQL. Log chứa phiên bản công cụ, cách tái lập và hash file nguồn.
+[Log parser artifacts](../../database/evidence/artifacts-validation.json) ghi lần kiểm cú pháp lịch sử bằng `@dbml/core` 11.1.0 và Mermaid 12.3.0: DBML 37 bảng/63 FK, ERD đầy đủ, ba sơ đồ D50 và ERD lõi D51 đều đạt ở các source hash được lưu. D50/D51/D54 đã được chỉnh văn bản sau lần kiểm đó nên hash tài liệu không còn khớp; kết quả cũ không chứng minh toàn bộ bản tài liệu hiện tại đã qua parser. SQL/DBML/ERD baseline được giữ riêng; cần kết quả parser mới nếu kiểm bản tài liệu sửa. Không thay hash/log cũ để giả một lần chạy mới.
 
 ## 3. Hợp đồng hàm cho Dev / QA
 
@@ -47,8 +49,8 @@ Thanh toán CAPTURED chỉ do backend ghi sau xác thực tiền. `confirmed_by`
 
 ## 4. Những phần chưa thể nghiệm thu bằng SQL
 
-- FRS_V2 và định dạng từng hãng còn thiếu; 9 business role là phương án đề xuất.
+- D34/D35 đã có; D54/V003…V005 phản ánh quy tắc hiện hành. Profile hãng/SKU phải có nguồn và người phê duyệt; sổ quyết định Fullstack và bản BA 15/25 Use Case cần đồng bộ phiên bản.
 - Chưa có kiểm thử HTTP/E2E, VietQR provider/webhook, AI thực, thiết bị camera hoặc máy in.
 - Chưa có worker TTL giữ hàng/outbox, hoàn tiền, điều chuyển kho, duyệt điều chỉnh, định tuyến giao lắp hoặc vòng đời bảo hành đầy đủ.
-- Backup/restore và RPO/RTO trong D50 là kế hoạch cần diễn tập; không coi load schema thành công là đã phục hồi backup.
+- Đã có diễn tập logical backup/restore DB cô lập trong [hồ sơ tiền Sprint](../../Ti%E1%BB%81n%20Sprint/DB/evidence/environment-summary.json); kết quả đó thuộc schema/hash/ngày chạy riêng. RPO/RTO Prod, PITR và phục hồi hạ tầng thật vẫn cần phê duyệt và diễn tập phù hợp.
 - Review/ký duyệt của Kiên, Huy, Thái, PM/Sponsor và quyết định Quality Gate M1 vẫn chờ người có thẩm quyền.

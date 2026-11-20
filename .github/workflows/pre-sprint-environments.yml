@@ -2,9 +2,9 @@ name: Pre-sprint PostgreSQL16 backup and restore
 
 on:
   push:
-    paths: ['scripts/db_ops.py', 'scripts/validate_environment.py', 'infra/**', 'Tiền Sprint/DB/**', '.github/workflows/pre-sprint-environments.yml']
+    paths: ['database/**', 'scripts/db_ops.py', 'scripts/validate_environment.py', 'scripts/migrate_db.py', 'infra/**', 'Tiền Sprint/DB/**', '.github/workflows/pre-sprint-environments.yml']
   pull_request:
-    paths: ['scripts/db_ops.py', 'scripts/validate_environment.py', 'infra/**', 'Tiền Sprint/DB/**', '.github/workflows/pre-sprint-environments.yml']
+    paths: ['database/**', 'scripts/db_ops.py', 'scripts/validate_environment.py', 'scripts/migrate_db.py', 'infra/**', 'Tiền Sprint/DB/**', '.github/workflows/pre-sprint-environments.yml']
   workflow_dispatch:
 
 permissions:

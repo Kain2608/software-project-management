@@ -34,9 +34,14 @@ Chuẩn bị **database thử mới và rỗng**, cùng quyền tạo database k
 
 ```powershell
 createdb -h 127.0.0.1 -U postgres pre_sprint_environment
-python scripts/validate_environment.py --apply --source-dsn 'host=127.0.0.1 user=postgres dbname=pre_sprint_environment' --maintenance-dsn 'host=127.0.0.1 user=postgres dbname=postgres' --work-dir C:\Backups\pre-sprint-drill
+$dbDrillRun = Get-Date -Format 'yyyyMMdd-HHmmss'
+$dbDrillWork = Join-Path 'C:\Backups' ('pre-sprint-' + $dbDrillRun)
+$dbDrillEvidence = Join-Path $env:TEMP ('sasms-environment-' + $dbDrillRun)
+python scripts/validate_environment.py --apply --source-dsn 'host=127.0.0.1 user=postgres dbname=pre_sprint_environment' --maintenance-dsn 'host=127.0.0.1 user=postgres dbname=postgres' --work-dir $dbDrillWork --evidence-dir $dbDrillEvidence
 ```
 
 Validator dựng baseline và migration, tạo dữ liệu giả, sao lưu và khôi phục target mới; kiểm dữ liệu/ledger/constraints/functions/quyền, replay giao dịch và các nhánh từ chối overwrite/checksum. [Evidence](../Ti%E1%BB%81n%20Sprint/DB/evidence) ghi kết quả thực chạy. [Workflow CI](../.github/workflows/pre-sprint-environments.yml) dùng PostgreSQL 16 tạm thời và chỉ upload báo cáo, không upload archive.
+
+Lượt đã lưu ngày **17/11/2026** dùng PostgreSQL **16.16**, **41 bảng/5 migration**, đạt **41 kiểm tra**. Mỗi lần diễn tập mới lưu evidence riêng, gồm source hash và thời điểm thực chạy; không ghi đè file mà tài liệu lịch sử đang dẫn rồi giữ nguyên số liệu cũ. Bộ lọc push/PR của workflow gồm `database/**`, migration runner và các công cụ backup/restore để thay đổi nguồn DB kích hoạt kiểm lại.
 
 Một lần diễn tập logical restore không chứng minh đạt RPO 15 phút/RTO 4 giờ của Production. Các mục tiêu đó còn chờ phê duyệt và cần base backup + WAL/PITR hoặc giải pháp quản trị tương đương, tải thật và diễn tập đầy đủ.

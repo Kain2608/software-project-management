@@ -1,6 +1,6 @@
 # S0-19 / S0-22 / S0-23 — Hợp đồng bàn giao DB cho API, AI và tích hợp
 
-> Hợp đồng S0/V002 bên dưới là lịch sử. Hiện hành V003: raw/case/128/Luhn/IMEI phụ; V004: quyền/deadline POS10m/ONLINE30m/PENDING; V005: role BA. Dùng D35 DB và DS2 DB khi tích hợp mới.
+> Các bảng S0/V002 bên dưới là snapshot lịch sử. Hiện hành V003: raw/case/128/Luhn/IMEI phụ; V004: quyền/deadline POS10m/ONLINE30m/PENDING; V005: role BA. Tích hợp mới dùng [D35 DB](../../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) và [DS2 DB](../../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md).
 
 
 | Thuộc tính | Nội dung |
@@ -8,12 +8,14 @@
 | Người đóng góp | Trần Trung Kiên — Architect / DBA |
 | Người nhận / chủ trì | Thái: D52/OpenAPI, D56/tích hợp; Vũ: D55/AI |
 | Nguồn phân công | [Workbook Sprint 0](../inputs/phan-cong-sprint-0.xlsx), sheet “Theo người” dòng 22; sheet “Phân chia công việc” dòng 12, 15, 17 |
-| Ngày / nhánh | 07/11/2026; `DB` |
+| Ngày / phiên bản | Lập 07/11/2026; rà soát 20/11/2026; phần DB đã tích hợp vào main |
 | Phạm vi | Phần hợp đồng DB bổ sung; chưa phải OpenAPI đầy đủ, adapter provider hoặc log gọi AI |
 
-[Schema S0](../../../database/schema.sql) và [D57](../D57-luoc-do-va-kiem-thu.md) đã có được giữ nguyên. Các đường dẫn HTTP dưới đây là đề xuất để Thái đưa vào D52, chưa có endpoint ứng dụng tương ứng trong repo. Không suy ra việc gửi SMS, phát hành hóa đơn, xác nhận tiền hoặc gọi LLM đã chạy từ thiết kế này.
+[Schema S0](../../../database/schema.sql) giữ nguyên, [D57](../D57-luoc-do-va-kiem-thu.md) được rà soát nguồn/phiên bản. Các đường dẫn HTTP trong bảng là đề xuất lịch sử, không phải đặc tả controller hiện hành. Source đã có API nhập kho, QR, order/reserve, cash payment, receipt và AI; lấy hợp đồng hiện tại từ controller/D52 và báo cáo của người sở hữu. Test DB không chứng minh đã gửi SMS, phát hành e-invoice hoặc gọi provider thật.
 
-## 1. Hợp đồng cho D52 / API kho và POS
+Những ranh giới cần phối hợp: JSON SQL nhập lô có `imei2` nhưng HTTP chưa nhận; hàm khóa POS chỉ nhận Serial; mỗi dòng số lượng N cần N thiết bị; phụ kiện không Serial cần BA/Fullstack chốt mô hình. Giữ mô hình hiện tại theo phạm vi sửa ngày 20/11; không tạo Serial giả hoặc tự mở rộng schema.
+
+## 1. Snapshot hợp đồng S0/V002 cho D52 / API kho và POS
 
 Backend xác thực phiên/JWT, ánh xạ sang `users.id` và kiểm quyền/phạm vi tài nguyên trước khi dùng credential `sasms_app`. Không lấy actor, vai trò hoặc quyền cửa hàng từ body làm bằng chứng. Cả đọc theo ID, tra Serial và trả lại kết quả retry đều phải kiểm phạm vi. Sprint 0 chưa tự kiểm user active/RBAC trong các hàm và chưa có RLS.
 
@@ -66,7 +68,7 @@ Canonical batch S1 trim/uppercase Serial, trim IMEI và chuyển rỗng thành N
 
 ## 2. Dữ liệu cho D55 / AI và fallback
 
-Vũ nhận phần chiếu dữ liệu và giới hạn truy cập dưới đây; prompt hoàn chỉnh, model, Redis, bộ đo latency và log provider do Vũ chủ trì. Repo chưa có pipeline RAG/cache/LLM đang chạy. AI chỉ gợi ý từ catalog hợp lệ, không ghi giá/tồn/quyền hoặc xác nhận đơn đã trả tiền.
+Vũ nhận phần chiếu dữ liệu và giới hạn truy cập dưới đây; prompt/model/cache, bộ đo latency và log provider do Vũ chủ trì. Source hiện đã có adapter LLM, cache ứng dụng và rule fallback; phần DB không xác nhận provider thật, RAG hoặc benchmark toàn đường chỉ từ thiết kế. AI chỉ gợi ý từ catalog hợp lệ, không ghi giá/tồn/quyền hoặc xác nhận đơn đã trả tiền.
 
 Ví dụ SELECT có thể dùng cho adapter catalog do backend kiểm soát, với product ID bind từ request đã kiểm tra:
 
@@ -90,7 +92,7 @@ WHERE p.is_active AND p.id = $1::uuid;
 
 Fallback đề xuất: tra luật bán kèm đã được Huy/nhóm sản phẩm xác nhận theo source product/category → candidate product IDs; lọc sản phẩm active và khả dụng tại kho hợp lệ; xếp hạng theo luật cố định, tie-break theo product ID. Không có luật/candidate hợp lệ thì trả danh sách rỗng và trạng thái `RULE`/không có gợi ý; không bịa tương thích cáp, giá treo hoặc phụ kiện. Luật này là cấu hình cần Vũ/Huy bổ sung, chưa có bảng luật bán kèm đã duyệt trong schema. Gói bảo hành/phụ kiện bán theo số lượng cần chốt mô hình vì baseline đang chọn thiết bị cho mọi dòng bán.
 
-Cache đề xuất do Vũ triển khai: key `ai:crosssell:v1:<catalogFingerprint>:<rulesVersion>:<modelVersion>:<warehouseId>:<sourceProductId>:<locale>:<limit>`, chỉ ID/phiên bản không có PII. Fingerprint lấy từ projection canonical của source và candidates; S0 chưa có catalog revision, S1 có revision sản phẩm nhưng vẫn phải tính đến thay đổi toàn tập candidate/luật. TTL khởi điểm 5 phút để review, không phải TTL đang hoạt động. Kiểm lại giá/active/tồn khi trả cache và khi checkout; thay phiên bản key hoặc invalidate khi catalog/luật đổi. Cache lỗi, timeout model hoặc output sai thì chuyển rules fallback; không giữ transaction DB khi gọi mạng.
+Cache key từng được đề xuất ở S0 là `ai:crosssell:v1:<catalogFingerprint>:<rulesVersion>:<modelVersion>:<warehouseId>:<sourceProductId>:<locale>:<limit>`; đây không phải bằng chứng key đó đã được ứng dụng triển khai. Hiện `AiCacheManager` giữ candidate trong bộ nhớ với TTL 5 phút; không suy Redis hoặc cache DB đang hoạt động. Backend kiểm lại giá/active/tồn khi trả cache và checkout, cập nhật key/invalidate theo hợp đồng AI hiện hành; không giữ transaction DB khi gọi model.
 
 `ai_recommendations` hiện chứa source/recommended product, source `RULE|LLM|CACHE`, score 0–1, model_version và thời điểm hết hạn; có CHECK không tự gợi ý cùng sản phẩm. Bảng chưa bảo đảm một kết quả duy nhất theo cache key và `sasms_reader`/`sasms_app` chưa có quyền INSERT kết quả. Nếu cần lưu, Kiên/Thái thiết kế hàm/worker role hẹp và migration riêng; không cấp AI quyền owner hoặc ghi tùy ý. Chưa có evidence gọi LLM/Redis, độ trễ AI hay endpoint AI 200 trong phần bổ sung này.
 
@@ -99,12 +101,12 @@ Cache đề xuất do Vũ triển khai: key `ai:crosssell:v1:<catalogFingerprint
 | Điểm tích hợp | Hợp đồng DB đã có | Trách nhiệm adapter / phần cần bổ sung |
 |---|---|---|
 | Tiền mặt | `payments.method=CASH`; CAPTURED cần `confirmed_by`, `captured_at`; trigger khóa đơn | Backend kiểm quyền thu ngân, số tiền và chứng từ; không nhận actor hoặc cờ CAPTURED trực tiếp từ browser |
-| Bank/card / webhook | `method=BANK_TRANSFER|CARD`; UNIQUE `(method, provider_reference)` khi reference không NULL; amount >0 | Kiểm chữ ký/timestamp/replay theo tài liệu provider, đúng merchant/đơn/tiền/đơn vị tiền; kiểm phía server khi cần. Schema chưa lưu currency hoặc provider namespace riêng: chốt hợp đồng trước tích hợp nhiều provider; chuẩn hóa reference có namespace nếu cần theo thiết kế được review |
+| Bank/card / webhook | `method=BANK_TRANSFER` hoặc `CARD`; UNIQUE `(method, provider_reference)` khi reference không NULL; amount >0 | Kiểm chữ ký/timestamp/replay theo tài liệu provider, đúng merchant/đơn/tiền/đơn vị tiền; kiểm phía server khi cần. Schema chưa lưu currency hoặc provider namespace riêng: chốt hợp đồng trước tích hợp nhiều provider; chuẩn hóa reference có namespace nếu cần theo thiết kế được review |
 | Webhook hoặc request lặp | Reference duy nhất chặn trùng, CAPTURED không sửa/xóa | Khi trùng, đối chiếu payment cũ đúng order/method/amount/nguồn; trùng reference khác đơn/khác tiền là xung đột để đối soát. Không dùng `ON CONFLICT DO NOTHING` rồi mặc định đơn mới đã trả tiền |
 | Không rõ kết quả / callback muộn | PENDING không đủ điều kiện hoàn tất; `cancel_order` không chạy khi đã có CAPTURED | Đối soát provider ngoài transaction rồi khóa/kiểm lại đơn trước cập nhật. TTL không tự giải phóng đơn còn tiền chưa rõ; tiền về cho đơn đã hủy cần luồng ngoại lệ/refund riêng, chưa hiện thực |
 | Hóa đơn | `complete_sale` tạo một invoice/order, số nội bộ `RECEIPT-<order.code>`, status DRAFT; có provider_reference UNIQUE và issued_at | DRAFT không phải e-invoice hợp lệ. Adapter phát hành sau commit, lưu reference/thời gian và ISSUED qua hàm/role mới; không tự đặt ISSUED từ UI. Credentials và API sandbox hiện chưa có |
 | SMS / thông báo | Outbox mang ID/total, không mang số điện thoại/địa chỉ | Worker lấy liên hệ cần thiết sau kiểm quyền/mục đích; provider message ID và trạng thái gửi cần delivery ledger mới. Không đưa PII thô vào outbox/log và không tuyên bố gửi thành công từ hàng event |
-| Máy in | DB cung cấp chứng từ nội bộ và dữ liệu hiển thị đã lọc | [D19](../../PM/D19.docx), đoạn 49–64, mô tả CR-TV4-W6-001 ngày 14/10 và quyết định PM 18/10 hoãn máy in 80mm, chuyển HTML/PDF. Đây là thay đổi nguồn tháng 10 so với kế hoạch tháng 9; repo hiện chưa có UI in/driver hoặc biên bản thử máy |
+| Máy in | DB cung cấp chứng từ nội bộ và dữ liệu hiển thị đã lọc | [D19](../../PM/D19.docx), đoạn 49–64, mô tả CR-TV4-W6-001 ngày 14/10 và quyết định PM 18/10 hoãn máy in 80mm, chuyển HTML/PDF. Source hiện đã có browser print; vẫn cần kiểm QR được encode, nội dung đa thiết bị và bằng chứng in thực tế, không coi có UI là đã nghiệm thu phần cứng |
 
 Không lưu payload webhook thô nếu có PII/secret; cần trường allowlist và chính sách lưu giữ khi thêm receipt ledger. Xác nhận tiền ở DB không tự kiểm chữ ký provider. Không gọi AI, SMS, bank hoặc e-invoice trong transaction đang khóa đơn/thiết bị. Sau tiền đã commit, lỗi gửi hóa đơn/SMS không đảo ngược giao dịch bán bằng cách sửa CAPTURED.
 
@@ -123,4 +125,4 @@ Hợp đồng triển khai tiếp: worker dùng role hẹp và `event.id` làm k
 
 ## 4. Điều kiện bàn giao cho người chủ trì
 
-Kiên đã cung cấp mapping API → SQL, DTO/SQLSTATE, giới hạn retry, projection AI và ranh giới tích hợp DB. Thái cần bổ sung D52/OpenAPI, auth/DTO/HTTP tests, tài liệu provider, tài khoản sandbox, worker và log chạy; Vũ cần bổ sung D55, luật được xác nhận, prompt/RAG/cache và số đo thật. PR review/ký vẫn do thành viên có thẩm quyền thực hiện. [Evidence S0](../../../database/evidence/summary.json) và [S1](../../../database/evidence/sprint1/summary.json) chỉ chứng minh DB theo đúng phiên bản nguồn được lưu trong từng summary.
+Kiên cung cấp mapping SQL, DTO/SQLSTATE, giới hạn retry, projection AI và ranh giới phiên bản. Thái/Vũ đã có tài liệu và source ứng dụng; cần đối chiếu D52/D55 hiện hành, hoàn thiện các điểm tích hợp còn mở và cung cấp log đúng SHA/môi trường cho phần của mình. Phê duyệt, QA và deployment cần người có thẩm quyền xác nhận. [Evidence S0](../../../database/evidence/summary.json), [S1](../../../database/evidence/sprint1/summary.json) và [S2](../../../database/evidence/sprint2/summary.json) chỉ chứng minh DB theo đúng nguồn được lưu trong từng summary.

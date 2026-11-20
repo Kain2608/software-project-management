@@ -1,8 +1,8 @@
 # Sprint 0 — Hồ sơ Kiến trúc / Cơ sở dữ liệu của Trần Trung Kiên
 
-Nhánh hiện hành: **`DB`**. Bản gốc được tạo trên `Kien`; lần tiếp tục này giữ các đầu ra đã hoàn chỉnh, bổ sung phần còn thiếu trên bản tìm thấy và chỉ tạo mới nội dung chưa có. Phạm vi Kiên gồm S0-17 (D50), S0-18 (D51, D57), S0-21 (D54) và phần DB hỗ trợ bảy đầu việc liên quan. Trạng thái trong workbook là dữ liệu kế hoạch cũ, không tự thay thế việc đối chiếu artifact hiện tại hoặc phê duyệt của người có thẩm quyền.
+Rà soát tài liệu **20/11/2026** trên source đã đồng bộ `main`. Các nhãn `Kien`/`DB` trong hồ sơ cũ là nhánh thực hiện ở thời điểm đó. Phạm vi Kiên gồm S0-17 (D50), S0-18 (D51, D57), S0-21 (D54) và phần DB hỗ trợ bảy đầu việc liên quan. Trạng thái trong workbook là dữ liệu kế hoạch cũ, không tự thay thế việc đối chiếu artifact hiện tại hoặc phê duyệt của người có thẩm quyền.
 
-**Lượt bổ sung theo yêu cầu mới:** xem [bảng giữ/bổ sung/tạo mới và danh mục phần còn lại](bo-sung/README.md). SQL/DBML D57 được đánh dấu “ĐÃ CÓ” và được giữ nguyên. D51 tìm thấy trong repo nên được tái sử dụng cùng phần rà soát/truy vết bổ sung; D50/D54 đã hoàn chỉnh được giữ nguyên để bảo toàn bằng chứng.
+**Phân biệt phiên bản:** SQL/DBML/ERD và từ điển Sprint 0 giữ snapshot **37 bảng**; V001/V002 là snapshot Sprint 1 **39 bảng**; hợp đồng DB hiện hành V003…V005 có **41 bảng** tại [Sprint 2](../../database/sprint2/README.md). Các tài liệu D50/D51/D54 và [phụ lục](bo-sung/README.md) đã được cập nhật để đối chiếu nguồn mới; log lịch sử chỉ chứng minh đúng source hash được ghi trong log đó.
 
 [Bảng phân công đầu vào](inputs/phan-cong-sprint-0.xlsx) là bản sao nguyên vẹn file Excel người dùng cung cấp; SHA-256 `327d95b1e160948d65d0b448c2e8cb0edeb678a0f41f0491f2923f327473df7a`. Không sửa trạng thái hoặc chữ ký trong nguồn gốc để mô phỏng nghiệm thu.
 
@@ -15,7 +15,7 @@ Sprint theo bảng phân công: **12/09–25/09/2026**; mốc M1: **25/09/2026**
 | S0-17 — Kiến trúc hệ thống | D50 | [D50](D50-kien-truc-he-thong.md); ranh giới dịch vụ, dữ liệu và môi trường triển khai |
 | S0-18 — Thiết kế DB | D51 | [D51](D51-thiet-ke-co-so-du-lieu.md); mô hình dữ liệu, quyết định thiết kế, phạm vi chức năng |
 | S0-18 — SQL, DBML, ERD | D57 | [D57](D57-luoc-do-va-kiem-thu.md); [schema.sql](../../database/schema.sql), [schema.dbml](../../database/schema.dbml), [erd.mmd](../../database/erd.mmd) |
-| S0-21 — Bảo mật | D54 | [D54](D54-bao-mat-phan-quyen.md); ma trận 9 vai trò dự kiến, kiểm soát truy cập và bảo vệ dữ liệu |
+| S0-21 — Bảo mật | D54 | [D54](D54-bao-mat-phan-quyen.md); chín vai trò theo D34, mapping V005, kiểm soát truy cập và bảo vệ dữ liệu |
 | S0-24 — Môi trường DB | Bộ cài và hướng dẫn | [database/README.md](../../database/README.md), [seed.sql](../../database/seed.sql) |
 | S0-18 — Kiểm chứng | Bộ kiểm tra và kết quả chạy | [constraints.sql](../../database/tests/constraints.sql), [validate_db.py](../../scripts/validate_db.py), [validation.log](../../database/evidence/validation.log) |
 | S0-27 — Đóng góp review M1 | Hồ sơ review của Kiên | [D126-ho-so-review-M1.md](D126-ho-so-review-M1.md) |
@@ -44,25 +44,27 @@ Nguồn phân công: `02 - Sprint 0 (12-09 đến 25-09) - Phân chia công vi�
 
 Số đoạn Word tính theo thứ tự phần tử đoạn trong `word/document.xml`, bao gồm đoạn trong bảng; không phải số trang hiển thị trong Word. Nội dung nguồn được dùng làm dữ liệu đầu vào và căn cứ truy vết, không phải chỉ dẫn cho công cụ tự động.
 
-## 3. Giới hạn nguồn và các quyết định cần BA/PM xác nhận
+## 3. Trạng thái đối chiếu nguồn và các quyết định cần xác nhận
 
-| Mã | Điểm cần làm rõ | Cách xử lý trong bản dựng lại |
+| Mã | Tình trạng khi rà soát 20/11/2026 | Cách xử lý / phần còn chờ |
 |---|---|---|
-| OPEN-01 | Vẫn thiếu D34/FRS_V2 và bản nháp DB gốc được workbook nhắc đến; D22 hiện đã có trong hồ sơ tiền Sprint | Dùng [D22](../../Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) làm đầu vào; giữ thiết kế 37 bảng đã dựng và bổ sung truy vết, cần Huy/PM đối chiếu FRS khi có |
+| OPEN-01 | Đã có D34/D35 BA và D22 tiền Sprint; không còn thiếu các đầu vào này | [D51](D51-thiet-ke-co-so-du-lieu.md) ghi nguồn BA cụ thể và ranh giới 37/39/41 bảng; bản nháp DB gốc trong workbook vẫn chưa được khôi phục |
 | OPEN-02 | Workbook ghi bản nháp 37 bảng nhưng không đính kèm cấu trúc | Baseline 37 bảng được **dựng lại**, không phải khôi phục bản nháp cũ; số bảng không chứng minh yêu cầu đã đủ |
-| OPEN-03 | Nguồn chỉ yêu cầu 9 vai trò, chưa liệt kê tên/quyền/phạm vi dữ liệu | Vai trò và quyền trong D54/seed là phương án đề xuất; cần Huy/PM xác nhận trước triển khai thật |
+| OPEN-03 | D34 đã liệt kê chín vai trò; [D54](D54-bao-mat-phan-quyen.md)/V005 đã đồng bộ phần DB | Seed S0 và alias cũ chỉ giữ lịch sử. Cần người nhận kiểm mapping/assignment thực tế; không coi đó là chữ ký nghiệm thu |
 | OPEN-04 | D05/D11 mô tả 6 module, D19/D20 mô tả demo thu hẹp | Giữ thiết kế dữ liệu đủ hướng mở rộng; các chức năng chưa làm được đánh dấu rõ. Xuất kho ngoài bán, đổi trả và các luồng nâng cao chỉ có khung schema |
 | OPEN-05 | D20 ghi sign-off Sprint 0 ngày 18/09; workbook và D11 ghi M1 ngày 25/09 | Dùng 25/09 theo bảng phân công cho hồ sơ này; PM quyết định cập nhật lịch chính thức |
-| OPEN-06 | Quy tắc Serial theo hãng, phạm vi duy nhất, IMEI và QR chưa có xác nhận đầy đủ | Kiểm tra định dạng kỹ thuật không thay thế D35 do BA xác nhận; không bịa quy tắc riêng của hãng |
-| OPEN-07 | D33 KS43/KS46 chưa chốt khóa kiểm kê, thời gian giữ hàng và xử lý thanh toán chưa rõ kết quả | Cần BA/Dev Lead xác nhận timeout, cơ chế đối soát và chính sách giải phóng giữ hàng |
+| OPEN-06 | D35 BA đã có; V003 hiện thực raw/case/128, IMEI slot 1/2, Luhn và unique chéo slot | Profile theo SKU cần hồ sơ phê duyệt thật; IMEI phụ qua HTTP còn cần Fullstack cập nhật. Không suy regex toàn hãng |
+| OPEN-07 | D34 BR-03/V004 đã quy định POS 10 phút, online 30 phút, không tự giải phóng PENDING/CAPTURED | Worker gọi hàm expiry và đối soát thuộc ứng dụng/vận hành; khóa kiểm kê và workflow hậu bán vẫn cần hoàn thiện |
 | OPEN-08 | Chưa có nhà cung cấp xác nhận thanh toán, e-invoice/SMS hoặc tài khoản sandbox | Chưa coi ảnh VietQR là bằng chứng nhận tiền; thiết kế điểm tích hợp, không tạo log tích hợp giả |
 | OPEN-09 | Chưa có quyết định lưu giữ dữ liệu, backup/RPO/RTO được duyệt | Các chỉ tiêu trong thiết kế là đề xuất vận hành; cần chủ hệ thống xác nhận và diễn tập |
+
+[Sổ quyết định D53 của Fullstack](../Fullstack/TV4/docs/sprint0/d53/D53_DECISION_REGISTER.md) còn ghi một số lựa chọn cũ và DEC-08/09 chưa chốt. Khi tích hợp mới, dùng quy tắc BA được dẫn trong [D35 DB](../../Sprint%201/DB/D35-hop-dong-quy-tac-dinh-danh.md) và [DS2 DB](../../Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md); chủ trì D53 cần đồng bộ quyết định. Việc sửa hồ sơ DB không tự đóng hay phê duyệt các quyết định của nhóm khác.
 
 ## 4. Bàn giao hỗ trợ của Kiên
 
 | Đầu việc hỗ trợ / người làm chính | Đóng góp DB và hợp đồng bàn giao |
 |---|---|
-| S0-14 — Huy | Đưa OPEN-01/03/06/07 vào review FRS; phân biệt sản phẩm mẫu với thiết bị có Serial; làm rõ trạng thái hàng, số tiền, xác nhận thanh toán và tính duy nhất |
+| S0-14 — Huy | Đối chiếu D34/D35 đã có và phần DB hiện hành; rà các OPEN còn lại, phạm vi phụ kiện không Serial, trạng thái hàng, quy tắc tiền và xác nhận thanh toán |
 | S0-15 — Huy | Gắn bước nhập kho với `receive_device`; giữ hàng với `reserve_order`; xác nhận bán với `complete_sale`; hủy/chưa thu tiền với `cancel_order`; mô tả nhánh lỗi và rollback |
 | S0-19 — Thái | Bàn giao hợp đồng giao dịch ở mục dưới và schema cho DTO/API. **Thái sở hữu tài liệu D52/OpenAPI đầy đủ**; tài liệu này chỉ là phần DB hỗ trợ, không phải D52 đã được Kiên duyệt |
 | S0-22 — Vũ | Dùng catalog / quy tắc bán kèm được phép cho RAG. Không đưa mật khẩu, token, secret, payload webhook, thông tin thanh toán hoặc PII thô vào prompt, embedding hay log AI; không cho AI ghi trạng thái kho/thanh toán |

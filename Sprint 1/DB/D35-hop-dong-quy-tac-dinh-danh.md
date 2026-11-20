@@ -1,6 +1,8 @@
 # D35 — Hợp đồng DB cho Serial/IMEI
 
-Phần Trần Trung Kiên — Architect / DBA, cập nhật **17/11/2026** trên nhánh `DB`. Căn cứ chính là [D35 BA](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx), SER-01…10 và BSL BA 01, [D34 FRS](../../Sprint%200/BA/D34_FRS_V2_SASMS.docx) BR-01; đối chiếu [D71](../Tester/D71_Bo_Test_Case_Kho_QR_SASMS_v1.2.docx), [D80](../Tester/D80_So_loi_Bug_Log_SASMS.docx) và [bàn giao Fullstack](../Fullstack/TV4/SPRINT1_IMPLEMENTATION_REPORT.md).
+Phần Trần Trung Kiên — Architect / DBA, rà soát tài liệu **20/11/2026** trên nguồn `main` tại `6544a00`; SQL/evidence hiện hành được kiểm ngày **17/11/2026**. Căn cứ chính là [D35 BA](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx), SER-01…10 và BSL BA 01, [D34 FRS](../../Sprint%200/BA/D34_FRS_V2_SASMS.docx) BR-01; đối chiếu [D71](../Tester/D71_Bo_Test_Case_Kho_QR_SASMS_v1.2.docx), [D80](../Tester/D80_So_loi_Bug_Log_SASMS.docx) và [bàn giao Fullstack](../Fullstack/TV4/SPRINT1_IMPLEMENTATION_REPORT.md).
+
+Đây là hợp đồng kỹ thuật hiện hành V003…V005. Phương án uppercase/100 ký tự/một IMEI trong DEC-03/04 của [D53 Fullstack](../../Sprint%200/Fullstack/TV4/docs/sprint0/d53/D53_DECISION_REGISTER.md) mô tả lựa chọn trước V003 và chưa được sổ quyết định đánh dấu thay thế; không áp phương án đó vào dữ liệu mới. Việc đồng bộ quyết định và ký duyệt nghiệp vụ cần người sở hữu xác nhận, không được suy từ nhãn APPROVED cũ.
 
 ## Quy tắc hiện hành
 
@@ -29,7 +31,9 @@ Giữ chữ ký receive_device_batch(receipt_item_id,request_key,devices_json,tr
 
 Kiểm 1–500 phần tử, inventory.receive theo store, PO/receipt/quantity, profile/checksum/unique. Một lỗi rollback cả lô và movement/audit/outbox. Cùng key, actor, receipt và normalized payload đúng thứ tự trả cùng ID; đổi hoa/thường là đổi payload. Ledger V002 cũ retry theo đúng canonical lịch sử, không tạo hiệu ứng lặp.
 
-imei2 là mở rộng **SQL DB**; DTO HTTP hiện có cần người sở hữu Fullstack cập nhật trước khi nhập IMEI phụ qua UI. Backend vẫn xác thực JWT, scope và ánh xạ lỗi, không gửi actor do client tự chọn vào SQL.
+`imei2` là mở rộng **SQL DB**; [InventoryBatchService](../../backend/src/main/java/com/smartelectronicsupermarket/inventory/service/InventoryBatchService.java) và DTO HTTP hiện chỉ cho `serial`/`imei`, nên chưa nhập được IMEI phụ qua UI/API. Fullstack cần bổ sung contract/validation/serialization và kiểm atomic retry với hai IMEI; không bỏ kiểm Luhn/unique ở DB để phù hợp DTO cũ. Backend vẫn xác thực JWT, scope và ánh xạ lỗi, không gửi actor do client tự chọn vào SQL.
+
+Tra cứu theo registry và khóa chọn thiết bị là hai giao thức khác nhau: `find_and_lock_device_for_pos(..., serial, actor)` hiện chỉ tìm **Serial**. Consumer cần đổi nhãn nhập thành Serial hoặc triển khai bước resolve IMEI → device/Serial theo đúng store/kho/product trước khi gọi khóa; không gửi IMEI vào tham số Serial rồi coi hợp đồng đã hỗ trợ cả hai.
 
 ## Cấu hình profile
 

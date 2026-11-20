@@ -6,7 +6,8 @@
 | Người soạn | Trần Trung Kiên — Architect / DBA |
 | Thời kỳ theo phân công | 05–18/09/2026; hạn đầu ra KD-10 là 18/09/2026 |
 | Ngày dựng lại hồ sơ | 07/11/2026; không dùng ngày lịch sử làm ngày ký hoặc ngày mua |
-| Phiên bản / trạng thái | 1.0 — đề xuất để PM/Sponsor review; chưa có phê duyệt mua, báo giá hoặc biên bản nhận thiết bị |
+| Ngày rà soát hiện hành | 20/11/2026 — đồng bộ tiêu chí đo với FRS; không phải lượt kiểm thử thiết bị mới |
+| Phiên bản / trạng thái | 1.1 — đề xuất để PM/Sponsor review; chưa có phê duyệt mua, báo giá hoặc biên bản nhận thiết bị |
 | Phối hợp | Trịnh Quốc An — PM; Vũ Duy Thái — Dev Lead; Huy — BA; Phát — QA |
 
 ## 1. Mục tiêu và căn cứ
@@ -20,8 +21,9 @@ Chuẩn bị phương án thiết bị để kiểm chứng nhập kho Serial/IM
 | [D12](../PM/D12.xlsx), sheet 1, E4:E13 | Baseline chi phí tổng 500.000.000 VND; chưa có dòng máy in hoặc scanner |
 | [D19](../PM/D19.docx), đoạn 49–64; [D20](../PM/D20.docx), đoạn 34–36 | Nguồn ghi CR-TV4-W6-001 được duyệt 18/10/2026: hoãn máy in nhiệt 80 mm vật lý, dùng HTML/PDF và Browser Print Preview |
 | [D33](../BA/D33.docx), đoạn 166–172, KS41/KS45 | QR payload, model máy in, giao tiếp, driver và thiết bị thử còn là câu hỏi cần xác nhận |
+| [D34 FRS_V2](../../Sprint%200/BA/D34_FRS_V2_SASMS.docx), NFR-01; [D35](../../Sprint%200/BA/D35_Quy_tac_Serial_IMEI_SASMS.docx) | Tiêu chí đo QR và quy tắc định danh hiện hành; không suy tiêu chí nghiệm thu từ tốc độ scanner/SQL |
 
-Nguồn được dùng làm dữ liệu truy vết. D33 chưa cung cấp kết quả khảo sát; trạng thái và chữ ký trong hồ sơ PM cũ không phê duyệt ngầm cho D21 mới.
+Nguồn được dùng làm dữ liệu truy vết. D33 được dẫn ở trên là bản câu hỏi khảo sát; kết quả khảo sát mô phỏng trong các bản BA bổ sung không thay cho kiểm kê hoặc thử thiết bị thật. Trạng thái và chữ ký trong hồ sơ PM cũ không phê duyệt ngầm cho D21 mới.
 
 ## 2. Phân biệt kế hoạch ban đầu và phương án hiện hành
 
@@ -114,7 +116,7 @@ Mỗi dòng có một đầu mối A. Chức danh Sponsor/người được ủy
 | AC-EQ05 | Chỉ khi máy in vật lý được mở lại: tiếng Việt/QR, cắt giấy, khổ, kết nối mất–nối lại | Mẫu in đọc được; driver/adapter đúng cấu hình; lỗi in không tạo lại đơn/thu tiền | Bản in mẫu, phiên bản driver/firmware và log lỗi/retry |
 | AC-EQ06 | Nhận/mượn và bàn giao | Đúng số lượng/model/phụ kiện/tình trạng; có người giữ, hạn trả hoặc điều khoản bảo hành | Phiếu nhận thật, chứng từ mua/thuê hoặc xác nhận mượn |
 
-Mục tiêu QR dưới một giây trong nguồn là mục tiêu toàn luồng camera/trình duyệt/API; không suy ra từ tốc độ decode của scanner hoặc SQL lookup. Quy mô mẫu và ngưỡng lỗi cần Huy/Phát xác nhận trước pilot. Các kiểm thử SQL đã có ở Sprint 0/1 chỉ là bằng chứng DB, chưa nghiệm thu phần cứng theo các hàng trên.
+Theo D34 **NFR-01**, QR phải đạt **p95 < 1 giây từ lúc giải mã QR thành công tới khi dữ liệu được hiển thị, không gồm thời gian lấy nét camera**. Phép đo gồm **100 lượt trên Chrome mobile, Wi-Fi thử ổn định**; lưu thiết bị, mạng, build, median/p95 và lỗi. Thời gian lấy nét/giải mã camera hoặc tốc độ scanner được đo riêng để kiểm nhận thiết bị, không cộng vào khoảng đo NFR-01 hay thay thế nó. Huy/Phát xác nhận bộ mẫu và các điều kiện kiểm nhận bổ sung trước pilot; không thay ngưỡng hoặc quy mô mẫu đã ghi trong FRS. Các kiểm thử SQL chỉ là bằng chứng DB, chưa nghiệm thu phần hiển thị QR hoặc phần cứng theo các hàng trên.
 
 ## 8. Quản lý tài sản, rủi ro và bàn giao
 
@@ -131,7 +133,7 @@ Sổ thiết bị cần có mã tài sản nội bộ, model/serial thật, hìn
 
 ## 9. Trạng thái phê duyệt
 
-| Nội dung | Người xác nhận cần có | Trạng thái của bản 1.0 |
+| Nội dung | Người xác nhận cần có | Trạng thái của bản 1.1 |
 |---|---|---|
 | Yêu cầu QR/Serial và chứng từ | Huy, đại diện kho/thu ngân | Chờ xác nhận |
 | Tương thích thiết bị/app | Thái, Kiên, Phát | Chưa có test thiết bị thật |

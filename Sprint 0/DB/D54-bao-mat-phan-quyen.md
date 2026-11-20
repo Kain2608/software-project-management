@@ -1,6 +1,6 @@
 # D54 — Bảo mật và phân quyền DB
 
-Trần Trung Kiên — Architect / DBA; cập nhật **17/11/2026** theo [D34 FRS BA](../BA/D34_FRS_V2_SASMS.docx), FR-01 và “Tác nhân và quyền được chốt”. SQL S0 là snapshot lịch sử; hiện hành bổ sung qua V001/V004/[V005](../../database/migrations/V005__frs_business_roles.sql).
+Trần Trung Kiên — Architect / DBA; đối chiếu tài liệu **20/11/2026** theo [D34 FRS BA](../BA/D34_FRS_V2_SASMS.docx), FR-01 và “Tác nhân và quyền được chốt”. SQL S0 là snapshot lịch sử; hiện hành bổ sung qua V001/V004/[V005](../../database/migrations/V005__frs_business_roles.sql). Lượt sửa văn bản này không bổ sung kết quả kiểm thử hoặc chữ ký phê duyệt.
 
 ## Chín vai trò nghiệp vụ
 
@@ -17,6 +17,8 @@ Trần Trung Kiên — Architect / DBA; cập nhật **17/11/2026** theo [D34 FR
 | STORE_MANAGER | Duyệt ngoại lệ/đổi trả, mở bán lại sau kiểm tra, báo cáo | Theo siêu thị được giao; không mặc định quản trị IAM/catalog toàn chuỗi |
 
 V005 giữ role/assignment cũ để không mất lịch sử. WAREHOUSE/SALES là alias is_legacy của WAREHOUSE_STAFF/SALES_STAFF; quyền cũ chỉ thu hẹp theo allowlist, không phục hồi grant đã thu hồi. ANALYST nằm ngoài chín role D34, giữ lịch sử nhưng không có quyền tự động; quản trị review và gán lại có chủ đích. Ba mã legacy không phải ba business role BA mới phê duyệt.
+
+DEC-01 trong [sổ quyết định D53](../Fullstack/TV4/docs/sprint0/d53/D53_DECISION_REGISTER.md) còn ghi bộ role kỹ thuật cũ và mapping CATALOG_MANAGER sang Admin/Manager. Consumer mới phải dùng bảng D34/V005 ở trên; chủ trì D53 cần đồng bộ sổ quyết định, không suy trạng thái APPROVED cũ thành quyền ADMIN được tự làm nghiệp vụ của role khác.
 
 ## Scope và credential
 
