@@ -72,20 +72,54 @@ class PosPaymentServiceTest {
     }
 
     @Test
-    void completeCashPaymentWithoutAmountDefaultsToOrderTotal() {
+    void completeCashPaymentThrowsValidationWhenRequestOrAmountMissing() {
         PosOrderRecord order = new PosOrderRecord(
                 ORDER_ID, "ORD-001", UUID.randomUUID(), STORE_ID, WAREHOUSE_ID, null,
                 "POS", "RESERVED", TOTAL_AMOUNT, ACTOR_ID, Instant.now(), Instant.now().plusSeconds(600));
 
         when(dataAccess.findOrderById(ORDER_ID)).thenReturn(Optional.of(order));
         when(dataAccess.hasCheckoutPermission(ACTOR_ID, STORE_ID)).thenReturn(true);
-        when(dataAccess.completeSale(ORDER_ID, ACTOR_ID)).thenReturn(ORDER_ID);
-        when(dataAccess.findInvoiceNumber(ORDER_ID)).thenReturn(Optional.of("RECEIPT-ORD-001"));
 
-        CashPaymentResponse response = service.completeCashPayment(ORDER_ID, null, ACTOR_ID);
+        PosOrderValidationException ex1 = assertThrows(PosOrderValidationException.class, () ->
+                service.completeCashPayment(ORDER_ID, null, ACTOR_ID));
+        assertEquals("amount", ex1.getField());
 
-        assertEquals("PAID", response.status());
-        assertEquals(TOTAL_AMOUNT, response.amount());
+        PosOrderValidationException ex2 = assertThrows(PosOrderValidationException.class, () ->
+                service.completeCashPayment(ORDER_ID, new CompleteCashPaymentRequest(null), ACTOR_ID));
+        assertEquals("amount", ex2.getField());
+    }
+
+    @Test
+    void completeCashPaymentThrowsConflictWhenPaidOrderHasNoCashPayment() {
+        PosOrderRecord order = new PosOrderRecord(
+                ORDER_ID, "ORD-001", UUID.randomUUID(), STORE_ID, WAREHOUSE_ID, null,
+                "POS", "PAID", TOTAL_AMOUNT, ACTOR_ID, Instant.now(), null);
+
+        when(dataAccess.findOrderById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(dataAccess.hasCheckoutPermission(ACTOR_ID, STORE_ID)).thenReturn(true);
+        when(dataAccess.findExistingCapturedPayment(ORDER_ID)).thenReturn(Optional.empty());
+
+        ResourceConflictException ex = assertThrows(ResourceConflictException.class, () ->
+                service.completeCashPayment(ORDER_ID, new CompleteCashPaymentRequest(TOTAL_AMOUNT), ACTOR_ID));
+        assertEquals(true, ex.getMessage().contains("no recorded CASH payment"));
+    }
+
+    @Test
+    void completeCashPaymentThrowsValidationWhenPaidOrderReplayedWithDifferentAmount() {
+        PosOrderRecord order = new PosOrderRecord(
+                ORDER_ID, "ORD-001", UUID.randomUUID(), STORE_ID, WAREHOUSE_ID, null,
+                "POS", "PAID", TOTAL_AMOUNT, ACTOR_ID, Instant.now(), null);
+        UUID paymentId = UUID.randomUUID();
+        OffsetDateTime capturedAt = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(5);
+
+        when(dataAccess.findOrderById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(dataAccess.hasCheckoutPermission(ACTOR_ID, STORE_ID)).thenReturn(true);
+        when(dataAccess.findExistingCapturedPayment(ORDER_ID)).thenReturn(Optional.of(
+                new ExistingPaymentRecord(paymentId, ORDER_ID, TOTAL_AMOUNT, capturedAt, "CASH", "CAPTURED")));
+
+        PosOrderValidationException ex = assertThrows(PosOrderValidationException.class, () ->
+                service.completeCashPayment(ORDER_ID, new CompleteCashPaymentRequest(new BigDecimal("999999.00")), ACTOR_ID));
+        assertEquals("amount", ex.getField());
     }
 
     @Test
@@ -94,7 +128,7 @@ class PosPaymentServiceTest {
                 ORDER_ID, "ORD-001", UUID.randomUUID(), STORE_ID, WAREHOUSE_ID, null,
                 "POS", "PAID", TOTAL_AMOUNT, ACTOR_ID, Instant.now(), null);
         UUID paymentId = UUID.randomUUID();
-        OffsetDateTime capturedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime capturedAt = OffsetDateTime.now(ZoneOffset.UTC).minusHours(1);
 
         when(dataAccess.findOrderById(ORDER_ID)).thenReturn(Optional.of(order));
         when(dataAccess.hasCheckoutPermission(ACTOR_ID, STORE_ID)).thenReturn(true);
@@ -109,6 +143,9 @@ class PosPaymentServiceTest {
         assertEquals(paymentId, response.paymentId());
         assertEquals("PAID", response.status());
         assertEquals("RECEIPT-ORD-001", response.invoiceNumber());
+        assertEquals(TOTAL_AMOUNT, response.amount());
+        assertEquals(capturedAt, response.paidAt());
+        assertEquals("CASH", response.paymentMethod());
 
         verify(dataAccess, never()).insertCapturedCashPayment(any(), any(), any(), any(), any(), any());
         verify(dataAccess, never()).completeSale(any(), any());

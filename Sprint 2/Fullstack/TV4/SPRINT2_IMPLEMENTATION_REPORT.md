@@ -924,3 +924,75 @@ Bổ sung test suite tích hợp `Sprint2OrderPostgreSqlIntegrationTest.java` (7
   - **BA / Product Owner**: Phê duyệt luồng trải nghiệm người dùng và quyết định bật cờ tính năng (`pos-cash-payment-api`, `pos-order-api`) trên môi trường UAT/Staging.
   - **Security / Architect Lead**: Rà soát việc sử dụng hàm CSDL `sasms.complete_sale` dưới quyền `sasms_app` trong cấu hình runtime.
 - **Kết luận:** **READY FOR DRAFT PR**. Nhánh `feat/tv4-s2-closeout` đã hoàn tất 100% các cam kết kỹ thuật của TV4 Sprint 2.
+
+---
+
+## 20. Báo cáo Hardening & Khắc phục Dứt điểm 4 Vấn đề Tồn đọng (Nhánh `fix/tv4-s2-pos-hardening`)
+
+Tiếp nối việc hoàn tất và merge PR #33 vào `origin/main`, nhóm kỹ thuật TV4 đã triển khai đợt kiểm tra và sửa lỗi dứt điểm cho 4 vấn đề bắt buộc trên nhánh độc lập `fix/tv4-s2-pos-hardening`:
+
+### 20.1 Chi tiết 4 Vấn đề Đã Khắc phục Dứt điểm
+
+1. **Chuẩn hóa Luồng Checkout & Sử dụng Authoritative Total Amount từ Reserve**:
+   - **Vấn đề trước sửa đổi**: Frontend lấy `total_amount` từ đơn DRAFT (vốn là 0 trước khi tính giá chiết khấu/tồn và hoàn tất khóa hàng) để điền vào form thanh toán tiền mặt. Nút thanh toán cho phép xác nhận mà không có bước kiểm đếm bắt buộc từ thu ngân.
+   - **Giải pháp**:
+     - Trong `PosPage.jsx`, tổng tiền thanh toán bắt buộc lấy từ trường `total_amount` chính thức trả về từ response của API `POST /api/v1/pos/orders/{id}/reserve` (`ReservePosOrderResponse`).
+     - Bổ sung xác thực phía frontend: số tiền thu phải là số dương hợp lệ, không được để trống, và phải khớp tuyệt đối ($\pm 0.001$) với `total_amount` của đơn đã RESERVE.
+     - Bổ sung ô kiểm tra xác nhận bắt buộc của thu ngân (`cashierConfirmed` checkbox: "Thu ngân xác nhận đã kiểm đếm và nhận đủ tiền mặt từ khách").
+     - Nút "Xác nhận thu đủ tiền & Hoàn tất bán" bị vô hiệu hóa (`disabled`) nếu số tiền chưa hợp lệ hoặc thu ngân chưa tích xác nhận.
+
+2. **Tạo Mã QR Bảo hành Quét được Thực sự (`WarrantyQrCode.jsx`)**:
+   - **Vấn đề trước sửa đổi**: Hóa đơn và giao diện tra cứu chỉ hiển thị chuỗi văn bản token thô (text), không có mã QR hình ảnh thực tế quét được bởi máy quét mã vạch hoặc camera.
+   - **Giải pháp**:
+     - Tạo mới component `WarrantyQrCode.jsx` tại `frontend/src/features/qr/WarrantyQrCode.jsx`.
+     - Sử dụng engine `QRCodeEncoder` từ thư viện `@zxing/library` với mức sửa lỗi tiêu chuẩn công nghiệp (Error Correction Level M) và quiet zone an toàn 4 modules.
+     - Sinh vector đồ họa SVG thuần (`shapeRendering="crispEdges"`, `<path d="..." fill="#000000"/>`), hiển thị sắc nét ở mọi kích cỡ màn hình và tối ưu cho máy in hóa đơn nhiệt POS 80mm không bị nhòe pixel.
+     - Bổ sung hàm tiện ích `formatWarrantyQrPayload(qrToken)` tại `frontend/src/features/qr/qrPayload.js` để định dạng chuẩn `SASMS:DEVICE:<uuid>`.
+     - Bổ sung kiểm thử đơn vị và **kiểm thử roundtrip** mã hóa / giải mã bằng `QRCodeReader` trong `qrPayload.test.js` (16/16 tests PASS), chứng minh mã QR sinh ra có thể được camera/máy quét đọc lại nguyên bản 100%.
+     - Tích hợp `WarrantyQrCode` vào cả bản xem trước hóa đơn thanh toán thành công và tab tra cứu hóa đơn POS.
+
+3. **Chuẩn hóa Idempotent Replay của CASH Payment & Xử lý Tranh chấp Đồng thời**:
+   - **Vấn đề trước sửa đổi**: Khi replay thanh toán CASH cho một đơn hàng đã ở trạng thái `PAID`, hệ thống chưa phân biệt phương thức thanh toán ban đầu (có thể bịa ID thanh toán hoặc trả về CASH cho đơn thanh toán bằng thẻ/VietQR). Khi có hai yêu cầu thanh toán CASH đồng thời trên cùng một đơn RESERVED, trigger bảo vệ CSDL `guard_order_child` có thể kích hoạt lỗi 23514 ("Order is frozen: PAID") và abort transaction.
+   - **Giải pháp**:
+     - Trong `PosPaymentService.java`:
+       - Khi đơn hàng đã `PAID`: truy vấn trực tiếp CSDL qua `findExistingCapturedPayment(orderId)`. Nếu tìm thấy khoản thanh toán `CAPTURED` bằng tiền mặt (`CASH`), trả về nguyên bản thông tin thanh toán thật từ CSDL (`payment_id`, `amount`, `captured_at`, `payment_method`), tuyệt đối không tự sinh hay bịa ID/thời gian.
+       - Nếu đơn hàng đã `PAID` nhưng phương thức không phải `CASH` (ví dụ CARD): từ chối với `409 Conflict` (`Order is already PAID but has no recorded CASH payment`).
+       - Nếu request replay yêu cầu số tiền khác với số tiền đã ghi nhận: từ chối với `422 Unprocessable Entity`.
+       - Đồng bộ hóa các yêu cầu đồng thời: sử dụng PostgreSQL transaction advisory lock `pg_advisory_xact_lock(hashtext('pos_payment_' || ?))` tại tầng CSDL ở đầu transaction `completeCashPayment`. Khi hai thread gọi đồng thời, thread 2 sẽ xếp hàng chờ thread 1 commit xong, sau đó thực thi nhánh replay hợp lệ và nhận về cùng một payment ID / invoice number mà không xảy ra transaction abort hay race condition.
+     - Cập nhật thời gian lưu trữ `capturedAt` được làm tròn microsecond (`ChronoUnit.MICROS`) để đồng nhất tuyệt đối với độ chính xác `timestamptz` của PostgreSQL.
+
+4. **Loại bỏ Hóa đơn Giả và Phép Nhân VND × 100**:
+   - **Vấn đề trước sửa đổi**: Khi `getReceipt` thất bại, client fallback tạo một đối tượng hóa đơn giả lập với `total_minor = Math.round(paid.amount * 100)`, gây sai lệch bản chất tiền tệ VND (không có đơn vị minor xu/cent). Nút in vẫn hiển thị cho hóa đơn chưa xác thực.
+   - **Giải pháp**:
+     - Xóa bỏ hoàn toàn khối `catch` tạo hóa đơn giả và phép tính sai lệch `* 100`.
+     - Khi không tải được hóa đơn chính thức, `completedReceipt` được đặt về `null`, giao diện hiển thị cảnh báo lỗi màu đỏ kèm nút "Tải lại hóa đơn" (`handleRetryFetchReceipt`).
+     - Nút "In hóa đơn (80mm)" được ẩn hoàn toàn cho đến khi hóa đơn chính thức được tải thành công từ backend, bảo đảm nhân viên thu ngân không thể in các tài liệu giả mạo hoặc chưa được server xác thực.
+
+---
+
+### 20.2 Bằng chứng Kiểm thử Sau Khắc phục (Verification Evidence)
+
+1. **Kiểm thử Đơn vị Backend (`PosPaymentServiceTest`)**:
+   - **10/10 tests PASS** (tăng thêm 2 tests kiểm thử: amount null/empty, order PAID bằng CARD bị từ chối 409).
+2. **Kiểm thử Toàn bộ Test Suite Backend (Maven)**:
+   - Lệnh: `.\mvnw.cmd test`
+   - Kết quả: **258 tests run: 0 failures, 0 errors, 16 skipped** (BUILD SUCCESS).
+3. **Kiểm thử Tích hợp PostgreSQL 16 Cô lập trên Docker (`run_s2_order_it.ps1`)**:
+   - Chạy trên container `tv4_s2_order_it_db` (PostgreSQL 16.15) với V001–V005.
+   - Kết quả: **7/7 tests PASS, 0 failures, 0 errors, 0 skipped**.
+   - Bao gồm kiểm chứng:
+     - Gửi amount rỗng $\rightarrow$ 422 `VALIDATION_FAILED`.
+     - Gửi amount sai lệch $\rightarrow$ 422 `VALIDATION_FAILED`.
+     - Gửi 2 request thanh toán đồng thời qua 2 luồng song song $\rightarrow$ Cả 2 đều trả về HTTP 200, cùng `payment_id`, cùng `invoice_number`, CSDL chỉ có đúng 1 bản ghi thanh toán.
+     - Replay đơn đã PAID với số tiền sai lệch $\rightarrow$ 422 `VALIDATION_FAILED`.
+     - Thanh toán CASH cho đơn đã PAID bằng CARD $\rightarrow$ 409 `CONFLICT`.
+4. **Kiểm thử Frontend (Node Test Runner)**:
+   - Lệnh: `npm test`
+   - Kết quả: **54/54 tests PASS, 0 failures, 0 skipped**.
+   - Bao gồm 16/16 tests QR trong `qrPayload.test.js` kiểm tra validation, format token, và encode/decode roundtrip bằng engine ZXing.
+5. **Build Production Frontend (Vite)**:
+   - Lệnh: `npm run build`
+   - Kết quả: **333 modules transformed, 0 errors, built in ~2.4s**.
+6. **Code Hygiene & Bảo mật**:
+   - `git diff --check`: Không có whitespace error.
+   - Quét bảo mật: Không có secret, credential hay token hardcode.

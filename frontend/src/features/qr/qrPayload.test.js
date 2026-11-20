@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { abbreviateQrToken, validateQrPayload } from './qrPayload.js'
+import { abbreviateQrToken, formatWarrantyQrPayload, validateQrPayload } from './qrPayload.js'
+import {
+  BinaryBitmap,
+  HybridBinarizer,
+  QRCodeDecoderErrorCorrectionLevel,
+  QRCodeEncoder,
+  QRCodeReader,
+  RGBLuminanceSource,
+} from '@zxing/library'
 
 const TOKEN = '123e4567-e89b-12d3-a456-426614174000'
 
@@ -44,4 +52,53 @@ test('rejects an external URL', () => {
 
 test('abbreviates a token without exposing the full value in the result card', () => {
   assert.equal(abbreviateQrToken(TOKEN), '123e4567…174000')
+})
+
+test('formatWarrantyQrPayload formats canonical UUID token into SASMS:DEVICE prefix', () => {
+  assert.equal(formatWarrantyQrPayload(TOKEN), `SASMS:DEVICE:${TOKEN}`)
+})
+
+test('formatWarrantyQrPayload rejects invalid tokens', () => {
+  assert.throws(() => formatWarrantyQrPayload(''), /qr_token phải là UUID canonical/)
+  assert.throws(() => formatWarrantyQrPayload('invalid-token'), /qr_token phải là UUID canonical/)
+  assert.throws(() => formatWarrantyQrPayload(null), /qr_token phải là UUID canonical/)
+})
+
+test('scannable QR code can be encoded and decoded roundtrip with @zxing/library', () => {
+  const payload = formatWarrantyQrPayload(TOKEN)
+  const code = QRCodeEncoder.encode(payload, QRCodeDecoderErrorCorrectionLevel.M)
+  const matrix = code.getMatrix()
+  const w = matrix.getWidth()
+  const h = matrix.getHeight()
+  const quietZone = 4
+  const scale = 4
+  const fullW = (w + quietZone * 2) * scale
+  const fullH = (h + quietZone * 2) * scale
+
+  const grayArray = new Uint8ClampedArray(fullW * fullH)
+  grayArray.fill(255) // white background
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (matrix.get(x, y) === 1) {
+        for (let dy = 0; dy < scale; dy++) {
+          for (let dx = 0; dx < scale; dx++) {
+            const py = (y + quietZone) * scale + dy
+            const px = (x + quietZone) * scale + dx
+            grayArray[py * fullW + px] = 0 // black module
+          }
+        }
+      }
+    }
+  }
+
+  const lum = new RGBLuminanceSource(grayArray, fullW, fullH)
+  const bitmap = new BinaryBitmap(new HybridBinarizer(lum))
+  const reader = new QRCodeReader()
+  const result = reader.decode(bitmap)
+
+  assert.equal(result.getText(), payload)
+  const validation = validateQrPayload(result.getText())
+  assert.equal(validation.valid, true)
+  assert.equal(validation.qrToken, TOKEN)
 })
