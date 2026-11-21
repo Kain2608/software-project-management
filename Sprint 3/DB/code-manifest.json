@@ -1,0 +1,146 @@
+{
+  "format_version": 1,
+  "canonical_root": ".",
+  "package_root": "Sprint 3/DB/code",
+  "line_endings": "LF; source and snapshot comparisons normalize CRLF/CR to LF",
+  "preserved_metadata": [
+    "code/README.md"
+  ],
+  "files": [
+    {
+      "canonical_path": ".github/workflows/sprint3.yml",
+      "package_path": "code/.github/workflows/sprint3.yml",
+      "sha256": "018feca6a9a967ae4a1c9a19286c40d904c7deb6e699074211ca979fe0bb4c6e"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/security/config/SasmsJwtDecoderFactory.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/security/config/SasmsJwtDecoderFactory.java",
+      "sha256": "dafa59c787f1ae2b6cb1d785b64c8a2ed013b74cc4db40478353bbc193f4d641"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/security/config/SasmsJwtProperties.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/security/config/SasmsJwtProperties.java",
+      "sha256": "d7cad6546a65fe7150e89451e6ec4b982d135f89afbb09cc5d7a2aadec5cce8c"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/HttpSmsAdapter.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/HttpSmsAdapter.java",
+      "sha256": "3037fa8e1139386454a9e82924cce5ce7d9854d4b6ddf6768679b2a0b6648690"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsAdapter.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsAdapter.java",
+      "sha256": "ff0483200efacc3387715976c85b7e78ccfd21dfc827eb52749fb5b0496edab4"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsConfiguration.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsConfiguration.java",
+      "sha256": "19cd8ca470df3fba51bfce073af7af8055ff13bebac766de44d17e988b6b8be0"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsOutboxWorker.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsOutboxWorker.java",
+      "sha256": "a713cb0f74d9997893c410c7032a450dc7eacf967c7ca5dd1e72e53f295ba3ff"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsProperties.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsProperties.java",
+      "sha256": "c7ccae9c48adfdd5067ce295d7f47bf8dcc02ce44aeba9f309cc5c888c77fef4"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsRequest.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsRequest.java",
+      "sha256": "c1d6be2150a965ce228ae416a7c364a10242ce10a1dfa711f23289a087175c6b"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsResult.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsResult.java",
+      "sha256": "de5784166f63dd12a94fd795f0937b760de8fbdf17c4e463ab7bda57c76f4a52"
+    },
+    {
+      "canonical_path": "backend/src/main/java/com/smartelectronicsupermarket/sms/SmsWorkerConfiguration.java",
+      "package_path": "code/backend/src/main/java/com/smartelectronicsupermarket/sms/SmsWorkerConfiguration.java",
+      "sha256": "0ac6cf6658457dc7455267062720b83a4375e70225e3350193b5599d2592b7fb"
+    },
+    {
+      "canonical_path": "backend/src/test/java/com/smartelectronicsupermarket/security/config/SasmsJwtDecoderFactoryTest.java",
+      "package_path": "code/backend/src/test/java/com/smartelectronicsupermarket/security/config/SasmsJwtDecoderFactoryTest.java",
+      "sha256": "e6124c2f6d4e1491a685d5f68c24e151a26fe7dda9396baa346e62a44d6fd53c"
+    },
+    {
+      "canonical_path": "backend/src/test/java/com/smartelectronicsupermarket/sms/SmsAdapterTest.java",
+      "package_path": "code/backend/src/test/java/com/smartelectronicsupermarket/sms/SmsAdapterTest.java",
+      "sha256": "b652a7f0ca0682f7ad687c5583108320bb4527c4a775648b900fa4a2fd5e32e9"
+    },
+    {
+      "canonical_path": "backend/src/test/java/com/smartelectronicsupermarket/sms/SmsOutboxWorkerTest.java",
+      "package_path": "code/backend/src/test/java/com/smartelectronicsupermarket/sms/SmsOutboxWorkerTest.java",
+      "sha256": "d433e2af4b9bc1cf2734e348263cad3f4629129dac81585cc5e81244dedd0488"
+    },
+    {
+      "canonical_path": "backend/src/test/java/com/smartelectronicsupermarket/sms/SmsPostgreSqlIntegrationTest.java",
+      "package_path": "code/backend/src/test/java/com/smartelectronicsupermarket/sms/SmsPostgreSqlIntegrationTest.java",
+      "sha256": "c395de7020121577f016a1f1c0d347bdb67206b5b265ef7eb82f972d6eda2ac0"
+    },
+    {
+      "canonical_path": "database/migrations/V006__logistics_and_warranty.sql",
+      "package_path": "code/database/migrations/V006__logistics_and_warranty.sql",
+      "sha256": "e52d7422deebb208faa68e58dccb5fc179a360204a8d2e2a696a7264a00dccc8"
+    },
+    {
+      "canonical_path": "database/migrations/V007__sms_outbox.sql",
+      "package_path": "code/database/migrations/V007__sms_outbox.sql",
+      "sha256": "0b15ff874127130b955024a55179752f3e82f6aa3fb0e841ea1c94c723d826e6"
+    },
+    {
+      "canonical_path": "database/sprint3/data-dictionary.md",
+      "package_path": "code/database/sprint3/data-dictionary.md",
+      "sha256": "3a2c0109e3db63bbbfaba8c67d9d919b2d3efdf86640f682de251aaa32273a66"
+    },
+    {
+      "canonical_path": "database/sprint3/demo.sql",
+      "package_path": "code/database/sprint3/demo.sql",
+      "sha256": "124675787ee3e0a7765e4d96f8475db338bc88368b635f9f92f9f420cb3c4d94"
+    },
+    {
+      "canonical_path": "database/sprint3/erd.mmd",
+      "package_path": "code/database/sprint3/erd.mmd",
+      "sha256": "45b9967d9666f9776b99d297d713bed8798c1bc6648e1926a4474fd1ab051bf4"
+    },
+    {
+      "canonical_path": "database/sprint3/runtime-roles.sql",
+      "package_path": "code/database/sprint3/runtime-roles.sql",
+      "sha256": "9da5ebc5f118608454d9fa325d99b41e0ee0b57694fa911bf5c7650b2c825469"
+    },
+    {
+      "canonical_path": "database/sprint3/schema.dbml",
+      "package_path": "code/database/sprint3/schema.dbml",
+      "sha256": "7fff72b7ad0a1eb0d9aded4a85ee2154cfc5f387e40fb0d3461c0fd602d2241c"
+    },
+    {
+      "canonical_path": "database/tests/sprint3/logistics_and_warranty.sql",
+      "package_path": "code/database/tests/sprint3/logistics_and_warranty.sql",
+      "sha256": "dc665fb2a91fbdc6bd3c191b4e34c690ad0e9b622d84ed15ee4bce52a962ad2a"
+    },
+    {
+      "canonical_path": "scripts/package_sprint3_db.py",
+      "package_path": "code/scripts/package_sprint3_db.py",
+      "sha256": "456f5d0f71bca150f8ed06753ea29597307aa7ed938f948548162c802cac982d"
+    },
+    {
+      "canonical_path": "scripts/validate_environment.py",
+      "package_path": "code/scripts/validate_environment.py",
+      "sha256": "1720cf9986e96d389daaa65bfb210fd04090f3792809f4ab82eb3330839c8f51"
+    },
+    {
+      "canonical_path": "scripts/validate_sprint2.py",
+      "package_path": "code/scripts/validate_sprint2.py",
+      "sha256": "7536b7ea1124297d967e83c30d08e6f8f6e61daeedcdf2c35558515d9da68acd"
+    },
+    {
+      "canonical_path": "scripts/validate_sprint3.py",
+      "package_path": "code/scripts/validate_sprint3.py",
+      "sha256": "e0468635dabb7416b17627926ba32f6af1c63f9bb5663b5f0715688875245086"
+    }
+  ]
+}

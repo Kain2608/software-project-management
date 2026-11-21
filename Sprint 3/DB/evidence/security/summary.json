@@ -1,5 +1,5 @@
 {
-  "collected_at_utc": "2026-11-21T00:49:42.552338+00:00",
+  "collected_at_utc": "2026-11-21T02:30:51.278432+00:00",
   "review_date_local": "2026-11-21",
   "scope": "Source review; local selected Java tests and frontend auth tests. No Staging, live provider, DAST or CVE audit.",
   "java_validation": {
@@ -290,7 +290,7 @@
       "aws-access-key-id",
       "provider-token"
     ],
-    "scanned_files": 247,
+    "scanned_files": 248,
     "matches": [],
     "limitations": "Only current textual source/configuration; no Git history, binaries, Office documents, runtime environment or entropy analysis. No match does not prove absence of secrets."
   },
@@ -299,7 +299,7 @@
     ".github/workflows/pre-sprint-environments.yml": "0e0c47c187b216a68c793ad8d06e75ce0f8567d9343be5c36ffa327db3e9b7b4",
     ".github/workflows/sprint1-database.yml": "ab3a5ae2cfcdb09e110dcf01b5b4f599343ec5cdb3665af3c4fa39d004205558",
     ".github/workflows/sprint2-staging.yml": "27dc386443dc7900646aa719317f8570fbefeccaf592ad93b4f3362d01ba2bf6",
-    ".github/workflows/sprint3.yml": "fc85854f94ca4ef57838f24c44b66c2de602397742929d27985531538264c815",
+    ".github/workflows/sprint3.yml": "018feca6a9a967ae4a1c9a19286c40d904c7deb6e699074211ca979fe0bb4c6e",
     "backend/pom.xml": "7778c59acabf88656cbe3e2059430b34b05334f6610adebedba34a267e1e3a2a",
     "backend/src/main/java/com/smartelectronicsupermarket/ai/adapter/GeminiAdapter.java": "0c084053ca4a02e61aa1dd00d616a49a3d247c6eb0e78763f0e9b78dbda8cbc2",
     "backend/src/main/java/com/smartelectronicsupermarket/ai/adapter/LlmAdapter.java": "7285c1f5be58fae173fe04441dbf52a20030634648c9b3e9e33fc52db5d099eb",
@@ -531,6 +531,7 @@
     "scripts/db_ops.py": "030ee4a7250169252fe4dee6f798774e7f7e643aefb71bc60456930bb7588fcb",
     "scripts/generate_db_artifacts.py": "78ead9fb2ce6466daea2acdf8519ced6d024ad8095ef0ecd5af59ae1bcb75b75",
     "scripts/migrate_db.py": "ee902e931d8c6d5f3ff7c61544c84fad6017da98f0ad7edd81269401f34c24b6",
+    "scripts/package_sprint3_db.py": "456f5d0f71bca150f8ed06753ea29597307aa7ed938f948548162c802cac982d",
     "scripts/provision_d35_rules.sql": "12a7001b58c713fe40c9122b46c681f8278e6eb39d6ab96a01c0fae824c80d82",
     "scripts/provision_s1_db.ps1": "e103ad7ce198f5179b421377439fd9c97180329de985b8f3a6eb2ec081cf3b5f",
     "scripts/provision_s2_order_db.ps1": "e49728049ba630df0f6108a271dcca4733c46fd3319cd866f2d67b0d6f07dfe2",
@@ -548,7 +549,7 @@
     ".github/workflows/pre-sprint-environments.yml": "0e0c47c187b216a68c793ad8d06e75ce0f8567d9343be5c36ffa327db3e9b7b4",
     ".github/workflows/sprint1-database.yml": "ab3a5ae2cfcdb09e110dcf01b5b4f599343ec5cdb3665af3c4fa39d004205558",
     ".github/workflows/sprint2-staging.yml": "27dc386443dc7900646aa719317f8570fbefeccaf592ad93b4f3362d01ba2bf6",
-    ".github/workflows/sprint3.yml": "fc85854f94ca4ef57838f24c44b66c2de602397742929d27985531538264c815",
+    ".github/workflows/sprint3.yml": "018feca6a9a967ae4a1c9a19286c40d904c7deb6e699074211ca979fe0bb4c6e",
     "backend/pom.xml": "1c6c485c6fda8d92cd95a62e99aa6e1476521284865914a917aa6fc6060eabc2",
     "backend/src/main/java/com/smartelectronicsupermarket/ai/adapter/GeminiAdapter.java": "9f6ff9fb9ab2b4495dc1f2af27c57f4de6ff7026025cc34719d00c416b9d7d82",
     "backend/src/main/java/com/smartelectronicsupermarket/ai/adapter/LlmAdapter.java": "8762f5f51526d4ce3caa6d988099ec4c2570c407717eb44d0310b147d11b239e",
@@ -780,6 +781,7 @@
     "scripts/db_ops.py": "030ee4a7250169252fe4dee6f798774e7f7e643aefb71bc60456930bb7588fcb",
     "scripts/generate_db_artifacts.py": "78ead9fb2ce6466daea2acdf8519ced6d024ad8095ef0ecd5af59ae1bcb75b75",
     "scripts/migrate_db.py": "ee902e931d8c6d5f3ff7c61544c84fad6017da98f0ad7edd81269401f34c24b6",
+    "scripts/package_sprint3_db.py": "456f5d0f71bca150f8ed06753ea29597307aa7ed938f948548162c802cac982d",
     "scripts/provision_d35_rules.sql": "12a7001b58c713fe40c9122b46c681f8278e6eb39d6ab96a01c0fae824c80d82",
     "scripts/provision_s1_db.ps1": "2bb0989a23408033b3b58f3aa19f0181e8e897499a7d647c4aea200333dc17bb",
     "scripts/provision_s2_order_db.ps1": "7cda230a5fa48970278084cef2eb964fadb078bf5b1cb09083ff6d0403dcfbd4",

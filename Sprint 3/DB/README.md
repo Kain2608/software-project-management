@@ -11,7 +11,19 @@ Kỳ kế hoạch **25/10–07/11/2026**; thực hiện và kiểm chứng bổ 
 | S3-07 | Hỗ trợ Phát | Kích hoạt bảo hành theo device, chống lặp, SMS tách transaction nghiệp vụ |
 | S3-14 | Hỗ trợ Huy | [Đầu vào refinement Sprint 4](S3-14-dau-vao-refinement-sprint4.md) |
 
-Mã nguồn ở [V006](../../database/migrations/V006__logistics_and_warranty.sql), [V007](../../database/migrations/V007__sms_outbox.sql), [SMS backend](../../backend/src/main/java/com/smartelectronicsupermarket/sms). DB giữ **41 bảng**, nâng cấp tới **V007**; không sửa V001…V005 hoặc snapshot Sprint 0/1/2.
+Mã nguồn bàn giao của Kiên được gom trong **[code/](code/README.md)** ngay tại phần `Sprint 3/DB`, theo cấu trúc thư mục vai trò đã có trên `main` tại `77d5c31`. [Manifest](code-manifest.json) đối chiếu từng file với đường dẫn tích hợp và SHA-256 chuẩn hóa LF.
+
+| Nhóm mã nguồn | Vị trí trong phần DB |
+|---|---|
+| Migration V006/V007 | [code/database/migrations](code/database/migrations) |
+| Schema, ERD, từ điển, runtime role và demo | [code/database/sprint3](code/database/sprint3) |
+| Kiểm thử SQL | [code/database/tests/sprint3](code/database/tests/sprint3) |
+| Adapter/worker SMS và cấu hình JWT | [code/backend/src/main/java/com/smartelectronicsupermarket](code/backend/src/main/java/com/smartelectronicsupermarket) |
+| Kiểm thử Java | [code/backend/src/test/java/com/smartelectronicsupermarket](code/backend/src/test/java/com/smartelectronicsupermarket) |
+| Script kiểm chứng và đóng gói | [code/scripts](code/scripts) |
+| Workflow Sprint 3 | [code/.github/workflows/sprint3.yml](code/.github/workflows/sprint3.yml) |
+
+Các file ở `backend/`, `database/`, `scripts/` tại gốc là bản tích hợp dùng để chạy repo chung. Chỉnh sửa tại đường dẫn tích hợp, rồi chạy `python scripts/package_sprint3_db.py` từ gốc repo để cập nhật bản bàn giao; `python scripts/package_sprint3_db.py --check` kiểm hai bản khớp nhau. DB giữ **41 bảng**, nâng cấp tới **V007**; không sửa V001…V005 hoặc snapshot Sprint 0/1/2.
 
 Chạy lại theo [runbook DB](../../database/sprint3/README.md); [validator](../../scripts/validate_sprint3.py) ghi source hash, assertions, kết nối cạnh tranh và kiểm dọn fixture. Kết quả thực tế đọc tại [summary DB](../../database/evidence/sprint3/summary.json) và [summary bảo mật](evidence/security/summary.json). Workflow [Sprint 3](../../.github/workflows/sprint3.yml) chuẩn bị kiểm tra DB/backend trên GitHub; tệp workflow không tự chứng minh một lượt CI đã chạy.
 

@@ -1,0 +1,86 @@
+name: Sprint 3 DB and SMS validation
+
+on:
+  push:
+    paths: ['database/**', 'scripts/**', 'backend/**', 'Sprint 3/**', '.github/workflows/sprint3.yml']
+  pull_request:
+    paths: ['database/**', 'scripts/**', 'backend/**', 'Sprint 3/**', '.github/workflows/sprint3.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sasms_ci
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: sasms_s3_validation
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sasms_ci -d sasms_s3_validation"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: sasms_ci
+      PGPASSWORD: isolated-ci-only
+      PGDATABASE: sasms_s3_validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check DB handoff source package
+        run: python scripts/package_sprint3_db.py --check
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Verify migrations, ACL and concurrent operations
+        run: python scripts/validate_sprint3.py --apply --evidence-dir /tmp/sasms-sprint3-evidence
+      - name: Check generated schema artifacts
+        run: python scripts/generate_db_artifacts.py --dsn "dbname=sasms_s3_validation" --expected-tables 41 --output-dir database/sprint3 --schema-label "Sprint 3" --check
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Verify committed outbox through the Java MOCK worker
+        working-directory: backend
+        env:
+          SASMS_S3_JDBC_URL: jdbc:postgresql://127.0.0.1:5432/sasms_s3_validation
+          SASMS_S3_JDBC_USER: sasms_ci
+          SASMS_S3_JDBC_PASSWORD: isolated-ci-only
+        run: mvn --batch-mode -Dtest=SmsPostgreSqlIntegrationTest test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprint3-database-evidence
+          path: |
+            /tmp/sasms-sprint3-evidence/
+            backend/target/surefire-reports/
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Verify backend including SMS and security regressions
+        working-directory: backend
+        run: mvn --batch-mode test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprint3-backend-test-results
+          path: backend/target/surefire-reports/
