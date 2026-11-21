@@ -2,9 +2,21 @@ import { useState } from 'react'
 import PosPage from '../features/pos/PosPage.jsx'
 import QrCameraScanner from '../features/qr/QrCameraScanner.jsx'
 import SerialImeiPanel from '../features/serialImei/SerialImeiPanel.jsx'
+import DeviceHistoryPage from '../features/deviceHistory/DeviceHistoryPage.jsx'
+import StoreDashboardPage from '../features/dashboard/StoreDashboardPage.jsx'
 import { resolveAuthSession } from './authContext.js'
 
 const screens = {
+  history: {
+    breadcrumb: 'CSKH / Lịch sử thiết bị',
+    title: 'Lịch sử Serial / IMEI',
+    subtitle: 'Dòng thời gian read-only theo quyền và phạm vi cửa hàng.',
+  },
+  dashboard: {
+    breadcrumb: 'Báo cáo / Dashboard',
+    title: 'Dashboard cửa hàng',
+    subtitle: 'Số liệu thực từ backend; không có dữ liệu AI thì hiển thị N/A.',
+  },
   pos: {
     breadcrumb: 'Bán hàng POS / Giỏ hàng',
     title: 'Bán hàng tại quầy',
@@ -69,9 +81,8 @@ export default function App({ authSession = null }) {
           </span>
           {navButton('pos', 'Bán hàng POS')}
           {navButton('serial', 'Serial / IMEI')}
-          <span className="sasms-nav__item sasms-nav__item--unavailable" aria-disabled="true" title="Báo cáo chưa được tích hợp">
-            <span className="sasms-nav__mark" aria-hidden="true" />Báo cáo
-          </span>
+          {navButton('history', 'Lịch sử thiết bị')}
+          {navButton('dashboard', 'Dashboard')}
         </nav>
 
         <div className="sasms-sidebar__footer">
@@ -111,6 +122,10 @@ export default function App({ authSession = null }) {
             )}
             {activeScreen === 'qr' && <QrCameraScanner accessToken={accessToken} />}
             {activeScreen === 'serial' && <SerialImeiPanel />}
+            {activeScreen === 'history' && <DeviceHistoryPage accessToken={accessToken} />}
+            {activeScreen === 'dashboard' && (
+              <StoreDashboardPage accessToken={accessToken} storeId={storeId} />
+            )}
           </div>
 
           <footer className="sasms-footer">
