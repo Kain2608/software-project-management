@@ -1,0 +1,23 @@
+{
+  "recorded_at_utc": "2026-11-21T02:31:18.222047+00:00",
+  "source_branch": "DB",
+  "main_revision_integrated": "77d5c310683d77eff2700f734b360c63e1942130",
+  "integration_commit": "4f0e71ec23b0921c09491b4f01cd1195046262a7",
+  "package_root": "Sprint 3/DB/code",
+  "canonical_runtime_roots": [
+    "backend",
+    "database",
+    "scripts"
+  ],
+  "files": 27,
+  "manifest_sha256": "af654cb3d742d0a0c9d7246c7f1ca62ce2dd8da9bc27572a271befd8191baa7c",
+  "verification": {
+    "source_snapshot_manifest_check": "passed",
+    "temporary_content_drift_detected": true,
+    "unexpected_file_refused_and_preserved": true,
+    "authored_metadata_preserved": "code/README.md",
+    "handoff_links": "passed"
+  },
+  "command": "python scripts/package_sprint3_db.py --check",
+  "note": "Package contains reproducible LF-normalized copies. Edit canonical runtime paths, then regenerate. No business code changed by this organization."
+}

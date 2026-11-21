@@ -1,0 +1,21 @@
+﻿source_row,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O
+6,2,S3-02,3. Phân tích,Sprint 3,TSK-03-02 Đặc tả quy trình đặt hàng online và đồng bộ kho,Nguyễn Quang Huy (BA / PO),Trần Trung Kiên,"D41 Mô hình BPMN: đặt hàng online, giao và lắp đặt
+D34 Đặc tả yêu cầu chức năng FRS_V2","D41 Mô hình BPMN: đặt hàng online, giao và lắp đặt","Bản đặc tả được Dev Lead xác nhận đủ để lập trình
+(Mẫu minh chứng của tài liệu: Sơ đồ được điều phối viên và kỹ thuật viên xác nhận)",26/10/2026,27/10/2026,16,CHƯA CÓ,TRỄ HẠN
+9,5,S3-08,5. Lập trình,Sprint 3,Tích hợp SMS Brandname (gói thử) qua adapter,Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,"D56 Thiết kế tích hợp hóa đơn điện tử, SMS, máy in",DS3 Phần mềm tăng trưởng Sprint 3 (demo được),"Log gửi SMS thử thành công; hợp đồng / gói thử
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",26/10/2026,02/11/2026,16,CHƯA CÓ,TRỄ HẠN
+12,8,S3-05,5. Lập trình,Sprint 3,TSK-03-03 Web App đặt hàng online cho khách hàng,Vũ Duy Thái (Fullstack Lead),Trần Trung Kiên,"D41 Mô hình BPMN: đặt hàng online, giao và lắp đặt
+D52 Đặc tả API (OpenAPI)",DS3 Phần mềm tăng trưởng Sprint 3 (demo được),"Video demo đặt hàng; hàng được giữ chỗ đồng bộ với POS
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",28/10/2026,03/11/2026,32,CHƯA CÓ,TRỄ HẠN
+13,9,S3-06,5. Lập trình,Sprint 3,TSK-03-05 API phân công kỹ thuật viên và gửi thông báo,Vũ Duy Thái (Fullstack Lead),Trần Trung Kiên,"D56 Thiết kế tích hợp hóa đơn điện tử, SMS, máy in
+D52 Đặc tả API (OpenAPI)",DS3 Phần mềm tăng trưởng Sprint 3 (demo được),"PR đã merge; log gửi thông báo thử
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",30/10/2026,03/11/2026,28,CHƯA CÓ,TRỄ HẠN
+15,11,S3-07,5. Lập trình,Sprint 3,TSK-03-06 Quét QR kích hoạt bảo hành và gửi SMS,Phạm Đại Phát (QA / Documentation Lead),"Vũ Duy Thái, Trần Trung Kiên","D42 Mô hình BPMN: bảo hành, đổi trả
+D56 Thiết kế tích hợp hóa đơn điện tử, SMS, máy in",DS3 Phần mềm tăng trưởng Sprint 3 (demo được),"Video kích hoạt; SMS thử nhận được; chặn kích hoạt trùng
+(Mẫu minh chứng của tài liệu: Video / ảnh demo; PR đã merge; PO ký Review)",02/11/2026,06/11/2026,20,CHƯA CÓ,ĐANG CHẠY
+17,13,S3-11,6. Kiểm thử,Sprint 3,"Rà soát bảo mật giai đoạn 1 (phân quyền, khóa API, OWASP)",Trần Trung Kiên (Architect / DBA),Phạm Đại Phát,D54 Thiết kế bảo mật và ma trận phân quyền,D81 Báo cáo rà soát bảo mật,"Danh sách lỗ hổng và kết quả xử lý
+(Mẫu minh chứng của tài liệu: Danh sách lỗ hổng và kết quả xử lý)",02/11/2026,06/11/2026,16,CHƯA CÓ,ĐANG CHẠY
+19,15,S3-14,9. Quản lý và kiểm soát (xuyên suốt),Sprint 3,Refinement cho Sprint 4 (US-12..16) và kiểm tra DoR,Nguyễn Quang Huy (BA / PO),"Vũ Duy Thái, Trần Trung Kiên, Phạm Đại Phát","D31 Product Backlog và User Story
+D34 Đặc tả yêu cầu chức năng FRS_V2
+D42 Mô hình BPMN: bảo hành, đổi trả",D31 Product Backlog và User Story,"Checklist DoR 6 tiêu chí cho từng story
+(Mẫu minh chứng của tài liệu: Backlog 16 story + EN-01; điểm Fibonacci; RICE chưa tính)",02/11/2026,04/11/2026,8,MỘT PHẦN,TRỄ HẠN

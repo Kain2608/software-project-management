@@ -1,0 +1,15 @@
+✔ rejectUrlSuppliedCredentials rejects all URL-supplied token parameters (1.3951ms)
+✔ rejectUrlSuppliedCredentials accepts benign query strings without tokens (0.4221ms)
+✔ resolveAuthSession returns strictly unauthenticated fail-closed state when no session is provided (0.3841ms)
+✔ resolveAuthSession rejects whitespace-only or non-string tokens and fails closed (0.2102ms)
+✔ resolveAuthSession rejects fake, demo or mock tokens (0.2067ms)
+✔ resolveAuthSession treats client token as unverified pending backend verification (0.1449ms)
+✔ regression: URL query strings cannot elevate or self-authenticate a session (0.1829ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 128.5587

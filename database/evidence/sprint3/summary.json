@@ -1,0 +1,172 @@
+{
+  "started_at_utc": "2026-11-21T00:40:22.797486+00:00",
+  "status": "passed",
+  "checks": {
+    "PostgreSQL version": {
+      "passed": true,
+      "seconds": 0.1914
+    },
+    "table names": {
+      "passed": true,
+      "seconds": 0.0979
+    },
+    "seed snapshot": {
+      "passed": true,
+      "seconds": 0.3227
+    },
+    "Provision dedicated SMS worker group": {
+      "passed": true,
+      "seconds": 0.2164
+    },
+    "Current schema version and count": {
+      "passed": true,
+      "seconds": 0.0985
+    },
+    "Logistics warranty and SMS assertions": {
+      "passed": true,
+      "seconds": 0.2829
+    },
+    "Commit exact synthetic concurrency fixtures": {
+      "passed": true,
+      "seconds": 0.1466
+    },
+    "Complete winning delivery": {
+      "passed": true,
+      "seconds": 0.1415
+    },
+    "Unique concurrent warranty and SMS event": {
+      "passed": true,
+      "seconds": 0.1114
+    },
+    "Warranty event reference": {
+      "passed": true,
+      "seconds": 0.1652
+    },
+    "Mock transport result commits separately": {
+      "passed": true,
+      "seconds": 0.0996
+    },
+    "Cleanup only exact committed fixture UUIDs": {
+      "passed": true,
+      "seconds": 0.1911
+    }
+  },
+  "source_sha256": {
+    "scripts/validate_sprint3.py": "e0468635dabb7416b17627926ba32f6af1c63f9bb5663b5f0715688875245086",
+    "scripts/validate_sprint2.py": "7536b7ea1124297d967e83c30d08e6f8f6e61daeedcdf2c35558515d9da68acd",
+    "scripts/migrate_db.py": "ee902e931d8c6d5f3ff7c61544c84fad6017da98f0ad7edd81269401f34c24b6",
+    "database/sprint3/runtime-roles.sql": "9da5ebc5f118608454d9fa325d99b41e0ee0b57694fa911bf5c7650b2c825469",
+    "database/migrations/V001__catalog_and_iam.sql": "4ebbb59ad4b8bee50c16e26becabe1ec2fab5d69e44ad5a613a049f6583d3f71",
+    "database/migrations/V002__inventory_batches_and_identifiers.sql": "48038d23eaaf418d49e8a840a71faed2f59b4f8350089dee2f9f3566524a020e",
+    "database/migrations/V003__scoped_device_identifiers.sql": "8e98e7b0d52b6c8776cff404b5cc5669e5b0724095bcc652ecd24e8a97e450f0",
+    "database/migrations/V004__pos_lease_lifecycle.sql": "f27c1e0ee9b1d64c54aad9f47bb49d44b184e0240bd73479be8e3b3b959969a4",
+    "database/migrations/V005__frs_business_roles.sql": "717d236e06cd17a7fe10578a8d312792ac6129b4d6c8692d0e014b76cb627272",
+    "database/migrations/V006__logistics_and_warranty.sql": "e52d7422deebb208faa68e58dccb5fc179a360204a8d2e2a696a7264a00dccc8",
+    "database/migrations/V007__sms_outbox.sql": "0b15ff874127130b955024a55179752f3e82f6aa3fb0e841ea1c94c723d826e6",
+    "database/tests/sprint3/logistics_and_warranty.sql": "dc665fb2a91fbdc6bd3c191b4e34c690ad0e9b622d84ed15ee4bce52a962ad2a"
+  },
+  "scope": "Isolated PostgreSQL 16, SQL behavior/ACL/races; no real SMS, HTTP checkout, browser, Staging or approval claim",
+  "sprint2_regression": {
+    "status": "passed",
+    "assertions": 33,
+    "identifier_lease_assertions": 43,
+    "concurrency": [
+      {
+        "case": "POS1_commit",
+        "independent_pos_connections": 2,
+        "pos_backend_pids": [
+          25876,
+          26924
+        ],
+        "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
+        "overlap_55P03_rejections": 1,
+        "post_commit_55P03_rejections": 1,
+        "retry_after_release_or_rollback": true,
+        "draft_stock_unchanged": true,
+        "stock_before": [
+          2,
+          0,
+          0
+        ],
+        "stock_after_reserve": [
+          1,
+          1,
+          0
+        ],
+        "stock_after_sale": [
+          1,
+          0,
+          1
+        ],
+        "committed_side_effects": {
+          "sold_device": 1,
+          "paid_order": 1,
+          "reserve_movement": 1,
+          "sale_movement": 1,
+          "invoice": 1,
+          "checkout_audit": 1,
+          "paid_event": 1
+        }
+      },
+      {
+        "case": "POS1_rollback",
+        "independent_pos_connections": 2,
+        "pos_backend_pids": [
+          41400,
+          28420
+        ],
+        "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
+        "overlap_55P03_rejections": 1,
+        "post_commit_55P03_rejections": 0,
+        "retry_after_release_or_rollback": true,
+        "draft_stock_unchanged": true,
+        "stock_before": [
+          2,
+          0,
+          0
+        ],
+        "stock_after_reserve": [
+          1,
+          1,
+          0
+        ],
+        "stock_after_sale": [
+          1,
+          0,
+          1
+        ],
+        "committed_side_effects": {
+          "sold_device": 1,
+          "paid_order": 1,
+          "reserve_movement": 1,
+          "sale_movement": 1,
+          "invoice": 1,
+          "checkout_audit": 1,
+          "paid_event": 1
+        }
+      }
+    ]
+  },
+  "schema": {
+    "version": 7,
+    "tables": 41
+  },
+  "assertions": 46,
+  "concurrency": {
+    "schedule_backend_pids": [
+      3612,
+      19556
+    ],
+    "schedule_successes": 1,
+    "schedule_23P01_rejections": 1,
+    "warranty_connections": 2,
+    "warranty_rows": 1,
+    "warranty_sms_events": 1,
+    "worker_connections": 2,
+    "event_claims": 1,
+    "transport_result": "MOCK_ACCEPTED",
+    "external_sms_sent": false
+  },
+  "fixtures_cleaned": true,
+  "finished_at_utc": "2026-11-21T00:40:51.302513+00:00"
+}

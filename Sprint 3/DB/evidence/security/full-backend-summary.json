@@ -1,0 +1,482 @@
+{
+  "recorded_at_utc": "2026-11-21T00:42:16.385207+00:00",
+  "command": "mvn -o -Dmaven.repo.local=<local-cache> -Djava.version=24 test",
+  "exit_code": 0,
+  "runtime": "Zulu OpenJDK 24.0.1",
+  "maven": "3.9.15",
+  "project_java_version": 25,
+  "totals": {
+    "tests": 279,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 16
+  },
+  "passed": 263,
+  "sprint3_postgresql_integration_enabled": true,
+  "postgresql": "16.11 / isolated loopback fixture database",
+  "external_sms_sent": false,
+  "log_sha256": "c9625c9c813e8315fcb25c1df4f9a909ef1c4048a17658c9e25507989844c347",
+  "suites": [
+    {
+      "suite": "com.smartelectronicsupermarket.ai.AiCrossSellControllerTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.ai.AiSprint2EvidenceTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "skipped_cases": [
+        {
+          "name": "generateSprint2Evidence",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: set SASMS_AI_EVIDENCE_DIR to generate evidence"
+        }
+      ]
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.ai.data.JdbcAiCrossSellDataAccessTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.ai.service.AiCircuitBreakerTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.ai.service.AiCrossSellServiceResilienceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.catalog.controller.ProductCatalogControllerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.catalog.data.JdbcProductCatalogDataAccessTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.catalog.service.ProductCatalogQueryServiceTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.catalog.service.ProductCatalogServiceTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.common.web.ApiExceptionHandlerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.inventory.controller.InventoryBatchControllerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.inventory.data.JdbcInventoryBatchDataAccessTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.inventory.service.InventoryBatchServiceTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.inventory.stock.controller.InventoryStockControllerTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.inventory.stock.data.JdbcInventoryStockDataAccessTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.inventory.stock.service.InventoryStockServiceTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.order.controller.PosOrderDisabledFeatureFlagIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.order.controller.PosOrderSecurityIntegrationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.order.data.JdbcPosOrderDataAccessTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.order.service.PosOrderServiceTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.payment.controller.PosCashPaymentDisabledFeatureFlagIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.payment.controller.PosCashPaymentSecurityIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.payment.service.PosPaymentServiceTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.receipt.controller.ReceiptControllerTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.receipt.data.JdbcReceiptDataAccessTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.receipt.service.ReceiptServiceTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.selection.controller.PosDeviceSelectionControllerTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.selection.controller.PosDeviceSelectionDisabledFeatureFlagIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.selection.controller.PosDeviceSelectionSecurityIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.selection.data.JdbcPosDeviceSelectionDataAccessTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.pos.selection.service.PosDeviceSelectionServiceTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.PostgreSqlConnectionSmokeTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "skipped_cases": [
+        {
+          "name": "connectsToValidatedLocalSasmsDatabaseReadOnly",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: PostgreSQL smoke test is disabled; set SASMS_PG_SMOKE_ENABLED=true to run it"
+        }
+      ]
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.qr.controller.QrDeviceLookupControllerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.qr.data.JdbcQrDeviceLookupDataAccessTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.qr.QrPayloadParserTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.qr.service.QrDeviceLookupServiceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.authorization.JdbcPermissionCheckerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.config.ConfiguredJwtSecurityIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.config.SasmsJwtDecoderFactoryTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.config.SecurityFailClosedIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.identity.JdbcActorIdentityResolverTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.identity.SecurityIdentityContractsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.security.identity.TrustedActorJwtAuthenticationConverterTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.SmartElectronicSupermarketApplicationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.sms.SmsAdapterTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.sms.SmsOutboxWorkerTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.sms.SmsPostgreSqlIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipped_cases": []
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.Sprint1PostgreSqlIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 7,
+      "skipped_cases": [
+        {
+          "name": "runtimeRoleSasmsAppEnforcesLeastPrivilegeOnRealPostgreSql",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "jwtSecurityRejectsUnauthenticatedInvalidInactiveAndForgedRequestsOverHttp",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "catalogCrudSoftDeleteRevisionConflictDuplicateSkuAndPermissionsWorkOnRealDb",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "inventoryBatchImportIdempotencyOrderingRollbackAndScopeWorkOnRealDb",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "qrLookupFindsInScopeDeviceHidesCrossStoreBlocksUnauthorizedAndDoesNotMutateInventory",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "sprint2StockLookupUsesRealViewAndConcealsCrossStoreRows",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "sprint2ReceiptReadsOnlyPaidOrdersAndConcealsCrossStoreData",
+          "reason": "Environment variable [SASMS_S1_PG_IT_ENABLED] does not exist"
+        }
+      ]
+    },
+    {
+      "suite": "com.smartelectronicsupermarket.Sprint2OrderPostgreSqlIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 7,
+      "skipped_cases": [
+        {
+          "name": "runtimeRoleSasmsAppEnforcesLeastPrivilegeOnRealPostgreSql",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "createDraftOrderSuccessAndReplaySamePayload",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "createDraftOrderConcurrentTwoConnectionsSameKeyReplaySafely",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "createDraftOrderReplayDifferentPayloadReturns409Conflict",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "createDraftOrderAtomicRollbackOnConstraintFailure",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "createDraftOrderScopeEnforcement",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        },
+        {
+          "name": "reserveOrderDeviceHoldAndLease",
+          "reason": "Environment variable [SASMS_S2_PG_IT_ENABLED] does not exist"
+        }
+      ]
+    }
+  ],
+  "limitations": "Java25 CI remains pending. S1/S2 HTTP PostgreSQL integration tests and opt-in AI evidence retain their existing skip conditions. S3 PostgreSQL SMS integration uses MOCK and synthetic data."
+}

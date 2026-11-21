@@ -1,6 +1,6 @@
 # Chạy DB SASMS — PostgreSQL 16
 
-> Các bước baseline bên dưới phục vụ snapshot Sprint 0 (37 bảng). Triển khai hiện hành dùng [runbook Sprint 2](sprint2/README.md): V001…V005, 41 bảng, Serial raw/phân biệt hoa-thường, Luhn/IMEI phụ, deadline POS 10 phút/ONLINE 30 phút và vai trò D34. Các mô tả uppercase, user demo hoặc quyền POS ở snapshot S0 không phải hợp đồng bảo mật hiện hành. Không nạp lại schema/seed lên DB đã nâng cấp.
+> Các bước baseline bên dưới phục vụ snapshot Sprint 0 (37 bảng). Triển khai hiện hành dùng [runbook Sprint 3](sprint3/README.md): V001…V007, 41 bảng, logistics/bảo hành và SMS outbox, Serial raw/phân biệt hoa-thường, Luhn/IMEI phụ, deadline POS 10 phút/ONLINE 30 phút và vai trò D34. Các mô tả uppercase, user demo hoặc quyền POS ở snapshot S0 không phải hợp đồng bảo mật hiện hành. Không nạp lại schema/seed lên DB đã nâng cấp.
 
 
 Đây là DB baseline Sprint 0 của Kiên: 37 bảng, dữ liệu mô phỏng, 4 giao dịch DB, bộ kiểm tra và artifacts ERD. Xem [D51](../Sprint%200/DB/D51-thiet-ke-co-so-du-lieu.md) và [D57](../Sprint%200/DB/D57-luoc-do-va-kiem-thu.md) trước khi tích hợp.

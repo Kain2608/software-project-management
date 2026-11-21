@@ -98,6 +98,46 @@ class SasmsJwtDecoderFactoryTest {
     }
 
     @Test
+    void rejectsSignedAccessTokenWithoutExpiration() {
+        JwtClaimsSet withoutExpiration = JwtClaimsSet.builder()
+                .issuer(ISSUER)
+                .subject("active-user")
+                .audience(List.of(AUDIENCE))
+                .issuedAt(Instant.now().minusSeconds(5))
+                .build();
+
+        String token = encode(rsaEncoder, JwsHeader.with(SignatureAlgorithm.RS256).build(), withoutExpiration);
+        assertThrows(JwtException.class, () -> decoder.decode(token));
+    }
+
+    @Test
+    void rejectsInsecureOrCredentialBearingIdentityProviderUris() {
+        for (String invalid : List.of(
+                "http://identity.example.test/jwks",
+                "https://user:secret@identity.example.test/jwks",
+                "https:///missing-host",
+                "https://identity.example.test/jwks#fragment",
+                "https://identity.example.test/jwks?api_key=secret")) {
+            assertThrows(IllegalStateException.class,
+                    () -> new SasmsJwtProperties(ISSUER, AUDIENCE, invalid).validateConfigurationState());
+        }
+        assertThrows(IllegalStateException.class,
+                () -> new SasmsJwtProperties("http://identity.example.test", AUDIENCE,
+                        PROPERTIES.jwksUri()).validateConfigurationState());
+    }
+
+    @Test
+    void permitsHttpOnlyOnExplicitLoopbackForLocalIdentityProvider() {
+        for (String host : List.of("localhost", "127.0.0.1", "[::1]")) {
+            assertDoesNotThrow(() -> new SasmsJwtProperties("http://" + host + ":9000",
+                    AUDIENCE, "http://" + host + ":9000/jwks").validateConfigurationState());
+        }
+        assertThrows(IllegalStateException.class,
+                () -> new SasmsJwtProperties("http://localhost.evil.test", AUDIENCE,
+                        PROPERTIES.jwksUri()).validateConfigurationState());
+    }
+
+    @Test
     void rejectsWrongIssuerAndAudience() {
         String wrongIssuer = rsaToken(
                 "https://wrong.example.test",
