@@ -1,0 +1,65 @@
+{
+  "recorded_at_utc": "2026-11-21T00:45:11.874182+00:00",
+  "scope": "Sprint 3 DB/Architect handoff, SMS MOCK selected by user",
+  "database": {
+    "status": "passed",
+    "schema": {
+      "version": 7,
+      "tables": 41
+    },
+    "assertions": 46,
+    "concurrency": {
+      "schedule_backend_pids": [
+        3612,
+        19556
+      ],
+      "schedule_successes": 1,
+      "schedule_23P01_rejections": 1,
+      "warranty_connections": 2,
+      "warranty_rows": 1,
+      "warranty_sms_events": 1,
+      "worker_connections": 2,
+      "event_claims": 1,
+      "transport_result": "MOCK_ACCEPTED",
+      "external_sms_sent": false
+    },
+    "fixtures_cleaned": true,
+    "evidence": "database/evidence/sprint3/summary.json"
+  },
+  "backend": {
+    "exit_code": 0,
+    "totals": {
+      "tests": 279,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 16
+    },
+    "passed": 263,
+    "sms_postgresql_mock_integration": true,
+    "java_runtime": "Zulu OpenJDK 24.0.1",
+    "java_override": "-Djava.version=24",
+    "evidence": "Sprint 3/DB/evidence/security/full-backend-summary.json"
+  },
+  "frontend_auth": {
+    "command": "node --test src/app/authContext.test.js",
+    "exit_code": 0
+  },
+  "artifacts": {
+    "status": "passed",
+    "evidence": "database/evidence/sprint3/artifacts-validation.json"
+  },
+  "historical_environment_regression": {
+    "status": "passed",
+    "checks": 41,
+    "evidence": "database/evidence/sprint3/environment-regression/environment-summary.json"
+  },
+  "external_sms_sent": false,
+  "ci_execution": "not run in this session",
+  "staging_deployment": "not deployed",
+  "acceptance_signatures": "pending actual reviewers",
+  "release_followups": [
+    "JDK25 CI validation",
+    "Provider-specific SMS mapping and sandbox when selected",
+    "Web/QR/browser E2E and remaining D81 deployment checks"
+  ]
+}

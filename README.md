@@ -1,6 +1,6 @@
 # SASMS — Quản lý siêu thị điện máy thông minh
 
-DB hiện hành theo D34/D35 BA: **41 bảng, V001…V005**, Serial raw/phân biệt hoa-thường, IMEI phụ/Luhn, giữ hàng POS10m/ONLINE30m và chín role canonical. [Chạy nâng cấp/kiểm chứng](database/sprint2/README.md), [hợp đồng liên nhóm](Sprint%202/DB/DS2-thiet-ke-va-ban-giao-DB.md). Snapshot S0/S1 giữ nguyên để truy vết.
+DB hiện hành theo D34/D35 BA: **41 bảng, V001…V007**, Serial raw/phân biệt hoa-thường, IMEI phụ/Luhn, giữ hàng POS10m/ONLINE30m và chín role canonical. [Chạy nâng cấp/kiểm chứng](database/sprint3/README.md), [hợp đồng DB Sprint 3](Sprint%203/DB/DS3-thiet-ke-va-ban-giao-DB.md). Snapshot S0/S1/S2 giữ nguyên để truy vết.
 
 
 Phần Architect / DBA của Kiên cho Tiền Sprint, Sprint 0, Sprint 1 và Sprint 2 đã được tích hợp vào `main`; `DB` là nhánh phát triển phần DB. Nhãn `Kien` trong các hồ sơ trước ghi nguồn gốc của bản ban đầu. Lượt rà soát tài liệu **20/11/2026** phân biệt kết quả kiểm kỹ thuật đã lưu, giới hạn tích hợp và phần chờ BA/PM/QA xác nhận.
@@ -13,6 +13,10 @@ Các quy tắc DB hiện hành theo D34/D35 được mô tả trong [D35 DB](Spr
 - [D21 — Kế hoạch thiết bị](Ti%E1%BB%81n%20Sprint/DB/D21-ke-hoach-mua-sam-thiet-bi.md) · [Dự toán Excel](Ti%E1%BB%81n%20Sprint/DB/D21-du-toan-thiet-bi.xlsx)
 - [D22 — Môi trường và CI/CD](Ti%E1%BB%81n%20Sprint/DB/D22-ke-hoach-moi-truong-va-CICD.md) · [Runbook sao lưu/khôi phục](infra/README.md)
 - [Bằng chứng kỹ thuật tiền Sprint](Ti%E1%BB%81n%20Sprint/DB/evidence)
+
+**Sprint 3:** adapter/worker SMS, l?ch k? thu?t vi?n v?i ??m 30 ph?t, k?ch ho?t b?o h?nh WAR-12 ch?ng l?p v? b?o c?o b?o m?t D81. [B? b?n giao DB](Sprint%203/DB/README.md) ? [N?ng c?p v? ki?m th?](database/sprint3/README.md). SMS th?t, Web/QR E2E v? nghi?m thu c?n b?ng ch?ng t?ch h?p ri?ng.
+
+**Sprint 3:** adapter/worker SMS, lịch kỹ thuật viên với đệm 30 phút, kích hoạt bảo hành WAR-12 chống lặp và báo cáo bảo mật D81. [Bộ bàn giao DB](Sprint%203/DB/README.md) · [Nâng cấp và kiểm thử](database/sprint3/README.md). Theo lựa chọn của người dùng, SMS dùng mô phỏng cho lần bàn giao này.
 
 **Sprint 2:** khóa chọn/giải phóng Serial POS, tồn theo kho/cửa hàng, quyền function và hai kết nối tranh Serial. CI kiểm DB và báo readiness; Staging thật còn chờ triển khai.
 
