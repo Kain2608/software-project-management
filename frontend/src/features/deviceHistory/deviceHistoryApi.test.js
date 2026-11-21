@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{loadDeviceHistory,classifyHistoryError}from'./deviceHistoryApi.js'
+const id='00000000-0000-0000-0000-000000000101'
+test('requires trusted session and canonical device id before request',async()=>{let calls=0;const client={get:async()=>{calls++}};await assert.rejects(()=>loadDeviceHistory({deviceId:id},client),/AUTHENTICATION_REQUIRED/);await assert.rejects(()=>loadDeviceHistory({deviceId:'serial',accessToken:'x'},client),/INVALID_DEVICE/);assert.equal(calls,0)})
+test('loads only matching device history and preserves paging',async()=>{const client={get:async(path,config)=>{assert.equal(path,`/v1/devices/${id}/history`);assert.deepEqual(config.params,{limit:20,offset:5});return{data:{device_id:id,events:[]}}}};assert.equal((await loadDeviceHistory({deviceId:id,accessToken:'jwt',limit:20,offset:5},client)).device_id,id)})
+test('maps concealed and forbidden results without leaking detail',()=>{assert.equal(classifyHistoryError({response:{status:404}}),'not-found');assert.equal(classifyHistoryError({response:{status:403}}),'forbidden')})
