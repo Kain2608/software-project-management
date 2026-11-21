@@ -174,3 +174,23 @@ PR #37 của DB và PR #38 của Sprint 3 chưa merge tại thời điểm bắt
 ## 8. Kết luận
 
 Source đủ điều kiện **Draft Review** cho các proposal read-only, security-scoped và fail-closed. Source **chưa đủ điều kiện Acceptance/Production** vì DoR và hợp đồng còn mở, Docker/PostgreSQL/E2E/performance chưa được kiểm chứng, và feature flags vẫn OFF.
+
+---
+
+## 9. Cập nhật Trạng thái Cuối kỳ (Sprint 4 Closeout Update — 21/11/2026)
+
+- **Trạng thái PR:** PR #39 (`feat/tv4-s4-integration`) đã được **MERGE** vào `main` tại commit `7ac73ec`. PR #43 (DB Sprint 4 V008, Runbooks D101, Cutover D91 của Kiên) đã được **MERGE** vào `main` tại commit `6ff29ea`.
+- **Chỉ số kiểm thử tự động toàn diện:**
+  - Backend Spring Boot: **322 tests PASS** (0 failures, 0 errors, 17 skipped, BUILD SUCCESS).
+  - Frontend React Vitest: **61/61 tests PASS** (0 failures, 0 skipped).
+  - Production Build Vite: **Thành công** (335 modules transformed trong ~2.88s).
+- **Hoàn thành nhiệm vụ S4-06 (Sửa lỗi P1/P2):**
+  - Hoàn tất mã nguồn và unit tests cho BUG-D71-01 (IMEI Luhn MOD-10 checksum - `DeviceIdentifierValidator.java`), BUG-D73-01 (AI telemetry tracking events SHOWN/ACCEPTED - `AiEventRequest.java`), BUG-D74-03 (QR Warranty dates mapping - `QrLookupResponse.java`).
+  - Ban hành tài liệu chi tiết: `Sprint 4/Fullstack/TV4/S4-06_P1P2_CLOSEOUT_MATRIX.md`. Trạng thái QA là `BLOCKED_PENDING_QA_EVIDENCE` chờ QA Phát re-test ký đóng trong D80.
+- **Hoàn thành nhiệm vụ S4-16 (Quy trình Hypercare & SLA D100):**
+  - Ban hành tài liệu chi tiết: `Sprint 4/Fullstack/TV4/D100_HYPERCARE_SLA_TV4.md` (17 mục toàn diện, nhãn `PROPOSED - Chờ PM An duyệt`).
+  - Khẳng định trung thực trạng thái Go-Live: `PLAN_READY / EXECUTION_PENDING` (chưa Go-Live thật do D78 chưa đạt E2E).
+- **Hồ sơ bàn giao kỹ thuật cuối kỳ:**
+  - `Sprint 4/Fullstack/TV4/TV4_WORKLOG_VERIFIED.md` (Nhật ký 32 commits, đối soát giờ thực tế và khoảng trống thời gian).
+  - `Sprint 4/Fullstack/TV4/TV4_FINAL_HANDOFF.md` (Báo cáo tổng kết 12 phần, ma trận 16 nhiệm vụ, 10 câu hỏi phản biện kỹ thuật).
+  - `Sprint 4/Fullstack/TV4/TV4_EXTERNAL_DEPENDENCIES.md` (Danh mục phụ thuộc bên ngoài phân theo Phát, An, Kiên, Huy, Vũ).

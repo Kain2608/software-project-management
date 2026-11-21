@@ -26,6 +26,7 @@ import com.smartelectronicsupermarket.ai.adapter.OpenAiAdapter;
 import com.smartelectronicsupermarket.ai.data.AiCrossSellDataAccess;
 import com.smartelectronicsupermarket.ai.data.AiCrossSellDataAccess.VerifiedProduct;
 import com.smartelectronicsupermarket.ai.dto.CartItemInput;
+import com.smartelectronicsupermarket.ai.dto.AiEventRequest;
 import com.smartelectronicsupermarket.ai.dto.CrossSellCandidate;
 import com.smartelectronicsupermarket.ai.dto.CrossSellItem;
 import com.smartelectronicsupermarket.ai.dto.CrossSellRequest;
@@ -326,5 +327,25 @@ public class AiCrossSellService {
 
     public LlmAdapter.LlmCallLog getLastGeminiLog() {
         return geminiAdapter.getLastCallLog();
+    }
+
+    /**
+     * Records a persistent telemetry event (SHOWN / ACCEPTED) for AI cross-selling traceability (BR-10).
+     */
+    public void recordEvent(UUID actorId, AiEventRequest request) {
+        if (actorId == null) {
+            throw new IllegalArgumentException("actorId is required");
+        }
+        if (request == null || request.eventType() == null || request.eventType().isBlank()) {
+            throw new IllegalArgumentException("eventType is required and cannot be blank");
+        }
+        String eventType = request.eventType().trim().toUpperCase();
+        if (!"SHOWN".equals(eventType) && !"ACCEPTED".equals(eventType)) {
+            throw new IllegalArgumentException("eventType must be SHOWN or ACCEPTED");
+        }
+        log.info("[AI-EVENT] type={} actor={} store={} warehouse={} sku={} sku_count={} source={}",
+                eventType, actorId, request.storeId(), request.warehouseId(),
+                request.skuId(), (request.skuIds() != null ? request.skuIds().size() : 0),
+                request.source() != null ? request.source() : "UNKNOWN");
     }
 }

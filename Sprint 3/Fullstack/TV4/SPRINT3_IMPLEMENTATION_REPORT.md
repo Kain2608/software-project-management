@@ -116,3 +116,14 @@ Sau khi PR #37 merge và có DB PostgreSQL 16 dùng một lần, owner-controlle
 ## 9. Kết luận
 
 Source hiện **READY FOR DRAFT REVIEW** cho phần độc lập và contract proposal. Sprint 3 **chưa ACCEPTANCE**: S3-05 production checkout, integration V006/V007, SMS/payment/JWT customer và QA/PO còn BLOCKED/NOT TESTED.
+
+---
+
+## 10. Cập nhật Trạng thái Cuối kỳ (Sprint 4 Closeout Update — 21/11/2026)
+
+- **Trạng thái PR:** PR #37 (DB V006/V007 của Kiên) đã được **MERGE** vào `main` tại commit `e530213`. PR #38 (`feat/tv4-s3-online-logistics`) đã được **MERGE** vào `main` tại commit `b30888c`.
+- **Chỉ số kiểm thử cập nhật:** Toàn bộ hệ thống Backend đạt **322 tests PASS** (0 failure, 0 error, 17 skipped), Frontend đạt **61/61 tests PASS**, Vite production build đạt 335 modules hoàn thành trong 2.88s.
+- **Xử lý tồn đọng Sprint 3:**
+  - Lỗi tra cứu QR bảo hành thiếu ngày hết hạn (BUG-D74-03) đã được sửa triệt để trên branch `fix/tv4-s4-closeout-evidence` bằng việc bổ sung trường bảo hành vào `QrLookupResponse` và hiển thị trực quan trên `QrCameraScanner.jsx`.
+  - Phân hệ Online Order (S3-05) và Logistics API (S3-06) tiếp tục được giữ an toàn ở trạng thái **Fail-Closed under Feature Flag** (`sasms.features.online-order.enabled=false`, `sasms.features.logistics-api.enabled=false`) do chưa có phê duyệt chính thức về hợp đồng OpenAPI D52 và cơ chế định danh khách hàng (Customer Identity) từ phía BA Huy và Kiến trúc sư An.
+- **Tài liệu bàn giao bổ sung:** Xem chi tiết tại `Sprint 4/Fullstack/TV4/TV4_FINAL_HANDOFF.md` và `TV4_EXTERNAL_DEPENDENCIES.md`.

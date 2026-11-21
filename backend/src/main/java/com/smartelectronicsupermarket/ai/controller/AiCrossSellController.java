@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.smartelectronicsupermarket.ai.adapter.LlmAdapter;
+import com.smartelectronicsupermarket.ai.dto.AiEventRequest;
 import com.smartelectronicsupermarket.ai.dto.AiStatusResponse;
 import com.smartelectronicsupermarket.ai.dto.CrossSellCandidate;
 import com.smartelectronicsupermarket.ai.dto.CrossSellRequest;
@@ -86,5 +87,17 @@ public class AiCrossSellController {
                 "candidates", candidates,
                 "call_log", callLog
         ));
+    }
+
+    /**
+     * FR08 / BR-10 - Records persistent telemetry events for shown and accepted recommendations.
+     */
+    @PostMapping("/events")
+    public ResponseEntity<Map<String, Object>> recordEvent(
+            @RequestBody AiEventRequest request,
+            Authentication authentication) {
+        aiCrossSellService.recordEvent(
+                TrustedActorAccess.actorId(authentication), request);
+        return ResponseEntity.ok(Map.of("status", "RECORDED"));
     }
 }

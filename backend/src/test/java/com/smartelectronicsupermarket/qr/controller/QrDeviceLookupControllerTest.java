@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -62,6 +63,32 @@ class QrDeviceLookupControllerTest {
                 .andExpect(jsonPath("$.serial").doesNotExist())
                 .andExpect(jsonPath("$.imei").doesNotExist())
                 .andExpect(jsonPath("$.sku_id").doesNotExist());
+    }
+
+    @Test
+    void returnsWarrantyInformationWhenAvailable() throws Exception {
+        LocalDate start = LocalDate.of(2026, 1, 1);
+        LocalDate end = LocalDate.of(2027, 1, 1);
+        QrDeviceRecord record = new QrDeviceRecord(
+                UUID.fromString("00000000-0000-0000-0000-000000000502"),
+                UUID.fromString("00000000-0000-0000-0000-000000000503"),
+                UUID.fromString("00000000-0000-0000-0000-000000000504"),
+                "SOLD",
+                "ACTIVE",
+                start,
+                end,
+                "Bảo hành chính hãng 12 tháng");
+        when(lookupService.lookup(PAYLOAD, ACTOR_ID)).thenReturn(Optional.of(record));
+
+        mockMvc.perform(post("/api/v1/devices/qr-lookup")
+                        .principal(trustedActor())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"payload\":\"" + PAYLOAD + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warranty_status").value("ACTIVE"))
+                .andExpect(jsonPath("$.warranty_starts_on").value("2026-01-01"))
+                .andExpect(jsonPath("$.warranty_ends_on").value("2027-01-01"))
+                .andExpect(jsonPath("$.policy_name").value("Bảo hành chính hãng 12 tháng"));
     }
 
     @Test

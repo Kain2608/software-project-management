@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getVerifiedCrossSell } from './aiPosApi.js'
+import { getVerifiedCrossSell, recordAiEvent } from './aiPosApi.js'
 import './aiPos.css'
 import { classifyCrossSellError, isCrossSellContextReady } from './aiPosContract.js'
 
@@ -23,8 +23,19 @@ export default function CrossSellWidget({ accessToken, storeId, warehouseId, car
       try {
         const result = await getVerifiedCrossSell({ accessToken, storeId, warehouseId, cartItems, signal: controller.signal })
         if (disposed) return
+        if (result.suggestions.length > 0) {
+          recordAiEvent({
+            eventType: 'SHOWN',
+            skuIds: result.suggestions.map((s) => s.sku),
+            storeId,
+            warehouseId,
+            source: result.source,
+            accessToken,
+          })
+        }
         setState({
           status: 'success',
+          source: result.source,
           suggestions: result.suggestions,
           message: result.suggestions.length ? `Nguồn: ${result.source}. Giá và tồn kho đã đối chiếu qua API nghiệp vụ.` :
             'Chưa có gợi ý nào xác minh được giá, mã sản phẩm và tồn kho. Không tự thêm hàng giả vào POS.',
@@ -66,7 +77,17 @@ export default function CrossSellWidget({ accessToken, storeId, warehouseId, car
                 type="button"
                 disabled={typeof onReviewSuggestion !== 'function'}
                 title="Chỉ chuyển đề xuất đã đối chiếu cho luồng xác minh giỏ hàng; không tự ghi đơn hàng"
-                onClick={() => onReviewSuggestion?.({ ...item, requiresServerValidation: true })}
+                onClick={() => {
+                  recordAiEvent({
+                    eventType: 'ACCEPTED',
+                    skuId: item.sku,
+                    storeId,
+                    warehouseId,
+                    source: state.source,
+                    accessToken,
+                  })
+                  onReviewSuggestion?.({ ...item, requiresServerValidation: true })
+                }}
               >
                 + Thêm vào giỏ
               </button>

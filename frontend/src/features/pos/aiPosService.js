@@ -40,3 +40,26 @@ export async function fetchVerifiedCrossSell({ accessToken, storeId, warehouseId
   }
   return { source: response.source, tookMs: response.took_ms, suggestions: verified }
 }
+
+export async function sendAiTelemetryEvent({ eventType, skuIds, skuId, storeId, warehouseId, source, accessToken, signal }, client) {
+  if (typeof accessToken !== 'string' || !accessToken.trim()) {
+    return
+  }
+  const payload = {
+    event_type: eventType,
+    sku_ids: skuIds,
+    sku_id: skuId,
+    store_id: storeId,
+    warehouse_id: warehouseId,
+    source: source || 'AI',
+  }
+  try {
+    await client.post('/v1/ai/events', payload, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal,
+      timeout: 3000,
+    })
+  } catch {
+    // Non-blocking telemetry
+  }
+}

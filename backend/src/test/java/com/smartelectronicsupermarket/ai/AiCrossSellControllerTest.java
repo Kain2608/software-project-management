@@ -248,4 +248,51 @@ class AiCrossSellControllerTest {
                 .andExpect(jsonPath("$.candidates[0].list_price").doesNotExist())
                 .andExpect(jsonPath("$.call_log.modelVersion", is("gemini-2.5-flash")));
     }
+
+    @Test
+    void recordEventAcceptsShownAndAcceptedEvents() throws Exception {
+        String shownJson = """
+                {
+                    "event_type": "SHOWN",
+                    "sku_ids": ["ACC-GEN-ESSENTIAL"],
+                    "store_id": "%s",
+                    "warehouse_id": "%s",
+                    "source": "AI"
+                }
+                """.formatted(STORE, WAREHOUSE);
+
+        mockMvc.perform(post("/api/v1/ai/events").with(actor(ACTOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(shownJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("RECORDED")));
+
+        String acceptedJson = """
+                {
+                    "event_type": "ACCEPTED",
+                    "sku_id": "ACC-GEN-ESSENTIAL",
+                    "store_id": "%s",
+                    "warehouse_id": "%s",
+                    "source": "AI"
+                }
+                """.formatted(STORE, WAREHOUSE);
+
+        mockMvc.perform(post("/api/v1/ai/events").with(actor(ACTOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(acceptedJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("RECORDED")));
+    }
+
+    @Test
+    void recordEventRejectsInvalidEventType() throws Exception {
+        String invalidJson = """
+                {
+                    "event_type": "INVALID_TYPE",
+                    "sku_id": "ACC-GEN-ESSENTIAL"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/ai/events").with(actor(ACTOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(invalidJson))
+                .andExpect(status().isBadRequest());
+    }
 }

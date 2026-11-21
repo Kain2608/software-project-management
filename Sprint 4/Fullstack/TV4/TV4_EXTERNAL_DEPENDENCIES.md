@@ -1,0 +1,76 @@
+# SASMS — BẢNG DANH MỤC PHỤ THUỘC BÊN NGOÀI CỦA PHÂN HỆ FULLSTACK TV4 (EXTERNAL DEPENDENCIES)
+
+**Dự án:** Hệ thống Quản trị Bán lẻ Điện máy Thông minh SASMS (INT1450)  
+**Phân hệ lập báo cáo:** Vũ Duy Thái (TV4 — Fullstack Lead)  
+**Ngày cập nhật:** 21/11/2026 (Asia/Ho_Chi_Minh)  
+**Mục đích:** Xác định rõ các sản phẩm chuyển giao (deliverables), quyết định kỹ thuật và điều kiện tiên quyết thuộc trách nhiệm của các thành viên khác trong nhóm (TV1, TV2, TV3, TV5, TV6) mà TV4 cần để hoàn thiện hoặc đưa các tính năng vào nghiệm thu chính thức.
+
+---
+
+## 1. Nguyên tắc Phân định Ranh giới và Trách nhiệm (Separation of Concerns)
+
+1. **Không vượt thẩm quyền:** TV4 không tự tiện thay thế các tài liệu thuộc sở hữu của QA (D78, D80, D81), BA (D34, D52, D83) hay DBA (D90, D91, D101).
+2. **Minh bạch tình trạng chặn (Fail-Closed by Default):** Mọi tính năng thiếu thỏa thuận hợp đồng hoặc thiếu môi trường kiểm chứng độc lập đều được đưa về trạng thái cờ tính năng tắt (`feature flag = false`) để bảo đảm an toàn cho nhánh `main`.
+3. **Thúc đẩy phối hợp liên phòng ban:** Bảng phụ thuộc này đóng vai trò là danh mục hành động (action items) gửi tới từng thành viên nhằm chuẩn bị tốt nhất cho buổi bảo vệ đồ án cuối kỳ.
+
+---
+
+## 2. Ma trận Phụ thuộc Bên ngoài Chi tiết (External Dependencies Matrix)
+
+### 2.1 Phụ thuộc vào Nguyễn Hồng Phát (TV3 — QA Lead / Tester)
+
+| Tài liệu / Hạng mục phụ thuộc | Mã tài liệu | Trạng thái hiện tại | Đường dẫn trong Repo | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
+|---|---|---|---|---|:---:|---|
+| **Báo cáo kiểm thử E2E hệ thống** | D78 | **CHƯA ĐẠT / NO-GO** (Chữ ký để trống) | `Sprint 4/Test/D78_Bao_cao_kiem_thu_he_thong_E2E_SASMS.docx` | Nghiệm thu tổng thể Sprint 4, Kích hoạt Hypercare D100 | **BLOCKING (Chặn Go-Live)** | Chạy lại kiểm thử tích hợp E2E trên môi trường Staging với các bản vá mới nhất của TV4, đánh giá lại tiêu chí và ký biên bản. |
+| **Sổ theo dõi lỗi Sprint 4** | D80 (S4) | **CHƯA CÓ** (Thư mục chỉ có D78, D92, D95) | `Sprint 4/Test/` | Đóng lỗi S4-06 (BUG-D71-01, BUG-D73-01, BUG-D74-03) | **BLOCKING (Chặn nghiệm thu S4-06)** | Ban hành chính thức D80 Sprint 4, thực hiện re-test các bản vá của TV4 và chuyển trạng thái từ `BLOCKED_PENDING_QA_EVIDENCE` sang `VERIFIED_CLOSED`. |
+| **Báo cáo kiểm thử tải và bảo mật** | D79, D81 | Bản nháp kỹ thuật | `Sprint 4/Test/` | Xác minh NFR: latency POS < 1s, AI < 3s; không còn lỗ hổng | **NON-BLOCKING (Khuyến nghị)** | Chạy công cụ kiểm thử tải (JMeter/K6) ghi nhận số đo chính thức trên staging. |
+
+---
+
+### 2.2 Phụ thuộc vào Trịnh Quốc An (TV1 — Project Manager / System Architect)
+
+| Tài liệu / Quyết định phụ thuộc | Mã tài liệu | Trạng thái hiện tại | Đường dẫn trong Repo | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
+|---|---|---|---|---|:---:|---|
+| **Kiến trúc Định danh Khách hàng (Customer Identity)** | D50 / Architecture RFC | **CHƯA CÓ** | `Sprint 0/DB/` hoặc `docs/` | Mở tính năng Đặt hàng Online (S3-05 / BUG-D74-01) | **BLOCKING (Chặn Online Checkout)** | Định nghĩa cơ chế map Customer JWT từ Cognito/Firebase sang `customers.id`, cấp quyền tối thiểu an toàn thay vì đòi hỏi `sales.checkout`. |
+| **Phê duyệt Quy trình Hypercare & SLA D100** | D100 | **DỰ THẢO (PROPOSED)** | `Sprint 4/Fullstack/TV4/D100_HYPERCARE_SLA_TV4.md` | Hoàn tất sản phẩm bàn giao S4-16 | **INFORMATIONAL (Chờ ký duyệt)** | Xem xét các chỉ số cam kết SLA đề xuất tại Mục 5 của D100 và ký phê duyệt ban hành chính thức. |
+| **Chính sách Mở Cờ tính năng (Feature Flags Policy)** | Quyết định điều hành | Mặc định `false` toàn bộ | `application.yml` | Đưa tính năng Online Order, Logistics, Device History vào chạy thật | **BLOCKING (Chặn mở cờ Production)** | Quyết định thời điểm bật các feature flag sau khi hoàn tất nghiệm thu UAT và E2E. |
+
+---
+
+### 2.3 Phụ thuộc vào Trần Trung Kiên (TV2 — DBA / Technical Lead)
+
+| Hạng mục kỹ thuật / Quyết định DB | Mã tài liệu | Trạng thái hiện tại | Đường dẫn trong Repo | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
+|---|---|---|---|---|:---:|---|
+| **Xử lý xung đột Deadlock P0002** | BUG-D74-05 | Đang điều tra nguyên nhân | `database/sprint2/` và `sprint3/` | Bảo đảm an toàn khi đặt hàng đồng thời cao (Concurrency S2-02, S4-06) | **BLOCKING (Chặn tải cao đồng thời)** | Thêm lệnh sắp xếp khóa dòng `ORDER BY device_id ASC` trong câu lệnh `SELECT FOR UPDATE` của các hàm giữ chỗ tồn kho (reservation functions). |
+| **Phân quyền vai trò chạy thực tế (Runtime Role Grants)** | Runtime Roles | Đã có V001–V008 | `database/` | Đọc dữ liệu lịch sử thiết bị và doanh thu báo cáo chi nhánh | **RESOLVED / NEED VERIFY** | Xác minh vai trò `sasms_app` có đầy đủ quyền `SELECT` trên các view/table: `inventory_movements`, `deliveries`, `warranties` mà không làm lộ PII. |
+| **Kế hoạch Rollback và Vận hành Runbook** | D91, D101 | Đã ban hành trong PR #43 | `Sprint 4/DB/D91_...docx`, `D101_...docx` | Đồng bộ quy trình ứng cứu sự cố trong D100 Hypercare | **RESOLVED / ALIGNED** | TV4 đã liên kết trực tiếp quy trình Rollback cấp ứng dụng với kịch bản Rollback DB của Kiên trong D100 Mục 8. |
+
+---
+
+### 2.4 Phụ thuộc vào Nguyễn Quang Huy (TV5 — Product Owner / BA Lead)
+
+| Tài liệu nghiệp vụ / Hợp đồng API | Mã tài liệu | Trạng thái hiện tại | Đường dẫn trong Repo | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
+|---|---|---|---|---|:---:|---|
+| **Đặc tả API OpenAPI chính thức cho Online & Logistics** | D52 | Mới có phần Draft Inventory, POS, AI; thiếu Online/Logistics | `Sprint 0/DB/` | Chuẩn hóa giao tiếp Frontend - Backend Online & Logistics | **BLOCKING (Chặn chuẩn hóa API)** | Thống nhất cấu trúc request/response, mã lỗi nghiệp vụ và idempotency header cho các API đặt hàng trực tuyến và giao hàng. |
+| **Biên bản Nghiệm thu Người dùng UAT** | D83, D125 | **DỰ THẢO (MAU_CHO_XAC_NHAN)** | `Sprint 4/BA/D83_Bien_ban_nghiem_thu_UAT_SASMS.docx` | Bàn giao và đóng nghiệm thu Sprint 4 | **BLOCKING (Chặn nghiệm thu tổng thể)** | Tổ chức buổi kiểm thử chấp nhận người dùng thực tế với đại diện các bên và ký biên bản chính thức. |
+| **Quy định Nghiệp vụ Đổi trả và Doanh thu thuần (Net Revenue)** | D34, D42 | Chưa định nghĩa thời điểm ghi nhận refund thành công | `Sprint 3/BA/`, `Sprint 4/BA/` | Báo cáo Dashboard BI tổng hợp (Store Summary BI) | **NON-BLOCKING (Hiện hiển thị Gross Revenue)** | Định nghĩa rõ điều kiện trừ doanh thu khi đơn hàng bị hoàn tiền một phần hoặc toàn phần. |
+
+---
+
+### 2.5 Phụ thuộc vào Nguyễn Tiến Vũ / Ngô Đình Vũ (TV6 — Infra / DevOps Lead)
+
+| Hạ tầng / Dịch vụ tích hợp | Thành phần | Trạng thái hiện tại | Đường dẫn / Tài nguyên | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
+|---|---|---|---|---|:---:|---|
+| **Hợp đồng và Thông tin Tài khoản SMS Gateway** | SMS Provider API | Chưa có thông tin kết nối thật (đang dùng Adapter Mock) | `backend/src/main/resources/application.yml` | BUG-D74-04 (Gửi tin nhắn SMS thật cho khách) | **BLOCKING (Chặn SMS thật)** | Đăng ký hợp đồng thương mại với nhà mạng (eSMS/SpeedSMS/Twilio) và cấu hình API credentials lên Staging/Prod secret manager. |
+| **Môi trường CI/CD và Docker Staging tập trung** | Staging Server | Docker Desktop trên máy trạm cục bộ gặp lỗi engine | Pipeline GitHub Actions | Chạy bộ kiểm thử tích hợp PostgreSQL tự động cho PRs | **NON-BLOCKING (Đã kiểm chứng trên container riêng)** | Thiết lập runner CI có Docker daemon sẵn sàng để tự động kích hoạt bộ test `Sprint2OrderPostgreSqlIntegrationTest`. |
+
+---
+
+## 3. Tổng kết Kế hoạch Hành động Phối hợp (Coordinated Action Plan)
+
+1. **Ưu tiên 1 (Trước ngày bảo vệ đồ án):**
+   - Đề nghị QA Phát thực hiện re-test các bản vá BUG-D71-01, BUG-D73-01, BUG-D74-03 của TV4 và cập nhật trạng thái trong tài liệu D80/D78.
+   - Đề nghị PM Trịnh Quốc An ký phê duyệt dự thảo D100 Hypercare SLA.
+2. **Ưu tiên 2 (Giai đoạn thương mại hóa tiếp theo):**
+   - Thống nhất mô hình định danh khách hàng (Customer IdP) cùng Kiến trúc sư An và BA Huy để gỡ cờ tính năng cho Online Order và Logistics.
+   - Ký kết hợp đồng SMS Gateway cùng DevOps Vũ.

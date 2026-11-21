@@ -39,6 +39,10 @@ public class QrDeviceLookupController {
                 device.deviceId(),
                 device.productId(),
                 device.warehouseId(),
-                device.status());
+                device.status(),
+                device.warrantyStatus(),
+                device.warrantyStartsOn(),
+                device.warrantyEndsOn(),
+                device.policyName());
     }
 }
