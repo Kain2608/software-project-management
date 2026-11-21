@@ -353,6 +353,12 @@ export default function QrCameraScanner({ accessToken = null }) {
                   <div><dt>Product</dt><dd>{shortIdentifier(device.product_id)}</dd></div>
                   <div><dt>Warehouse</dt><dd>{shortIdentifier(device.warehouse_id)}</dd></div>
                   <div><dt>Trạng thái</dt><dd>{device.status}</dd></div>
+                  {device.warranty_status && (
+                    <>
+                      <div><dt>Bảo hành</dt><dd><strong>{device.warranty_status}</strong>{device.policy_name ? ` · ${device.policy_name}` : ''}</dd></div>
+                      <div><dt>Thời hạn</dt><dd>{device.warranty_starts_on ?? '—'} đến {device.warranty_ends_on ?? '—'}</dd></div>
+                    </>
+                  )}
                 </dl>
               )}
             </div>

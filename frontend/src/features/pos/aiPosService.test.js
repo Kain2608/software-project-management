@@ -6,7 +6,7 @@ import {
   classifyCrossSellError,
   isCrossSellContextReady,
 } from './aiPosContract.js'
-import { fetchVerifiedCrossSell } from './aiPosService.js'
+import { fetchVerifiedCrossSell, sendAiTelemetryEvent } from './aiPosService.js'
 
 const store = '00000000-0000-4000-8000-000000000101'
 const warehouse = '00000000-0000-4000-8000-000000000201'
@@ -102,4 +102,52 @@ test('does not expose raw backend SQL and differentiates auth scope', () => {
   assert.match(classifyCrossSellError({ response: { status: 401 } }), /đăng nhập/)
   assert.match(classifyCrossSellError({ response: { status: 403 } }), /quyền/)
   assert.doesNotMatch(classifyCrossSellError({ message: 'SELECT secret FROM users' }), /SELECT|secret/)
+})
+
+test('sendAiTelemetryEvent sends SHOWN and ACCEPTED payloads to /v1/ai/events', async () => {
+  const calls = []
+  const client = {
+    async post(path, body, config) {
+      calls.push({ path, body, config })
+      return { data: { status: 'RECORDED' } }
+    },
+  }
+  await sendAiTelemetryEvent({
+    eventType: 'SHOWN',
+    skuIds: ['ACC-CASE-IP16'],
+    storeId: store,
+    warehouseId: warehouse,
+    source: 'AI',
+    accessToken: 'test-token',
+  }, client)
+
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].path, '/v1/ai/events')
+  assert.equal(calls[0].body.event_type, 'SHOWN')
+  assert.deepEqual(calls[0].body.sku_ids, ['ACC-CASE-IP16'])
+  assert.equal(calls[0].config.headers.Authorization, 'Bearer test-token')
+
+  await sendAiTelemetryEvent({
+    eventType: 'ACCEPTED',
+    skuId: 'ACC-CASE-IP16',
+    storeId: store,
+    warehouseId: warehouse,
+    source: 'AI',
+    accessToken: 'test-token',
+  }, client)
+
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].body.event_type, 'ACCEPTED')
+  assert.equal(calls[1].body.sku_id, 'ACC-CASE-IP16')
+})
+
+test('sendAiTelemetryEvent ignores requests without valid access token', async () => {
+  const calls = []
+  const client = {
+    async post(path, body, config) {
+      calls.push({ path, body, config })
+    },
+  }
+  await sendAiTelemetryEvent({ eventType: 'SHOWN', accessToken: '' }, client)
+  assert.equal(calls.length, 0)
 })
