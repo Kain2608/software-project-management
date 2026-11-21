@@ -34,8 +34,10 @@ public class SasmsJwtDecoderFactory {
                 "aud",
                 audience -> audience != null && audience.contains(properties.audience()));
 
+        JwtTimestampValidator timestampValidator = new JwtTimestampValidator();
+        timestampValidator.setAllowEmptyExpiryClaim(false);
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                new JwtTimestampValidator(),
+                timestampValidator,
                 new JwtIssuerValidator(properties.issuer()),
                 audienceValidator));
     }

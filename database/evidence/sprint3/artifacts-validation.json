@@ -1,0 +1,12 @@
+{
+  "checked_at_utc": "2026-11-21T00:44:42.681738+00:00",
+  "status": "passed",
+  "exit_code": 0,
+  "expected_tables": 41,
+  "output": "D57 artifacts match 41 PostgreSQL tables.\n",
+  "source_sha256": {
+    "database/sprint3/schema.dbml": "7fff72b7ad0a1eb0d9aded4a85ee2154cfc5f387e40fb0d3461c0fd602d2241c",
+    "database/sprint3/erd.mmd": "45b9967d9666f9776b99d297d713bed8798c1bc6648e1926a4474fd1ab051bf4",
+    "database/sprint3/data-dictionary.md": "3a2c0109e3db63bbbfaba8c67d9d919b2d3efdf86640f682de251aaa32273a66"
+  }
+}

@@ -186,7 +186,8 @@ SELECT json_build_object(
             for filename in ['database/schema.sql', 'database/seed.sql', 'database/runtime-roles.sql']:
                 self.psql('bootstrap ' + filename, file=filename)
             self.command('upgrade dedicated source', [sys.executable, str(ROOT/'scripts/migrate_db.py'),
-                         '--psql', self.args.psql, '--dsn', self.args.source_dsn])
+                         '--psql', self.args.psql, '--dsn', self.args.source_dsn,
+                         '--target-version', '5'])
             self.psql('provision Sprint1 runtime', file='database/sprint1/runtime-roles.sql')
             self.psql('provision Sprint2 extension', file='database/sprint2/realtime_stock_and_locking.sql')
         elif not exists:

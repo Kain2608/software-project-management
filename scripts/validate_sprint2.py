@@ -83,7 +83,8 @@ SELECT to_json(sasms.receive_device_batch('{RECEIPT_ITEM}','{request}',
 COMMIT;
 """)
             old_ids = json.loads(next(line for line in output.splitlines() if line.startswith('[')))
-        command = [sys.executable, str(ROOT/'scripts/migrate_db.py'), '--psql', self.args.psql]
+        command = [sys.executable, str(ROOT/'scripts/migrate_db.py'), '--psql', self.args.psql,
+                   '--target-version', '5']
         if self.args.dsn:
             command += ['--dsn', self.args.dsn]
         for label in ('current migrations apply', 'current migrations checksum verification and noop'):

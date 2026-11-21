@@ -1,0 +1,16 @@
+com.smartelectronicsupermarket.common.web.ApiExceptionHandlerTest: tests=4, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.inventory.stock.data.JdbcInventoryStockDataAccessTest: tests=2, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.pos.order.controller.PosOrderSecurityIntegrationTest: tests=14, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.pos.payment.controller.PosCashPaymentSecurityIntegrationTest: tests=6, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.pos.receipt.data.JdbcReceiptDataAccessTest: tests=2, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.pos.selection.controller.PosDeviceSelectionSecurityIntegrationTest: tests=10, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.qr.data.JdbcQrDeviceLookupDataAccessTest: tests=6, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.security.authorization.JdbcPermissionCheckerTest: tests=8, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.security.config.ConfiguredJwtSecurityIntegrationTest: tests=5, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.security.config.SasmsJwtDecoderFactoryTest: tests=9, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.security.config.SecurityFailClosedIntegrationTest: tests=7, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.security.identity.JdbcActorIdentityResolverTest: tests=4, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.security.identity.SecurityIdentityContractsTest: tests=4, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.sms.SmsAdapterTest: tests=12, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.sms.SmsOutboxWorkerTest: tests=5, failures=0, errors=0, skipped=0
+com.smartelectronicsupermarket.sms.SmsPostgreSqlIntegrationTest: tests=1, failures=0, errors=0, skipped=0
