@@ -1,0 +1,18 @@
+{
+  "description": "Provision these reviewed settings on the existing App Runner service; never pass this descriptive template directly to AWS CLI.",
+  "HealthCheckConfiguration": {"Protocol": "HTTP", "Path": "/api/health", "Interval": 10, "Timeout": 5, "HealthyThreshold": 2, "UnhealthyThreshold": 5},
+  "ImageConfiguration": {
+    "Port": "8080",
+    "RuntimeEnvironmentVariables": {
+      "SPRING_PROFILES_ACTIVE": "postgresql",
+      "SASMS_DB_URL": "jdbc:postgresql://APPROVED_DB_HOST:5432/sasms?sslmode=verify-full",
+      "SASMS_DB_USERNAME": "DEDICATED_RUNTIME_LOGIN_MEMBER_OF_sasms_app",
+      "SASMS_JWT_ISSUER": "https://APPROVED_IDP_ISSUER",
+      "SASMS_JWT_AUDIENCE": "APPROVED_AUDIENCE",
+      "SASMS_JWT_JWKS_URI": "https://APPROVED_IDP_HOST/.well-known/jwks.json",
+      "SASMS_SMS_MODE": "DISABLED",
+      "SASMS_SMS_WORKER_ENABLED": "false"
+    },
+    "RuntimeEnvironmentSecrets": {"SASMS_DB_PASSWORD": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:APPROVED_SECRET"}
+  }
+}

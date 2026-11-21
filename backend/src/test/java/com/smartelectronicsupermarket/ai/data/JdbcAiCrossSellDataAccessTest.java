@@ -19,11 +19,15 @@ class JdbcAiCrossSellDataAccessTest {
         String sql = sql("SELLABLE_SQL");
         assertTrue(sql.contains("p.list_price"));
         assertTrue(sql.contains("from sasms.products p"));
-        assertTrue(sql.contains("join sasms.stock_availability sa"));
-        assertTrue(sql.contains("sa.warehouse_id = cast(? as uuid)"));
+        assertTrue(sql.contains("join lateral"));
+        assertTrue(sql.contains("from sasms.devices d"));
+        assertTrue(sql.contains("d.product_id = p.id"));
+        assertTrue(sql.contains("d.warehouse_id = cast(? as uuid)"));
+        assertTrue(sql.contains("d.status = 'in_stock'"));
         assertTrue(sql.contains("sa.available > 0"));
         assertTrue(sql.contains("p.is_active = true"));
         assertFalse(sql.contains("select *"));
+        assertFalse(sql.contains("stock_availability"));
     }
 
     @Test

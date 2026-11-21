@@ -1,0 +1,25 @@
+{
+  "baseline_commit": "7ac73ec7ad10e22095aed08b197086fe36f20628",
+  "queries": {
+    "qr": {
+      "path": "backend/src/main/java/com/smartelectronicsupermarket/qr/data/JdbcQrDeviceLookupDataAccess.java",
+      "constant": "FIND_BY_QR_TOKEN_SQL",
+      "sql": "SELECT\n                d.id,\n                d.product_id,\n                d.warehouse_id,\n                d.status\n            FROM sasms.devices d\n            JOIN sasms.warehouses w\n                ON w.id = d.warehouse_id\n            WHERE d.qr_token = CAST(? AS uuid)\n              AND sasms.has_permission(\n                  CAST(? AS uuid),\n                  'inventory.read',\n                  w.store_id\n              ) = TRUE"
+    },
+    "ai_stock": {
+      "path": "backend/src/main/java/com/smartelectronicsupermarket/ai/data/JdbcAiCrossSellDataAccess.java",
+      "constant": "SELLABLE_SQL",
+      "sql": "SELECT p.id, p.sku, p.name, p.list_price, sa.available, c.name AS category_name\n            FROM sasms.products p\n            JOIN sasms.categories c ON c.id = p.category_id\n            JOIN sasms.stock_availability sa\n                 ON sa.product_id = p.id AND sa.warehouse_id = CAST(? AS uuid)\n            WHERE p.sku = ANY (CAST(? AS text[]))\n              AND p.is_active = TRUE\n              AND sa.available > 0\n            ORDER BY p.sku ASC"
+    },
+    "bi_summary": {
+      "path": "backend/src/main/java/com/smartelectronicsupermarket/reporting/data/JdbcStoreDashboardDataAccess.java",
+      "constant": "SUMMARY_SQL",
+      "sql": "SELECT\n              COALESCE((SELECT sum(o.total_amount) FROM sasms.sales_orders o\n                WHERE o.store_id=CAST(? AS uuid) AND o.status='PAID' AND o.paid_at>=? AND o.paid_at<?),0) gross,\n              (SELECT count(*) FROM sasms.sales_orders o\n                WHERE o.store_id=CAST(? AS uuid) AND o.status='PAID' AND o.paid_at>=? AND o.paid_at<?) paid_orders,\n              (SELECT count(*) FROM sasms.devices d JOIN sasms.warehouses w ON w.id=d.warehouse_id\n                WHERE w.store_id=CAST(? AS uuid) AND d.status='IN_STOCK') available_devices,\n              (SELECT count(*) FROM sasms.inventory_movements m JOIN sasms.warehouses w ON w.id=m.warehouse_id\n                WHERE w.store_id=CAST(? AS uuid) AND m.kind='RECEIVE' AND m.created_at>=? AND m.created_at<?) received,\n              (SELECT count(*) FROM sasms.inventory_movements m JOIN sasms.warehouses w ON w.id=m.warehouse_id\n                WHERE w.store_id=CAST(? AS uuid) AND m.kind='SALE' AND m.created_at>=? AND m.created_at<?) sold,\n              (SELECT count(*) FROM sasms.inventory_movements m JOIN sasms.warehouses w ON w.id=m.warehouse_id\n                WHERE w.store_id=CAST(? AS uuid) AND m.kind='RETURN' AND m.created_at>=? AND m.created_at<?) returned"
+    },
+    "inventory_stock": {
+      "path": "backend/src/main/java/com/smartelectronicsupermarket/inventory/stock/data/JdbcInventoryStockDataAccess.java",
+      "constant": "LIST_STOCK_SQL",
+      "sql": "SELECT\n                sa.product_id,\n                sa.warehouse_id,\n                sa.available + sa.reserved AS accounting_stock,\n                sa.available AS sellable_count,\n                sa.reserved AS reserved_count\n            FROM sasms.stock_availability sa\n            JOIN sasms.warehouses w ON w.id = sa.warehouse_id\n            JOIN sasms.products p ON p.id = sa.product_id\n            WHERE sasms.has_permission(\n                    CAST(? AS uuid),\n                    'inventory.read',\n                    w.store_id\n                  ) = TRUE\n              AND (CAST(? AS uuid) IS NULL OR sa.warehouse_id = CAST(? AS uuid))\n              AND (CAST(? AS text) IS NULL OR p.sku ILIKE ('%' || CAST(? AS text) || '%'))\n            ORDER BY p.sku ASC, sa.warehouse_id ASC\n            LIMIT ? OFFSET ?"
+    }
+  }
+}

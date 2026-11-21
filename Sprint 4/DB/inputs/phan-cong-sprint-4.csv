@@ -1,0 +1,26 @@
+﻿id,role,task,owner,support,inputs,outputs,evidence,start_planned,due_planned,owner_hours_planned,output_status_at_source,calendar_status_at_2026_11_05,source_sheet,source_row
+S4-03,support,"TSK-04-02 BI Analytics Dashboard doanh thu, kho, hiệu quả AI",Nguyễn Tiến Vũ (Data / AI Lead),Trần Trung Kiên,D51 Thiết kế cơ sở dữ liệu SASMS,DS4 Phần mềm tăng trưởng Sprint 4 (bản phát hành),"Ảnh Dashboard; số liệu khớp dữ liệu nguồn; làm mới ≤ 1 phút
+(Mẫu minh chứng của tài liệu: Log deploy Production; PO ký Review)",09/11/2026,12/11/2026,32,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,7
+S4-04,primary,TSK-04-03 Tối ưu truy vấn tổng hợp báo cáo kho Serial/IMEI,Trần Trung Kiên (Architect / DBA),Nguyễn Tiến Vũ,D51 Thiết kế cơ sở dữ liệu SASMS,DS4 Phần mềm tăng trưởng Sprint 4 (bản phát hành),"Kết quả đo thời gian truy vấn trước và sau tối ưu
+(Mẫu minh chứng của tài liệu: Log deploy Production; PO ký Review)",09/11/2026,12/11/2026,20,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,8
+S4-07,primary,TSK-04-06 Tối ưu độ trễ quét QR < 1 giây và AI < 3 giây,Trần Trung Kiên (Architect / DBA),"Nguyễn Tiến Vũ, Vũ Duy Thái",D79 Báo cáo kiểm thử hiệu năng và tải,DS4 Phần mềm tăng trưởng Sprint 4 (bản phát hành),"Báo cáo số đo trước / sau
+(Mẫu minh chứng của tài liệu: Log deploy Production; PO ký Review)",09/11/2026,16/11/2026,24,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,9
+S4-13,primary,Hoàn tất rà soát bảo mật và xử lý lỗ hổng,Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,D81 Báo cáo rà soát bảo mật,D81 Báo cáo rà soát bảo mật,"Báo cáo bảo mật: không còn lỗ hổng mức cao
+(Mẫu minh chứng của tài liệu: Danh sách lỗ hổng và kết quả xử lý)",09/11/2026,16/11/2026,12,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,10
+S4-08,primary,TSK-04-07 Thiết lập CI/CD và deploy cloud AWS / Vercel,Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,"D22 Kế hoạch môi trường Dev / Staging / Prod và CI/CD
+D91 Kế hoạch chuyển đổi Go-Live (Cutover) và quay lui (Rollback)","DS4 Phần mềm tăng trưởng Sprint 4 (bản phát hành)
+D91 Kế hoạch chuyển đổi Go-Live (Cutover) và quay lui (Rollback)","Log pipeline deploy Production thành công
+(Mẫu minh chứng của tài liệu: Log deploy Production; PO ký Review; Biên bản diễn tập; khôi phục sao lưu thử thành công)",10/11/2026,18/11/2026,20,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,12
+S4-14,primary,"Hoàn thiện Release Plan, Cutover và Rollback; diễn tập khôi phục",Trần Trung Kiên (Architect / DBA),"Trịnh Quốc An, Vũ Duy Thái","D90 Kế hoạch phát hành (Release Plan)
+D22 Kế hoạch môi trường Dev / Staging / Prod và CI/CD","D90 Kế hoạch phát hành (Release Plan)
+D91 Kế hoạch chuyển đổi Go-Live (Cutover) và quay lui (Rollback)","Biên bản diễn tập cutover; khôi phục bản sao lưu thử thành công
+(Mẫu minh chứng của tài liệu: Lịch phát hành được Sponsor duyệt; Biên bản diễn tập; khôi phục sao lưu thử thành công)",12/11/2026,17/11/2026,24,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,16
+S4-06,support,TSK-04-05 Sửa toàn bộ lỗi P1/P2 phát hiện trong kiểm thử,Vũ Duy Thái (Fullstack Lead),"Trần Trung Kiên, Nguyễn Tiến Vũ",D80 Sổ lỗi (Bug Log),DS4 Phần mềm tăng trưởng Sprint 4 (bản phát hành),"Sổ lỗi: mọi P1/P2 ở trạng thái VERIFIED CLOSED
+(Mẫu minh chứng của tài liệu: Log deploy Production; PO ký Review)",13/11/2026,18/11/2026,24,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,17
+S4-11,support,"Báo cáo kiểm thử hiệu năng (QR < 1s, POS < 2s, AI < 3s) và tải",Phạm Đại Phát (QA / Documentation Lead),"Trần Trung Kiên, Nguyễn Tiến Vũ",D79 Báo cáo kiểm thử hiệu năng và tải,D79 Báo cáo kiểm thử hiệu năng và tải,"Bảng số đo p95; đạt các chỉ tiêu Charter
+(Mẫu minh chứng của tài liệu: Số đo QR < 1s, POS < 2s, AI < 3s (p95), 50 request đồng thời)",13/11/2026,17/11/2026,16,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,18
+S4-17,primary,"Tài liệu vận hành (Runbook), quy trình sao lưu và bảo trì",Trần Trung Kiên (Architect / DBA),Vũ Duy Thái,D91 Kế hoạch chuyển đổi Go-Live (Cutover) và quay lui (Rollback),"D101 Tài liệu vận hành (Runbook), sao lưu và bảo trì","Quy trình sao lưu / khôi phục; kết quả diễn tập
+(Mẫu minh chứng của tài liệu: Quy trình sao lưu / khôi phục; kết quả diễn tập)",15/11/2026,19/11/2026,16,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,21
+S4-18,support,"Lập biên bản bàn giao hệ thống (mã nguồn, tài khoản, tài liệu)",Phạm Đại Phát (QA / Documentation Lead),"Trần Trung Kiên, Vũ Duy Thái","D92 Hướng dẫn sử dụng (User Guide)
+D101 Tài liệu vận hành (Runbook), sao lưu và bảo trì",D95 Biên bản bàn giao hệ thống,"Danh mục bàn giao có chữ ký hai bên
+(Mẫu minh chứng của tài liệu: Danh mục bàn giao (mã nguồn, tài khoản, tài liệu) có chữ ký hai bên)",19/11/2026,20/11/2026,12,CHƯA CÓ,CHƯA ĐẾN HẠN,Phân chia công việc,27

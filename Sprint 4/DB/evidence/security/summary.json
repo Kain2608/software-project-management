@@ -1,0 +1,44 @@
+{
+  "collected_at_utc": "2026-11-21T10:49:18.239422+00:00",
+  "scope": "APPLICATION_DEPENDENCIES_AND_LIMITED_SOURCE_SCAN",
+  "gate": "PASS",
+  "frontend": {
+    "status": "PASS",
+    "exit_code": 0,
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "scope": "Complete package-lock graph, including development dependencies"
+  },
+  "backend": {
+    "status": "PASS",
+    "packages": 91,
+    "counts": {
+      "LOW": 0,
+      "MODERATE": 0,
+      "HIGH": 0,
+      "CRITICAL": 0,
+      "UNKNOWN": 0
+    },
+    "tree_sha256": "8a9927d34bdb719cc70b53b339045f6f745e0efec31d16416b4bf44b2927f4f0",
+    "scope": "Resolved Maven application dependencies, including test scope; plugins/JDK/OS/container/cloud excluded"
+  },
+  "limited_secret_scan": {
+    "status": "PASS",
+    "files": 300,
+    "patterns": [
+      "private_key",
+      "github_token",
+      "aws_access_key_id",
+      "provider_token"
+    ],
+    "matches": [],
+    "limitations": "Four token/key patterns in current textual source/config only; no entropy, Git history, Office files or runtime secrets scan."
+  },
+  "limitations": "Not DAST, penetration testing, browser E2E, cloud TLS/IdP/rate-limit validation or approval for Production."
+}

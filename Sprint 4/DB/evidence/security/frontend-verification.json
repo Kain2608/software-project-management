@@ -1,0 +1,17 @@
+{
+  "frontend-tests": {
+    "exit_code": 0,
+    "command": "npm.cmd test",
+    "log_sha256": "380ca6bf06df0e38e60ab1251ab65e6576fe1a762c8fd5e38ea3fa86f4d26a87",
+    "counts": {}
+  },
+  "frontend-build": {
+    "exit_code": 1,
+    "command": "npm.cmd run build",
+    "log_sha256": "4e327046a94cdeea402a71368bef6b82ee6b76e59298d476913afc96f5f5c471"
+  },
+  "tool_versions": {
+    "node": "v24.15.0",
+    "npm.cmd": "11.12.1"
+  }
+}

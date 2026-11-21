@@ -1,0 +1,250 @@
+{
+  "started_at_utc": "2026-11-21T10:50:27.430697+00:00",
+  "status": "passed",
+  "checks": {
+    "migration ledger presence": {
+      "passed": true,
+      "seconds": 0.0604
+    },
+    "migration version before current upgrade": {
+      "passed": true,
+      "seconds": 0.0737
+    },
+    "legacy payload fixture before V003": {
+      "passed": true,
+      "seconds": 0.1105
+    },
+    "table names": {
+      "passed": true,
+      "seconds": 0.0929
+    },
+    "seed snapshot": {
+      "passed": true,
+      "seconds": 0.2135
+    },
+    "legacy receipt retry after V003": {
+      "passed": true,
+      "seconds": 0.0806
+    },
+    "legacy source preserved without invented raw data": {
+      "passed": true,
+      "seconds": 0.0795
+    },
+    "exact legacy upgrade fixture cleanup": {
+      "passed": true,
+      "seconds": 0.1158
+    },
+    "captured payment guard initially enabled": {
+      "passed": true,
+      "seconds": 0.0842
+    },
+    "atomic Sprint2 extension apply": {
+      "passed": true,
+      "seconds": 0.0933
+    },
+    "Sprint2 extension reapply": {
+      "passed": true,
+      "seconds": 0.0916
+    },
+    "Sprint2 runtime ACL authorization and stock lifecycle": {
+      "passed": true,
+      "seconds": 0.15
+    },
+    "D34 D35 identifier and lease regression": {
+      "passed": true,
+      "seconds": 0.1997
+    },
+    "commit independent POS fixtures": {
+      "passed": true,
+      "seconds": 0.1036
+    },
+    "committed realtime stock": {
+      "passed": true,
+      "seconds": 0.0705
+    },
+    "commit initial allocation count": {
+      "passed": true,
+      "seconds": 0.0809
+    },
+    "authorized POS1 release": {
+      "passed": true,
+      "seconds": 0.0936
+    },
+    "POS2 retry after release": {
+      "passed": true,
+      "seconds": 0.1095
+    },
+    "exactly one committed active draft owner": {
+      "passed": true,
+      "seconds": 0.0638
+    },
+    "winning POS2 reserve commit": {
+      "passed": true,
+      "seconds": 0.0996
+    },
+    "winning POS2 captured payment and sale commit": {
+      "passed": true,
+      "seconds": 0.0999
+    },
+    "unique committed checkout side effects": {
+      "passed": true,
+      "seconds": 0.0902
+    },
+    "commit exact synthetic UUID cleanup": {
+      "passed": true,
+      "seconds": 0.1355
+    },
+    "rollback independent POS fixtures": {
+      "passed": true,
+      "seconds": 0.0894
+    },
+    "rollback initial allocation count": {
+      "passed": true,
+      "seconds": 0.067
+    },
+    "POS2 retry after rollback": {
+      "passed": true,
+      "seconds": 0.087
+    },
+    "rollback exact synthetic UUID cleanup": {
+      "passed": true,
+      "seconds": 0.1323
+    },
+    "captured payment guard restored": {
+      "passed": true,
+      "seconds": 0.0593
+    }
+  },
+  "scope": "isolated PostgreSQL behavior, ACL and two POS connections; no API, browser, remote Staging deployment or health claim",
+  "concurrency": [
+    {
+      "case": "POS1_commit",
+      "independent_pos_connections": 2,
+      "pos_backend_pids": [
+        37248,
+        8748
+      ],
+      "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
+      "overlap_55P03_rejections": 1,
+      "post_commit_55P03_rejections": 1,
+      "retry_after_release_or_rollback": true,
+      "draft_stock_unchanged": true,
+      "stock_before": [
+        2,
+        0,
+        0
+      ],
+      "stock_after_reserve": [
+        1,
+        1,
+        0
+      ],
+      "stock_after_sale": [
+        1,
+        0,
+        1
+      ],
+      "committed_side_effects": {
+        "sold_device": 1,
+        "paid_order": 1,
+        "reserve_movement": 1,
+        "sale_movement": 1,
+        "invoice": 1,
+        "checkout_audit": 1,
+        "paid_event": 1
+      }
+    },
+    {
+      "case": "POS1_rollback",
+      "independent_pos_connections": 2,
+      "pos_backend_pids": [
+        22556,
+        18788
+      ],
+      "synchronization": "POS1 holds device and waits on owner advisory gate before POS2 starts",
+      "overlap_55P03_rejections": 1,
+      "post_commit_55P03_rejections": 0,
+      "retry_after_release_or_rollback": true,
+      "draft_stock_unchanged": true,
+      "stock_before": [
+        2,
+        0,
+        0
+      ],
+      "stock_after_reserve": [
+        1,
+        1,
+        0
+      ],
+      "stock_after_sale": [
+        1,
+        0,
+        1
+      ],
+      "committed_side_effects": {
+        "sold_device": 1,
+        "paid_order": 1,
+        "reserve_movement": 1,
+        "sale_movement": 1,
+        "invoice": 1,
+        "checkout_audit": 1,
+        "paid_event": 1
+      }
+    }
+  ],
+  "source_sha256": {
+    "scripts/validate_sprint2.py": "7536b7ea1124297d967e83c30d08e6f8f6e61daeedcdf2c35558515d9da68acd",
+    "scripts/validate_db.py": "79d28cbd7859615551eae68f80c4c781449f35064737d038b7ea3c9f391b3841",
+    "scripts/validate_sprint1.py": "8276f6003f0bd9185006a8c0b3ed146edc325d3099019ae52730545aa570c57b",
+    ".github/workflows/sprint2-staging.yml": "27dc386443dc7900646aa719317f8570fbefeccaf592ad93b4f3362d01ba2bf6",
+    "database/sprint2/realtime_stock_and_locking.sql": "ed3fd83611bac54773d1382f1dbf21d96626acf1eecaba800d7714f9bdb10b48",
+    "database/tests/sprint2/test_sprint2_concurrency_and_stock.sql": "a1646558515c5c0f0995e9486cc89d1ea8ef642330f13cad140880bbb71b004d",
+    "scripts/migrate_db.py": "ee902e931d8c6d5f3ff7c61544c84fad6017da98f0ad7edd81269401f34c24b6",
+    "scripts/provision_d35_rules.sql": "12a7001b58c713fe40c9122b46c681f8278e6eb39d6ab96a01c0fae824c80d82",
+    "database/tests/sprint2/identifiers_and_leases.sql": "bc6fdf35a94a77d280449356930d1e0928783f974a75bd21cfa56b30098f43c7",
+    "database/migrations/V001__catalog_and_iam.sql": "4ebbb59ad4b8bee50c16e26becabe1ec2fab5d69e44ad5a613a049f6583d3f71",
+    "database/migrations/V002__inventory_batches_and_identifiers.sql": "48038d23eaaf418d49e8a840a71faed2f59b4f8350089dee2f9f3566524a020e",
+    "database/migrations/V003__scoped_device_identifiers.sql": "8e98e7b0d52b6c8776cff404b5cc5669e5b0724095bcc652ecd24e8a97e450f0",
+    "database/migrations/V004__pos_lease_lifecycle.sql": "f27c1e0ee9b1d64c54aad9f47bb49d44b184e0240bd73479be8e3b3b959969a4",
+    "database/migrations/V005__frs_business_roles.sql": "717d236e06cd17a7fe10578a8d312792ac6129b4d6c8692d0e014b76cb627272",
+    "database/migrations/V006__logistics_and_warranty.sql": "e52d7422deebb208faa68e58dccb5fc179a360204a8d2e2a696a7264a00dccc8",
+    "database/migrations/V007__sms_outbox.sql": "0b15ff874127130b955024a55179752f3e82f6aa3fb0e841ea1c94c723d826e6",
+    "database/migrations/V008__sprint4_query_optimization.sql": "5bfd66baf7d76134b62ff5a7374c4cd2df65d3bf0badc89a2a1f48b9058ab34d"
+  },
+  "prior_sprints": {
+    "sprint1_status": "passed",
+    "sprint1_assertions": 76,
+    "sprint0_regression": {
+      "passed": true,
+      "constraint_assertions": 56,
+      "runtime_acl_assertions": 7
+    },
+    "migration_safety": {
+      "reapply_noop": true,
+      "checksum_rejected": true,
+      "all_pending_ddl_and_ledger_rolled_back": true,
+      "applied_migrations": 2
+    }
+  },
+  "current_upgrade": {
+    "version": 5,
+    "business_tables": 41,
+    "legacy_payload_retry_verified": true,
+    "historical_raw_not_invented": true,
+    "migration_reapply_verified": true
+  },
+  "ci_failure_detection": {
+    "sql_file_nonzero_exit": 3,
+    "later_sql_not_executed": true,
+    "assertion_failure_propagated": true
+  },
+  "assertions": 33,
+  "identifier_lease_assertions": 43,
+  "fixtures_cleaned": true,
+  "fixture_cleanup": {
+    "owner_only_exact_synthetic_uuids": true,
+    "captured_payment_guard_disabled_only_during_cleanup_transaction": true,
+    "captured_payment_guard_restored": true
+  },
+  "finished_at_utc": "2026-11-21T10:50:44.318477+00:00"
+}

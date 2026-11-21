@@ -19,6 +19,9 @@
 
     <properties>
         <java.version>25</java.version>
+        <!-- S4-13: patched maintenance lines; see Sprint 4/DB/D81. -->
+        <tomcat.version>11.0.29</tomcat.version>
+        <jackson-bom.version>3.1.7</jackson-bom.version>
     </properties>
 
     <dependencies>

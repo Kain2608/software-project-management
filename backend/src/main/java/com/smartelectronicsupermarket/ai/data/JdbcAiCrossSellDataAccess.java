@@ -28,11 +28,14 @@ public class JdbcAiCrossSellDataAccess implements AiCrossSellDataAccess {
             SELECT p.id, p.sku, p.name, p.list_price, sa.available, c.name AS category_name
             FROM sasms.products p
             JOIN sasms.categories c ON c.id = p.category_id
-            JOIN sasms.stock_availability sa
-                 ON sa.product_id = p.id AND sa.warehouse_id = CAST(? AS uuid)
+            JOIN LATERAL (
+                SELECT count(*) AS available
+                FROM sasms.devices d
+                WHERE d.product_id = p.id AND d.warehouse_id = CAST(? AS uuid)
+                  AND d.status = 'IN_STOCK'
+            ) sa ON sa.available > 0
             WHERE p.sku = ANY (CAST(? AS text[]))
               AND p.is_active = TRUE
-              AND sa.available > 0
             ORDER BY p.sku ASC
             """;
 
