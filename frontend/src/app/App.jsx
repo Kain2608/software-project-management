@@ -2,9 +2,15 @@ import { useState } from 'react'
 import PosPage from '../features/pos/PosPage.jsx'
 import QrCameraScanner from '../features/qr/QrCameraScanner.jsx'
 import SerialImeiPanel from '../features/serialImei/SerialImeiPanel.jsx'
+import OnlineOrderPage from '../features/online/OnlineOrderPage.jsx'
 import { resolveAuthSession } from './authContext.js'
 
 const screens = {
+  online: {
+    breadcrumb: 'Online / Giỏ hàng',
+    title: 'Đặt hàng online',
+    subtitle: 'Tra cứu danh mục và tồn kho; gửi đơn bị khóa cho đến khi hợp đồng bảo mật được duyệt.',
+  },
   pos: {
     breadcrumb: 'Bán hàng POS / Giỏ hàng',
     title: 'Bán hàng tại quầy',
@@ -69,6 +75,7 @@ export default function App({ authSession = null }) {
           </span>
           {navButton('pos', 'Bán hàng POS')}
           {navButton('serial', 'Serial / IMEI')}
+          {navButton('online', 'Đặt hàng online')}
           <span className="sasms-nav__item sasms-nav__item--unavailable" aria-disabled="true" title="Báo cáo chưa được tích hợp">
             <span className="sasms-nav__mark" aria-hidden="true" />Báo cáo
           </span>
@@ -111,6 +118,9 @@ export default function App({ authSession = null }) {
             )}
             {activeScreen === 'qr' && <QrCameraScanner accessToken={accessToken} />}
             {activeScreen === 'serial' && <SerialImeiPanel />}
+            {activeScreen === 'online' && (
+              <OnlineOrderPage accessToken={accessToken} storeId={storeId} warehouseId={warehouseId} />
+            )}
           </div>
 
           <footer className="sasms-footer">
