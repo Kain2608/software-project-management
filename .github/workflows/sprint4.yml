@@ -1,0 +1,164 @@
+name: Sprint 4 release validation
+
+on:
+  push:
+    paths: ['database/**', 'scripts/**', 'backend/**', 'frontend/**', 'infra/sprint4/**', 'Sprint 4/DB/**', '.github/workflows/sprint4*.yml']
+  pull_request:
+    paths: ['database/**', 'scripts/**', 'backend/**', 'frontend/**', 'infra/sprint4/**', 'Sprint 4/DB/**', '.github/workflows/sprint4*.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sasms_ci
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: sasms_s4_validation
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sasms_ci -d sasms_s4_validation"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: sasms_ci
+      PGPASSWORD: isolated-ci-only
+      PGDATABASE: sasms_s4_validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install matching PostgreSQL 16 clients
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+      - name: Verify Sprint 4 migrations, ACL, data and performance
+        run: >-
+          python scripts/validate_sprint4.py --apply
+          --psql /usr/lib/postgresql/16/bin/psql
+          --benchmark --samples 30 --clients 50
+          --evidence-dir /tmp/sasms-sprint4-evidence
+      - name: Check generated V008 schema artifacts
+        run: >-
+          python scripts/generate_db_artifacts.py --dsn "dbname=sasms_s4_validation"
+          --psql /usr/lib/postgresql/16/bin/psql
+          --expected-tables 41 --output-dir database/sprint4 --schema-label "Sprint 4" --check
+      - name: Rehearse V008 logical backup and private restore
+        run: >-
+          python scripts/validate_sprint4_restore.py
+          --source-dsn "dbname=sasms_s4_validation" --maintenance-dsn "dbname=postgres"
+          --psql /usr/lib/postgresql/16/bin/psql
+          --pg-dump /usr/lib/postgresql/16/bin/pg_dump
+          --pg-restore /usr/lib/postgresql/16/bin/pg_restore
+          --work-dir /tmp/sasms-sprint4-backups
+          --evidence-dir /tmp/sasms-sprint4-evidence/restore
+      - name: Preserve DB evidence without archives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint4-database-evidence
+          path: /tmp/sasms-sprint4-evidence/
+          retention-days: 14
+
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Test and package backend once
+        working-directory: backend
+        run: mvn --batch-mode verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sprint4-backend-jar
+          path: backend/target/*.jar
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprint4-backend-tests
+          path: backend/target/surefire-reports/
+          retention-days: 14
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Test and build frontend once with same-origin API
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: /api
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sprint4-frontend-dist
+          path: frontend/dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Resolve the exact Maven runtime dependency graph
+        working-directory: backend
+        run: >-
+          mvn --batch-mode org.apache.maven.plugins:maven-dependency-plugin:3.9.0:tree
+          -DoutputType=json -DoutputFile=target/dependency-tree.json
+      - name: Audit frontend and resolved Maven coordinates
+        run: >-
+          python scripts/security_sprint4.py
+          --maven-tree backend/target/dependency-tree.json
+          --output /tmp/sasms-sprint4-security
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sprint4-security-evidence
+          path: /tmp/sasms-sprint4-security/
+          retention-days: 14
+
+  release-tooling:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify packaging, configuration preservation and rollback evidence
+        run: python -m unittest discover -s infra/sprint4 -p test_release.py -v

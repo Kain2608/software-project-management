@@ -1,0 +1,18 @@
+﻿
+> smart-electronic-supermarket-pos-web@0.1.0 build
+> vite build
+
+vite v6.4.6 building for production...
+transforming...
+✓ 335 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.43 kB │ gzip:   0.29 kB
+dist/assets/index-D_G_8Jjq.css   28.59 kB │ gzip:   6.42 kB
+dist/assets/index-SpPn-2w7.js   672.30 kB │ gzip: 193.58 kB
+System.Management.Automation.RemoteException
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.99s

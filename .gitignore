@@ -15,4 +15,5 @@ database/.local/
 *.backup
 .pgpass
 pgpass.conf
+frontend/.npm-cache/
 

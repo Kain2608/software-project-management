@@ -1,0 +1,201 @@
+name: Sprint 4 manual cloud release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful Sprint 4 release validation run on main (exact artifacts to deploy)
+        type: string
+        required: true
+      environment:
+        description: Existing GitHub environment with configured protection rules
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
+      approval_reference:
+        description: HTTPS link to release decision and backup/drill evidence for this build
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: sprint4-cloud-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  provenance:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      source_sha: ${{ steps.check.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify successful trusted main CI provenance
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          APPROVAL_REFERENCE: ${{ inputs.approval_reference }}
+        run: |
+          set -euo pipefail
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GH_REPO/actions/runs/$CI_RUN_ID" > /tmp/validated-run.json
+          python3 - <<'PY'
+          import json, os, re
+          from urllib.parse import urlsplit
+          run = json.load(open('/tmp/validated-run.json'))
+          assert run['conclusion'] == 'success' and run['status'] == 'completed'
+          assert run['event'] == 'push' and run['head_branch'] == 'main'
+          assert run['path'] == '.github/workflows/sprint4.yml'
+          sha = run['head_sha']
+          assert re.fullmatch('[a-f0-9]{40}', sha)
+          approval = urlsplit(os.environ['APPROVAL_REFERENCE'])
+          assert approval.scheme == 'https' and approval.hostname and not approval.username and not approval.password
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('source_sha=' + sha + '\n')
+          PY
+          SOURCE_SHA=$(python3 -c "import json; print(json.load(open('/tmp/validated-run.json'))['head_sha'])")
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/main
+
+  deploy:
+    needs: provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY_URI: ${{ vars.ECR_REPOSITORY_URI }}
+      APP_RUNNER_SERVICE_ARN: ${{ vars.APP_RUNNER_SERVICE_ARN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
+      SOURCE_SHA: ${{ needs.provenance.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.provenance.outputs.source_sha }}
+      - name: Check target configuration before requesting cloud credentials
+        env:
+          DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          for name in AWS_REGION ECR_REPOSITORY_URI APP_RUNNER_SERVICE_ARN VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_CLI_VERSION DEPLOY_ROLE_ARN; do
+            [[ -n "${!name}" ]] || { echo "Missing environment configuration: $name"; exit 1; }
+          done
+          [[ "$VERCEL_CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+      - uses: actions/download-artifact@v4
+        with:
+          name: sprint4-backend-jar
+          path: /tmp/sasms-release/backend
+          run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: sprint4-frontend-dist
+          path: /tmp/sasms-release/frontend-dist
+          run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Build and push immutable backend image from verified JAR
+        run: |
+          set -euo pipefail
+          REGISTRY="${ECR_REPOSITORY_URI%%/*}"
+          REPOSITORY="${ECR_REPOSITORY_URI#*/}"
+          MUTABILITY=$(aws ecr describe-repositories --repository-names "$REPOSITORY" --query 'repositories[0].imageTagMutability' --output text)
+          [[ "$MUTABILITY" == IMMUTABLE ]]
+          if aws ecr describe-images --repository-name "$REPOSITORY" --image-ids "imageTag=$SOURCE_SHA" > /tmp/sasms-release/image-metadata.json 2>/tmp/sasms-release/image-lookup-error.txt; then
+            echo 'Reusing the existing immutable image for this exact commit.'
+          else
+            grep -q ImageNotFoundException /tmp/sasms-release/image-lookup-error.txt
+            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+            docker build --file infra/sprint4/Dockerfile --tag "$ECR_REPOSITORY_URI:$SOURCE_SHA" /tmp/sasms-release/backend
+            docker push "$ECR_REPOSITORY_URI:$SOURCE_SHA"
+          fi
+      - name: Deploy backend while preserving existing runtime settings
+        run: >-
+          python infra/sprint4/release.py apprunner-update
+          --service-arn "$APP_RUNNER_SERVICE_ARN"
+          --image "$ECR_REPOSITORY_URI:$SOURCE_SHA"
+          --execute --evidence-dir /tmp/sasms-release/evidence
+      - name: Check backend and prepare exact frontend build bytes
+        run: |
+          set -euo pipefail
+          BACKEND_ORIGIN=$(python3 -c "import json; print(json.load(open('/tmp/sasms-release/evidence/apprunner-deployment.json'))['backend_origin'])")
+          python infra/sprint4/release.py smoke --base-url "$BACKEND_ORIGIN" --evidence /tmp/sasms-release/evidence/backend-smoke.json
+          python infra/sprint4/release.py prepare-vercel --dist /tmp/sasms-release/frontend-dist --output /tmp/sasms-vercel --backend-origin "$BACKEND_ORIGIN" --commit "$SOURCE_SHA"
+          cp /tmp/sasms-vercel/artifact-manifest.json /tmp/sasms-release/evidence/frontend-artifact-manifest.json
+      - name: Create frontend candidate without assigning production domains
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          [[ -n "$VERCEL_TOKEN" ]]
+          if [[ "$TARGET_ENVIRONMENT" == production ]]; then
+            npx --yes "vercel@$VERCEL_CLI_VERSION" deploy --cwd /tmp/sasms-vercel --prebuilt --prod --skip-domain --yes --token "$VERCEL_TOKEN" > /tmp/sasms-release/evidence/frontend-deployment-url.txt
+          else
+            npx --yes "vercel@$VERCEL_CLI_VERSION" deploy --cwd /tmp/sasms-vercel --prebuilt --yes --token "$VERCEL_TOKEN" > /tmp/sasms-release/evidence/frontend-deployment-url.txt
+          fi
+      - name: Smoke candidate through same-origin API rewrite
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_URL=$(cat /tmp/sasms-release/evidence/frontend-deployment-url.txt)
+          python infra/sprint4/release.py smoke --base-url "$DEPLOYMENT_URL" --evidence /tmp/sasms-release/evidence/frontend-smoke.json
+      - name: Assign production domains after candidate smoke passes
+        if: inputs.environment == 'production'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_URL=$(cat /tmp/sasms-release/evidence/frontend-deployment-url.txt)
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote "$DEPLOYMENT_URL" --cwd /tmp/sasms-vercel --yes --token "$VERCEL_TOKEN"
+      - name: Record exact release provenance and final job status
+        if: always()
+        env:
+          FINAL_STATUS: ${{ job.status }}
+          APPROVAL_REFERENCE: ${{ inputs.approval_reference }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          import json, os
+          from pathlib import Path
+          report = {name.lower(): os.environ[name] for name in ['SOURCE_SHA', 'FINAL_STATUS', 'APPROVAL_REFERENCE', 'TARGET_ENVIRONMENT', 'CI_RUN_ID']}
+          report['finished_at_utc'] = datetime.now(timezone.utc).isoformat()
+          report['database_migrations'] = 'NOT_EXECUTED_BY_CLOUD_WORKFLOW'
+          report['authenticated_e2e_uat'] = 'SEPARATE_REQUIRED_EVIDENCE'
+          path = Path('/tmp/sasms-release/evidence/release.json')
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Preserve deployment and smoke evidence without secrets or dumps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint4-cloud-${{ inputs.environment }}-${{ github.run_id }}
+          path: /tmp/sasms-release/evidence/
+          retention-days: 30
