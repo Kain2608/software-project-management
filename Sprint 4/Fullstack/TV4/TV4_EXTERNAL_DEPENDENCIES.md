@@ -17,7 +17,7 @@
 
 ## 2. Ma trận Phụ thuộc Bên ngoài Chi tiết (External Dependencies Matrix)
 
-### 2.1 Phụ thuộc vào Nguyễn Hồng Phát (TV3 — QA Lead / Tester)
+### 2.1 Phụ thuộc vào Phạm Đại Phát (TV3 — QA Lead / Tester)
 
 | Tài liệu / Hạng mục phụ thuộc | Mã tài liệu | Trạng thái hiện tại | Đường dẫn trong Repo | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
 |---|---|---|---|---|:---:|---|
@@ -57,12 +57,21 @@
 
 ---
 
-### 2.5 Phụ thuộc vào Nguyễn Tiến Vũ / Ngô Đình Vũ (TV6 — Infra / DevOps Lead)
+### 2.5 Phụ thuộc Staging/CI và dịch vụ SMS (TV2 Kiên phụ trách kỹ thuật, TV4 Thái hỗ trợ, TV1 An/TV5 Huy chốt phạm vi)
 
 | Hạ tầng / Dịch vụ tích hợp | Thành phần | Trạng thái hiện tại | Đường dẫn / Tài nguyên | Cần cho nhiệm vụ TV4 | Mức độ chặn (Blocking Status) | Hành động yêu cầu (Action Required) |
 |---|---|---|---|---|:---:|---|
-| **Hợp đồng và Thông tin Tài khoản SMS Gateway** | SMS Provider API | Chưa có thông tin kết nối thật (đang dùng Adapter Mock) | `backend/src/main/resources/application.yml` | BUG-D74-04 (Gửi tin nhắn SMS thật cho khách) | **BLOCKING (Chặn SMS thật)** | Đăng ký hợp đồng thương mại với nhà mạng (eSMS/SpeedSMS/Twilio) và cấu hình API credentials lên Staging/Prod secret manager. |
-| **Môi trường CI/CD và Docker Staging tập trung** | Staging Server | Docker Desktop trên máy trạm cục bộ gặp lỗi engine | Pipeline GitHub Actions | Chạy bộ kiểm thử tích hợp PostgreSQL tự động cho PRs | **NON-BLOCKING (Đã kiểm chứng trên container riêng)** | Thiết lập runner CI có Docker daemon sẵn sàng để tự động kích hoạt bộ test `Sprint2OrderPostgreSqlIntegrationTest`. |
+| **Hợp đồng và thông tin SMS Gateway** | SMS Provider API | Chưa có bằng chứng kết nối provider thật (đang dùng Adapter Mock) | `Sprint 3/DB/DS3-SMS-adapter-va-ban-giao.md` | BUG-D74-04 (SMS thật) | **BLOCKING (Nếu phạm vi bắt buộc SMS thật)** | **Kiên (S3-08)** phụ trách adapter/worker SMS, **Thái** hỗ trợ tích hợp; **An/Huy** quyết định có dùng provider/sandbox và nguồn kinh phí, không đưa secret vào Git. Nếu chưa duyệt, giữ MOCK và ghi giới hạn nghiệm thu. |
+| **Môi trường CI/CD và Docker Staging tập trung** | Staging Server | PostgreSQL 16 kiểm thử cục bộ và GitHub CI đã có bằng chứng; **staging chung/JWT E2E chưa xác minh** | Pipeline GitHub Actions; `Sprint 2/DB/inputs/phan-cong-sprint-2.csv` (S2-12) | Chạy E2E Frontend–Backend–JWT trên staging | **BLOCKING (Chặn E2E/UAT)** | **Kiên là đầu mối chính S2-12**, **Thái hỗ trợ**, **An** điều phối môi trường; cung cấp URL staging, runtime login riêng, log CI/deploy và bằng chứng chạy E2E đã che secret. |
+
+---
+
+### 2.6 Phụ thuộc Nguyễn Tiến Vũ (TV6 — Data / AI Lead)
+
+| Hạng mục | Trạng thái hiện tại | Cần bổ sung |
+|---|---|---|
+| **AI/BI Dashboard Sprint 4 (S4-03)** | Đã có mã nguồn/đối soát SQL; thiếu Browser E2E được QA xác nhận | Vũ phối hợp Thái chụp Dashboard có dữ liệu thật, đối soát số liệu PostgreSQL 16 và ghi rõ mức mô phỏng LLM. |
+| **Provider LLM thực** | Adapter hiện dùng mô phỏng theo hồ sơ DS4 | Vũ báo cáo benchmark theo đúng chế độ mock; nếu phạm vi yêu cầu LLM thật, An/Huy phê duyệt provider và Vũ thực hiện đo thử an toàn. |
 
 ---
 
@@ -73,4 +82,4 @@
    - Đề nghị PM Trịnh Quốc An ký phê duyệt dự thảo D100 Hypercare SLA.
 2. **Ưu tiên 2 (Giai đoạn thương mại hóa tiếp theo):**
    - Thống nhất mô hình định danh khách hàng (Customer IdP) cùng Kiến trúc sư An và BA Huy để gỡ cờ tính năng cho Online Order và Logistics.
-   - Ký kết hợp đồng SMS Gateway cùng DevOps Vũ.
+   - An/Huy xác nhận phạm vi và provider SMS; Kiên phụ trách adapter SMS (S3-08), Thái hỗ trợ kiểm thử/tích hợp. Không gán nhiệm vụ Infra cho Vũ AI.
