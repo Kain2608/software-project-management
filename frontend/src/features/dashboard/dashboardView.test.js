@@ -1,6 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { REFRESH_INTERVAL_MS, aiEffectivenessView, dataAgeSeconds } from './dashboardView.js'
+import {
+  REFRESH_INTERVAL_MS,
+  aiEffectivenessView,
+  dashboardUtcRange,
+  dataAgeSeconds,
+  todayInVietnam,
+} from './dashboardView.js'
 
 test('refresh interval satisfies the one-minute criterion', () => {
   assert.ok(REFRESH_INTERVAL_MS <= 60_000)
@@ -39,4 +45,35 @@ test('data age handles bad timestamps', () => {
   assert.equal(dataAgeSeconds('2026-11-20T10:00:00Z', Date.parse('2026-11-20T10:00:42Z')), 42)
   assert.equal(dataAgeSeconds('garbage'), null)
   assert.equal(dataAgeSeconds('2026-11-20T10:00:10Z', Date.parse('2026-11-20T10:00:00Z')), 0)
+})
+
+test('default business date uses Vietnam timezone, not UTC', () => {
+  assert.equal(todayInVietnam(new Date('2026-11-21T18:30:00Z')), '2026-11-22')
+  assert.equal(todayInVietnam(new Date('2026-11-22T16:59:59Z')), '2026-11-22')
+  assert.equal(todayInVietnam(new Date('2026-11-22T17:00:00Z')), '2026-11-23')
+})
+
+test('inclusive Vietnam days become exact half-open UTC instants', () => {
+  assert.deepEqual(dashboardUtcRange('2026-11-01', '2026-11-22'), {
+    from: '2026-10-31T17:00:00.000Z',
+    to: '2026-11-22T17:00:00.000Z',
+  })
+  assert.deepEqual(dashboardUtcRange('2026-11-22', '2026-11-22'), {
+    from: '2026-11-21T17:00:00.000Z',
+    to: '2026-11-22T17:00:00.000Z',
+  })
+})
+
+test('invalid, impossible, and reversed calendar dates fail closed', () => {
+  const invalid = [
+    ['', '2026-11-22'],
+    ['2026-11-23', '2026-11-22'],
+    ['2026-02-30', '2026-03-01'],
+    ['2026-13-01', '2026-13-01'],
+    ['2026-1-01', '2026-11-22'],
+    [null, '2026-11-22'],
+  ]
+  for (const [from, to] of invalid) {
+    assert.equal(dashboardUtcRange(from, to), null, `${from} ... ${to}`)
+  }
 })
