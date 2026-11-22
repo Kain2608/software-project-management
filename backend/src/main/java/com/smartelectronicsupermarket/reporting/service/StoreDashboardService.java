@@ -16,6 +16,7 @@ public class StoreDashboardService {
         if(storeId==null||from==null||to==null||actorId==null) throw new IllegalArgumentException("store, range and actor are required");
         if(!to.isAfter(from)) throw new IllegalArgumentException("to must be after from");
         if(!permissions.hasPermission(actorId,"reports.read",storeId)) throw new AccessDeniedException("Access denied");
-        return StoreDashboardResponse.from(storeId,from,to,data.summary(storeId,from,to),data.topProducts(storeId,from,to,5));
+        return StoreDashboardResponse.from(storeId,from,to,data.summary(storeId,from,to),data.topProducts(storeId,from,to,5),
+                data.aiEffectiveness(storeId,from,to));
     }
 }

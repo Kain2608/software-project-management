@@ -1,0 +1,282 @@
+{
+  "task": "S3-03 TSK-03-01 Prompt AI tom tat thong so san pham (RAG chong bia)",
+  "deliverable": "DS3 Phan mem tang truong Sprint 3 (AI)",
+  "generated_at": "2026-11-21T12:32:38.387645+00:00",
+  "full_backend_suite": {
+    "PASS": 333,
+    "FAIL": 0,
+    "SKIPPED": 16
+  },
+  "s3_suites": {
+    "ai.AiSpecSummaryControllerTest": {
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "unknownProductIs422",
+          "time_s": 0.038,
+          "status": "PASS"
+        },
+        {
+          "name": "missingAiUseIsForbiddenScope",
+          "time_s": 0.007,
+          "status": "PASS"
+        },
+        {
+          "name": "returnsSummaryTableAndAdvisoryDisclaimer",
+          "time_s": 0.03,
+          "status": "PASS"
+        },
+        {
+          "name": "invalidBodyIs400",
+          "time_s": 0.008,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.AiSprint3EvidenceTest": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "generateSprint3Evidence",
+          "time_s": 16.345,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.summary.AiSpecSummaryServiceTest": {
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "validatedAiSummaryIsReturnedWithDisclaimerAndSourceTable",
+          "time_s": 0.008,
+          "status": "PASS"
+        },
+        {
+          "name": "secondCallIsServedFromCacheWithoutCallingTheModel",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "promptCarriesOnlyCatalogSpecsAndGuardrails",
+          "time_s": 0.002,
+          "status": "PASS"
+        },
+        {
+          "name": "malformedModelOutputFallsBack",
+          "time_s": 0.005,
+          "status": "PASS"
+        },
+        {
+          "name": "fullyFabricatedOutputFallsBackToVerbatimSpecPairs",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "malformedIdsAreInvalidArguments",
+          "time_s": 0.003,
+          "status": "PASS"
+        },
+        {
+          "name": "unknownOrInactiveProductIsRejected",
+          "time_s": 0.007,
+          "status": "PASS"
+        },
+        {
+          "name": "fabricatedHighlightIsDroppedAndGroundedOnesAreKept",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "changingSpecificationsInvalidatesCacheThroughFingerprint",
+          "time_s": 0.005,
+          "status": "PASS"
+        },
+        {
+          "name": "modelTimeoutFallsBackWithinTheHardLimit",
+          "time_s": 2.511,
+          "status": "PASS"
+        },
+        {
+          "name": "emptySpecificationsReturnInsufficientDataWithoutCallingTheModel",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "cacheExpiresAfter24Hours",
+          "time_s": 0.005,
+          "status": "PASS"
+        },
+        {
+          "name": "modelErrorFallsBackAndTableIsStillReturned",
+          "time_s": 0.005,
+          "status": "PASS"
+        },
+        {
+          "name": "storeWithoutAiUseIsForbiddenBeforeAnyCatalogRead",
+          "time_s": 0.003,
+          "status": "PASS"
+        },
+        {
+          "name": "openBreakerSkipsTheModel",
+          "time_s": 0.048,
+          "status": "PASS"
+        },
+        {
+          "name": "injectionTextInSpecsStaysInsideTheJsonDataBlock",
+          "time_s": 0.005,
+          "status": "PASS"
+        },
+        {
+          "name": "concurrentColdMissesShareOneModelCall",
+          "time_s": 0.421,
+          "status": "PASS"
+        }
+      ]
+    },
+    "ai.summary.SpecSummaryValidatorTest": {
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "ungroundedAudienceIsDroppedButHighlightsSurvive",
+          "time_s": 0.003,
+          "status": "PASS"
+        },
+        {
+          "name": "highlightQuotingNothingFromSpecsIsRejected",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "acronymNotInSpecsIsRejectedEvenWithoutDigits",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "atMostFiveHighlightsAreKept",
+          "time_s": 0.002,
+          "status": "PASS"
+        },
+        {
+          "name": "tooLongHighlightIsRejected",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "unusableModelOutputReturnsNull",
+          "time_s": 0.002,
+          "status": "PASS"
+        },
+        {
+          "name": "groundedHighlightsAreAccepted",
+          "time_s": 0.002,
+          "status": "PASS"
+        },
+        {
+          "name": "diacriticsAreFoldedWhenAnchoring",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "numberNotInSpecsIsRejected",
+          "time_s": 0.001,
+          "status": "PASS"
+        },
+        {
+          "name": "numberFormattingDifferencesStillMatch",
+          "time_s": 0.001,
+          "status": "PASS"
+        }
+      ]
+    },
+    "security.config.SecurityFailClosedIntegrationTest": {
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "protectedRouteWithoutTokenIsUnauthorized",
+          "time_s": 0.01,
+          "status": "PASS"
+        },
+        {
+          "name": "xActorIdHeaderCannotBypassAuthentication",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "aiEndpointsRequireJwtExceptStatus",
+          "time_s": 0.009,
+          "status": "PASS"
+        },
+        {
+          "name": "missingJwtConfigurationDoesNotAcceptArbitraryBearerToken",
+          "time_s": 0.003,
+          "status": "PASS"
+        },
+        {
+          "name": "publicPathWithWrongHttpMethodIsNotPublic",
+          "time_s": 0.004,
+          "status": "PASS"
+        },
+        {
+          "name": "exactPublicStatusGetsRemainAvailableWithoutJwtConfiguration",
+          "time_s": 0.011,
+          "status": "PASS"
+        },
+        {
+          "name": "businessEndpointsAreNeverPublicWithoutJwt",
+          "time_s": 0.006,
+          "status": "PASS"
+        }
+      ]
+    }
+  },
+  "scenarios": {
+    "passed": 11,
+    "total": 11
+  },
+  "category_samples": {
+    "grounded_ai_samples": 6,
+    "total": 6
+  },
+  "benchmark": {
+    "requests": 100,
+    "concurrency": 50,
+    "latency_ms": {
+      "min": 0,
+      "avg": 700.0,
+      "p50": 754,
+      "p90": 1086,
+      "p95": 2514,
+      "p99": 2516,
+      "max": 2521
+    },
+    "p95_under_3000_ms": true,
+    "source_breakdown": {
+      "AI": 69,
+      "CACHE": 21,
+      "RULE_FALLBACK": 10
+    },
+    "llm_calls_executed": 16,
+    "distinct_cache_keys": 16
+  },
+  "not_verified": [
+    "Real OpenAI/Gemini provider (the model is a deterministic stand-in behind SpecSummaryLlm)",
+    "Hallucination rate of a real model (validator is exercised with scripted fabrications only)",
+    "Redis L2 cache (in-memory cache only)",
+    "Frontend POS spec-summary panel (no UI in this task)"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "task": "S3-03 TSK-03-01",
+  "passed": 11,
+  "total": 11,
+  "scenarios": [
+    {"id": "SUM-01", "name": "Tóm tắt mới qua LLM, đã kiểm định (cache miss)", "expected": "AI", "actual": "AI", "result": "PASS"},
+    {"id": "SUM-02", "name": "Lần 2 cùng sản phẩm, thông số không đổi -> cache hit", "expected": "CACHE", "actual": "CACHE", "result": "PASS"},
+    {"id": "SUM-03", "name": "LLM bịa thông số (pin 5000 mAh, IP68, 5G) -> bị loại, dùng luật dự phòng", "expected": "RULE_FALLBACK", "actual": "RULE_FALLBACK", "result": "PASS"},
+    {"id": "SUM-04", "name": "LLM bịa một phần: giữ ý đúng (chip A18), loại ý bịa", "expected": "AI:1", "actual": "AI:1", "result": "PASS"},
+    {"id": "SUM-05", "name": "LLM trả văn bản không phải JSON -> luật dự phòng", "expected": "RULE_FALLBACK", "actual": "RULE_FALLBACK", "result": "PASS"},
+    {"id": "SUM-06", "name": "LLM treo > 2,5 s -> luật dự phòng, dưới 3 s", "expected": "RULE_FALLBACK:true", "actual": "RULE_FALLBACK:true", "result": "PASS"},
+    {"id": "SUM-07", "name": "LLM lỗi 503 -> luật dự phòng, vẫn có bảng thông số gốc", "expected": "RULE_FALLBACK:2", "actual": "RULE_FALLBACK:2", "result": "PASS"},
+    {"id": "SUM-08", "name": "Thiếu thông số -> INSUFFICIENT_DATA, không gọi LLM (AC-09-2)", "expected": "INSUFFICIENT_DATA", "actual": "INSUFFICIENT_DATA", "result": "PASS"},
+    {"id": "SUM-09", "name": "Thu ngân không có ai.use tại store -> 403", "expected": "FORBIDDEN_SCOPE", "actual": "FORBIDDEN_SCOPE", "result": "PASS"},
+    {"id": "SUM-10", "name": "Sản phẩm ngừng bán -> 422 PRODUCT_NOT_FOUND", "expected": "PRODUCT_NOT_FOUND", "actual": "PRODUCT_NOT_FOUND", "result": "PASS"},
+    {"id": "SUM-11", "name": "Mọi phản hồi có cảnh báo 'chỉ mang tính tham khảo'", "expected": "true", "actual": "true", "result": "PASS"}
+  ]
+}

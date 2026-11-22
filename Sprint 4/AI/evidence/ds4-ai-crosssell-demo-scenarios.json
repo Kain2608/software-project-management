@@ -1,0 +1,17 @@
+{
+  "task": "S2-08 TSK-02-07",
+  "passed": 10,
+  "total": 10,
+  "scenarios": [
+    {"id": "DEMO-01", "name": "Goi y moi qua LLM (cache miss)", "expected": "AI", "actual": "AI", "latency_ms": 1064.43, "result": "PASS"},
+    {"id": "DEMO-02", "name": "Lan 2 cung gio hang -> cache hit", "expected": "CACHE", "actual": "CACHE", "latency_ms": 1.64, "result": "PASS"},
+    {"id": "DEMO-03", "name": "LLM treo > 2.5s -> luat du phong", "expected": "RULE_FALLBACK", "actual": "RULE_FALLBACK", "latency_ms": 2502.66, "result": "PASS"},
+    {"id": "DEMO-04", "name": "LLM loi 503 -> luat du phong", "expected": "RULE_FALLBACK", "actual": "RULE_FALLBACK", "latency_ms": 728.92, "result": "PASS"},
+    {"id": "DEMO-05", "name": "Goi y LLM het hang -> luat du phong lay tu DB", "expected": "RULE_FALLBACK", "actual": "RULE_FALLBACK", "latency_ms": 1109.31, "result": "PASS"},
+    {"id": "DEMO-05B", "name": "Het hang va khong co luat phu hop -> 200 danh sach rong", "expected": "AI:0", "actual": "AI:0", "latency_ms": 770.24, "result": "PASS"},
+    {"id": "DEMO-06", "name": "Circuit breaker OPEN -> luat du phong ngay", "expected": "RULE_FALLBACK", "actual": "RULE_FALLBACK", "latency_ms": 1.42, "result": "PASS"},
+    {"id": "DEMO-07", "name": "Thu ngan khong co ai.use tai store -> 403", "expected": "FORBIDDEN_SCOPE", "actual": "FORBIDDEN_SCOPE", "latency_ms": 1.33, "result": "PASS"},
+    {"id": "DEMO-08", "name": "Kho khong thuoc store -> 403", "expected": "FORBIDDEN_SCOPE", "actual": "FORBIDDEN_SCOPE", "latency_ms": 0.16, "result": "PASS"},
+    {"id": "DEMO-09", "name": "SKU khong ton tai trong CSDL -> 422", "expected": "SKU_NOT_FOUND", "actual": "SKU_NOT_FOUND", "latency_ms": 0.24, "result": "PASS"}
+  ]
+}

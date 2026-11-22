@@ -1,0 +1,93 @@
+{
+  "task": "S4-03 TSK-04-02 BI Analytics Dashboard (revenue, stock, AI effectiveness)",
+  "deliverable": "DS4 Phan mem tang truong Sprint 4 (AI / BI)",
+  "generated_at": "2026-11-21T12:35:58.517652+00:00",
+  "full_backend_suite": {
+    "PASS": 333,
+    "FAIL": 0,
+    "SKIPPED": 16
+  },
+  "s4_suites": {
+    "ai.AiCrossSellControllerTest": {
+      "PASS": 13,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "ai.AiSprint2EvidenceTest": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "ai.data.JdbcAiRecommendationRecorderTest": {
+      "PASS": 1,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "ai.service.AiCrossSellServiceResilienceTest": {
+      "PASS": 5,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "ai.service.AiRecommendationRecordingTest": {
+      "PASS": 5,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "ai.service.AiSingleFlightTest": {
+      "PASS": 4,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "reporting.controller.StoreDashboardControllerTest": {
+      "PASS": 2,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "reporting.data.JdbcStoreDashboardDataAccessTest": {
+      "PASS": 3,
+      "FAIL": 0,
+      "SKIPPED": 0
+    },
+    "reporting.service.StoreDashboardServiceTest": {
+      "PASS": 6,
+      "FAIL": 0,
+      "SKIPPED": 0
+    }
+  },
+  "postgresql_reconciliation": {
+    "database": {
+      "name": "sasms_s4_ai_tmp",
+      "server_version": "18.7",
+      "sasms_tables": 41
+    },
+    "passed": 35,
+    "total": 35,
+    "failed_checks": []
+  },
+  "ai_crosssell_regression_benchmark": {
+    "requests": 100,
+    "concurrency": 50,
+    "latency_ms": {
+      "min": 1,
+      "avg": 736.1,
+      "p50": 1003,
+      "p90": 1074,
+      "p95": 2510,
+      "p99": 2513,
+      "max": 2513
+    },
+    "source_breakdown": {
+      "AI": 57,
+      "CACHE": 33,
+      "RULE_FALLBACK": 10
+    },
+    "llm_calls_executed": 15,
+    "distinct_cache_keys": 15
+  },
+  "not_verified": [
+    "PostgreSQL 16 (reconciliation ran on PostgreSQL 18.7; the project CI uses 16)",
+    "Dashboard screenshot / browser rendering against a live backend",
+    "Real OpenAI/Gemini provider calls",
+    "Production deployment and PO sign-off"
+  ]
+}

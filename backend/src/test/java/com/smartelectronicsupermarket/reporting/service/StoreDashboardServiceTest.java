@@ -31,4 +31,29 @@ class StoreDashboardServiceTest {
         assertThrows(IllegalArgumentException.class,()->service.load(store,to,from,actor));
         verifyNoInteractions(permissions,data);
     }
+    @Test void aiEffectivenessIsStoreScopedAndShareIsComputedOnGrossRevenue(){
+        when(permissions.hasPermission(actor,"reports.read",store)).thenReturn(true);
+        when(data.summary(store,from,to)).thenReturn(new StoreSummaryRecord(new BigDecimal("2000.00"),4,5,3,2,1));
+        when(data.topProducts(store,from,to,5)).thenReturn(List.of());
+        when(data.aiEffectiveness(store,from,to)).thenReturn(new AiEffectivenessRecord(2,3,new BigDecimal("250.00"),1,1,1));
+        var ai=service.load(store,from,to,actor).aiEffectiveness();
+        assertEquals("ATTRIBUTION_ESTIMATE",ai.state()); assertEquals(2,ai.attributedOrderCount());
+        assertEquals(new BigDecimal("12.50"),ai.revenueSharePercent());
+        assertEquals(Map.of("LLM",1L,"CACHE",1L,"RULE",1L),ai.sourceBreakdown());
+        verify(data).aiEffectiveness(store,from,to);
+    }
+    @Test void zeroGrossRevenueShowsNotAvailableInsteadOfDividingByZero(){
+        when(permissions.hasPermission(actor,"reports.read",store)).thenReturn(true);
+        when(data.summary(store,from,to)).thenReturn(new StoreSummaryRecord(BigDecimal.ZERO,0,0,0,0,0));
+        when(data.topProducts(store,from,to,5)).thenReturn(List.of());
+        when(data.aiEffectiveness(store,from,to)).thenReturn(AiEffectivenessRecord.EMPTY);
+        var ai=service.load(store,from,to,actor).aiEffectiveness();
+        assertEquals("NO_ATTRIBUTED_SALES",ai.state()); assertNull(ai.revenueSharePercent());
+        assertEquals(BigDecimal.ZERO,ai.attributedRevenue());
+    }
+    @Test void deniedStoreNeverReachesAiQuery(){
+        when(permissions.hasPermission(actor,"reports.read",store)).thenReturn(false);
+        assertThrows(AccessDeniedException.class,()->service.load(store,from,to,actor));
+        verify(data,never()).aiEffectiveness(any(),any(),any());
+    }
 }

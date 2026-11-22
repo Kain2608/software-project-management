@@ -8,12 +8,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.smartelectronicsupermarket.ai.service.AiProductNotFoundException;
 import com.smartelectronicsupermarket.ai.service.AiScopeDeniedException;
 import com.smartelectronicsupermarket.ai.service.AiSkuNotFoundException;
 import com.smartelectronicsupermarket.common.web.ApiErrorResponse;
 
 /** D52 v2 error codes for the AI endpoints; messages are generic to avoid leaking scope details. */
-@RestControllerAdvice(assignableTypes = AiCrossSellController.class)
+@RestControllerAdvice(assignableTypes = {AiCrossSellController.class, AiSpecSummaryController.class})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class AiExceptionHandler {
 
@@ -31,6 +32,12 @@ public class AiExceptionHandler {
     ResponseEntity<ApiErrorResponse> skuNotFound(AiSkuNotFoundException exception) {
         return response(HttpStatus.UNPROCESSABLE_CONTENT, "SKU_NOT_FOUND",
                 "A cart SKU does not exist in the catalog", false);
+    }
+
+    @ExceptionHandler(AiProductNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> productNotFound(AiProductNotFoundException exception) {
+        return response(HttpStatus.UNPROCESSABLE_CONTENT, "PRODUCT_NOT_FOUND",
+                "The product does not exist or is not active", false);
     }
 
     private static ResponseEntity<ApiErrorResponse> response(

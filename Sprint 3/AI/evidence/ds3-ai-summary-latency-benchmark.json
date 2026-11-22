@@ -1,0 +1,16 @@
+{
+  "task": "S3-03 TSK-03-01",
+  "generated_at": "2026-11-21T12:32:14.011196200Z",
+  "method": "JUnit AiSprint3EvidenceTest: real AiSpecSummaryService, scripted LLM stand-in, in-memory catalog (no remote LLM, no PostgreSQL)",
+  "requests": 100,
+  "concurrency": 50,
+  "workload": "90 requests on 6 products (LLM 700-1400 ms on a miss, no request coalescing), 10 requests on 10 distinct products whose LLM hangs 5 s",
+  "llm_calls_executed": 16,
+  "distinct_cache_keys": 16,
+  "wall_clock_seconds": 3.46,
+  "latency_ms": {"min": 0, "avg": 700.0, "p50": 754, "p90": 1086, "p95": 2514, "p99": 2516, "max": 2521},
+  "sla_p95_under_3000_ms": true,
+  "source_breakdown": {"AI": 69, "CACHE": 21, "RULE_FALLBACK": 10},
+  "fallback_reason_breakdown": {"LLM_TIMEOUT_EXCEEDED_2500MS": 10, "NONE": 90},
+  "responses_without_spec_table": 0
+}

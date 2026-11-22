@@ -21,6 +21,9 @@ GRANT SELECT ON ALL TABLES IN SCHEMA sasms TO sasms_app;
 GRANT INSERT (id, code, idempotency_key, store_id, warehouse_id, customer_id, channel, created_by)
     ON sasms.sales_orders TO sasms_app;
 GRANT INSERT, UPDATE, DELETE ON sasms.sales_order_items, sasms.order_devices, sasms.payments TO sasms_app;
+-- S4-03: the AI engine audits what it recommended (D55 section 8.1). Insert only; rows are never edited by the app.
+GRANT INSERT (source_product_id, recommended_product_id, source, score, model_version, expires_at)
+    ON sasms.ai_recommendations TO sasms_app;
 GRANT EXECUTE ON FUNCTION sasms.receive_device(uuid,text,text,uuid),
     sasms.reserve_order(uuid,uuid), sasms.complete_sale(uuid,uuid), sasms.cancel_order(uuid,uuid) TO sasms_app;
 GRANT SELECT ON sasms.brands, sasms.categories, sasms.products, sasms.product_images,
