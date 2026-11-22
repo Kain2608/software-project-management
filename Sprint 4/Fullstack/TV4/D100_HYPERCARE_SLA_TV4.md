@@ -5,6 +5,7 @@
 **Phân hệ phụ trách:** Vũ Duy Thái (TV4 — Fullstack Lead) phối hợp cùng TV1 (An), TV2 (Kiên), TV3 (Phát), TV5 (Huy), TV6 (Vũ)  
 **Ngày ban hành dự thảo:** 21/11/2026 (Asia/Ho_Chi_Minh)  
 **Trạng thái phê duyệt:** **DỰ THẢO / CHỜ DUYỆT (PROPOSED — Chờ PM Trịnh Quốc An ký duyệt)**  
+**Đính chính nhân sự (22/11/2026):** Nhóm có 6 người: TV1 An (PM), TV2 Trần Trung Kiên (Architect/DBA, Staging/CI theo S2-12), TV3 Phạm Đại Phát (QA), TV4 Vũ Duy Thái (Fullstack), TV5 Nguyễn Quang Huy (BA/PO), TV6 Nguyễn Tiến Vũ (Data/AI). Lịch trực bên dưới là **đề xuất chờ PM xác nhận**, không phải cam kết đã phê duyệt.
 **Tài liệu tham chiếu:**  
 - `Sprint 4/DB/D90_Ke_hoach_phat_hanh_Release_Plan_SASMS.docx` (Release Plan v1.0.0, mốc M6)  
 - `Sprint 4/DB/D91_Ke_hoach_chuyen_doi_Cutover_va_quay_lui_Rollback_SASMS.docx` (Kế hoạch Cutover & Rollback)  
@@ -30,7 +31,7 @@
 > [!IMPORTANT]
 > **Tuyên bố trung thực về hiện trạng triển khai (Engineering Transparency):**
 > 
-> - **Kế hoạch lý thuyết:** Theo Release Plan D90 và Cutover Plan D91 do DBA Nguyễn Trung Kiên biên soạn, mốc phát hành mục tiêu được định vị là **20/11/2026** (Milestone M6).
+> - **Kế hoạch lý thuyết:** Theo Release Plan D90 và Cutover Plan D91 do DBA Trần Trung Kiên biên soạn, mốc phát hành mục tiêu được định vị là **20/11/2026** (Milestone M6).
 > - **Hiện trạng thực tế:** Tính đến ngày 21/11/2026, **sự kiện Go-Live Production thực tế CHƯA DIỄN RA**.
 > - **Bằng chứng kỹ thuật:**
 >   1. Tài liệu kiểm thử hệ thống E2E mới nhất của QA Lead Phạm Đại Phát (`Sprint 4/Test/D78`) xác định trạng thái tổng kết là **`CHƯA ĐẠT E2E ACCEPTANCE / NO-GO`**, bảng chữ ký đại diện các bên đang để trống.
@@ -55,13 +56,13 @@ Khung giờ vận hành siêu thị SASMS áp dụng từ 07:30 đến 22:30 hà
 
 | Ngày | Ca làm việc | Khung giờ | Nhân sự phụ trách trực | Nhiệm vụ chính |
 |---|---|---|---|---|
-| **Day 1** (T+0 -> T+24h) | Ca Sáng | 07:00 – 15:30 | **Vũ Duy Thái (TV4 - Lead)**, Ngô Đình Vũ (TV6) | Trực tại quầy POS pilot; xác nhận mở ca bán hàng; theo dõi kết nối API và máy in 80mm. |
-| | Ca Chiều | 15:00 – 23:00 | **Vũ Duy Thái (TV4)**, Nguyễn Trung Kiên (TV2) | Giám sát cao điểm chiều tối; đối soát lượng đơn DRAFT/PAID; kiểm tra kết nối DB pool. |
-| | Ca Đêm | 23:00 – 07:00 | Nguyễn Tiến Vũ (TV6) - On-call; TV4 dự phòng P1 | Kiểm tra sao lưu tự động đêm; quét kiểm tra outbox table và audit log. |
+| **Day 1** (T+0 -> T+24h) | Ca Sáng | 07:00 – 15:30 | **Vũ Duy Thái (TV4 - Lead)**; Trần Trung Kiên (TV2 — hỗ trợ Staging/CI, chờ PM xác nhận lịch) | Trực tại quầy POS pilot; xác nhận mở ca bán hàng; theo dõi kết nối API, DB và máy in 80mm. |
+| | Ca Chiều | 15:00 – 23:00 | **Vũ Duy Thái (TV4)**, Trần Trung Kiên (TV2) | Giám sát cao điểm chiều tối; đối soát lượng đơn DRAFT/PAID; kiểm tra kết nối DB pool. |
+| | Ca Đêm | 23:00 – 07:00 | Nguyễn Tiến Vũ (TV6 — hỗ trợ AI); Trần Trung Kiên (TV2 — phụ trách DB); TV4 dự phòng ứng dụng (lịch chờ PM xác nhận) | Vũ giám sát AI/cache; Kiên kiểm tra sao lưu DB và outbox; Thái tiếp nhận sự cố ứng dụng. |
 | **Day 2** (T+24h -> T+48h) | Ca Sáng | 07:30 – 15:30 | **Vũ Duy Thái (TV4)**, Phạm Đại Phát (TV3) | Giám sát tỷ lệ quét QR thành công; hỗ trợ nhân viên thu ngân thao tác đổi/trả. |
 | | Ca Chiều | 15:00 – 22:30 | **Vũ Duy Thái (TV4)**, Nguyễn Quang Huy (TV5) | Theo dõi hành vi khách hàng tra cứu QR bảo hành; kiểm tra số đo hiệu năng latency. |
-| | Ca Đêm | 22:30 – 07:30 | Nguyễn Trung Kiên (TV2) - On-call; TV4 dự phòng P1 | Rà soát chỉ mục database; kiểm tra log ngoại lệ chưa bắt được (unhandled exceptions). |
-| **Day 3** (T+48h -> T+72h) | Ca Sáng | 07:30 – 15:30 | **Vũ Duy Thái (TV4)**, Trịnh Quốc An (TV1) | Giám sát vận hành ổn định; rà soát số liệu Dashboard BI so với thực tế bán hàng lẻ. |
+| | Ca Đêm | 22:30 – 07:30 | Trần Trung Kiên (TV2) - On-call; TV4 dự phòng P1 | Rà soát chỉ mục database; kiểm tra log ngoại lệ chưa bắt được (unhandled exceptions). |
+| **Day 3** (T+48h -> T+72h) | Ca Sáng | 07:30 – 15:30 | **Vũ Duy Thái (TV4)**, Trịnh Quốc An (TV1); Nguyễn Tiến Vũ (TV6 — đối soát AI, theo phân công khi được duyệt) | Giám sát vận hành ổn định; rà soát số liệu Dashboard BI và AI với dữ liệu bán hàng. |
 | | Ca Chiều | 15:00 – 22:30 | Toàn bộ Core Team (TV1, TV2, TV3, TV4, TV5, TV6) | Họp đánh giá tiêu chí thoát Hypercare; ký biên bản chuyển sang vận hành thông thường. |
 
 ---
@@ -130,7 +131,7 @@ flowchart LR
 
 ## 8. Quy trình Rollback và Khôi phục (Rollback & Recovery Procedures)
 
-Quy trình Rollback trong Hypercare tuân thủ tuyệt đối **Kế hoạch Cutover & Rollback D91** và **Runbook D101** do DBA Nguyễn Trung Kiên ban hành:
+Quy trình Rollback trong Hypercare tuân thủ tuyệt đối **Kế hoạch Cutover & Rollback D91** và **Runbook D101** do DBA Trần Trung Kiên ban hành:
 
 1. **Điều kiện kích hoạt Rollback (Trigger Conditions):**
    - Sự cố P1 kéo dài quá **02 giờ liên tục** mà Tier 2 và Tier 3 không thể cô lập hoặc khắc phục.
@@ -179,15 +180,16 @@ Trong 3 ngày Hypercare, mọi thay đổi mã nguồn phải tuân thủ kỷ l
 - **C (Consulted):** Người được tham vấn chuyên môn hai chiều.
 - **I (Informed):** Người được thông báo kết quả một chiều.
 
-| Hoạt động vận hành trong Hypercare | TV4 (Thái)<br>Fullstack | TV2 (Kiên)<br>DBA | TV3 (Phát)<br>QA | TV1 (An)<br>PM / Arch | TV5 (Huy)<br>BA / Product | TV6 (Vũ)<br>Infra / DevOps |
+| Hoạt động vận hành trong Hypercare | TV4 (Thái)<br>Fullstack | TV2 (Kiên)<br>DBA / Staging | TV3 (Phát)<br>QA | TV1 (An)<br>PM / Arch | TV5 (Huy)<br>BA / Product | TV6 (Vũ)<br>Data / AI |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Trực giám sát hệ thống tầng ứng dụng | **R** | C | I | A | I | R |
+| Trực giám sát hệ thống tầng ứng dụng | **R** | C | I | A | I | C |
 | Tiếp nhận và sơ tuyển sự cố (L1) | C | I | **R** | I | **R** | I |
 | Xử lý sự cố phần mềm POS / In hóa đơn / QR (L2) | **R** | C | C | A | I | I |
 | Xử lý sự cố nghẽn khóa DB / Deadlock / Chậm truy vấn | C | **R** | I | A | I | C |
 | Đưa ra quyết định Rollback hệ thống | C | C | I | **A** | C | I |
-| Thực thi kịch bản Rollback Database / Hạ tầng | I | **R** | I | A | I | **R** |
+| Thực thi kịch bản Rollback Database / Hạ tầng | C | **R** | I | A | I | I |
 | Phê duyệt bản vá khẩn cấp (Hotfix PR) | **R** | C | C | **A** | I | I |
+| Giám sát AI gợi ý và đối soát Dashboard BI | C | C | C | **A** | I | **R** |
 | Đo lường số liệu SLA và báo cáo ban điều hành | C | C | **R** | **A** | I | I |
 
 ---
@@ -288,7 +290,7 @@ Sau khi đạt các tiêu chí kết thúc Hypercare tại Mục 14:
 | **QA / Documentation Lead** | Phạm Đại Phát | TV3 | `(+84) 912-xxx-003` | `daiphat235@gmail.com` | `@phat_qa` |
 | **Fullstack Lead (On-site Lead)** | **Vũ Duy Thái** | **TV4** | **`(+84) 912-xxx-004`** | **`duythai123nd@gmail.com`** | **`@thai_fullstack`** |
 | **Product Owner / BA Lead** | Nguyễn Quang Huy | TV5 | `(+84) 912-xxx-005` | `ngqhuy1003@gmail.com` | `@huy_po` |
-| **Infra / DevOps Engineer** | Nguyễn Tiến Vũ / Ngô Đình Vũ | TV6 | `(+84) 912-xxx-006` | `tienvutb21@gmail.com` | `@vu_devops` |
+| **Data / AI Lead** | Nguyễn Tiến Vũ | TV6 | `(+84) 912-xxx-006` | `tienvutb21@gmail.com` | `[Chưa xác minh]` |
 
 ---
 
