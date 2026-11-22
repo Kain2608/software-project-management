@@ -99,6 +99,10 @@ class SecurityFailClosedIntegrationTest {
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/ai/summaries/specifications")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/ai/status")).andExpect(status().isOk());
     }
 }

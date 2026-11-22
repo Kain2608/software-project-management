@@ -1,0 +1,16 @@
+{
+  "task": "S2-08 TSK-02-07",
+  "generated_at": "2026-11-21T12:31:57.665526100Z",
+  "method": "JUnit AiSprint2EvidenceTest: real AiCrossSellService, fault-injecting LLM adapter, in-memory DB stub (no remote LLM, no PostgreSQL)",
+  "requests": 100,
+  "concurrency": 50,
+  "workload": "90 requests on 5 cart SKUs (LLM 700-1400 ms), 10 requests on 10 distinct SKUs whose LLM hangs 5 s",
+  "llm_calls_executed": 15,
+  "distinct_cache_keys": 15,
+  "wall_clock_seconds": 3.58,
+  "latency_ms": {"min": 1, "avg": 736.1, "p50": 1003, "p90": 1074, "p95": 2510, "p99": 2513, "max": 2513},
+  "sla_p95_under_3000_ms": true,
+  "source_breakdown": {"AI": 57, "CACHE": 33, "RULE_FALLBACK": 10},
+  "fallback_reason_breakdown": {"LLM_TIMEOUT_EXCEEDED_2500MS": 10, "NONE": 90},
+  "empty_suggestion_responses": 0
+}

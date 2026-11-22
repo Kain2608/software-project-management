@@ -66,9 +66,12 @@ class AiSprint2EvidenceTest {
             "PHONE-HANG-05", "PHONE-HANG-06", "PHONE-HANG-07", "PHONE-HANG-08", "PHONE-HANG-09", "PHONE-HANG-10", "PHONE-ERR-1", "OOS-1", "PHONE-OOS");
 
     /** LLM stand-in: 700-1400 ms normally, hangs 5 s for *HANG-*, throws for *ERR-*. */
+    private static final java.util.concurrent.atomic.AtomicInteger LLM_CALLS = new java.util.concurrent.atomic.AtomicInteger();
+
     private static class FaultInjectingLlm extends OpenAiAdapter {
         @Override
         public List<CrossSellCandidate> generateCrossSell(List<String> skuIds, String storeId) {
+            LLM_CALLS.incrementAndGet();
             String sku = skuIds.get(0);
             try {
                 if (sku.startsWith("PHONE-HANG-")) {
@@ -262,6 +265,7 @@ class AiSprint2EvidenceTest {
         }
         Collections.shuffle(workload, new Random(20261024L));
 
+        LLM_CALLS.set(0);
         ExecutorService pool = Executors.newFixedThreadPool(50);
         List<Future<Object[]>> futures = new ArrayList<>();
         long wallStart = System.nanoTime();
@@ -285,6 +289,7 @@ class AiSprint2EvidenceTest {
             }
         }
         double wallSeconds = (System.nanoTime() - wallStart) / 1_000_000_000.0;
+        int llmCalls = LLM_CALLS.get();
         pool.shutdown();
         Collections.sort(latencies);
         double avg = latencies.stream().mapToLong(Long::longValue).average().orElse(0);
@@ -312,6 +317,8 @@ class AiSprint2EvidenceTest {
         bench.append("  \"requests\": ").append(latencies.size()).append(",\n");
         bench.append("  \"concurrency\": 50,\n");
         bench.append("  \"workload\": \"90 requests on 5 cart SKUs (LLM 700-1400 ms), 10 requests on 10 distinct SKUs whose LLM hangs 5 s\",\n");
+        bench.append("  \"llm_calls_executed\": ").append(llmCalls).append(",\n");
+        bench.append("  \"distinct_cache_keys\": 15,\n");
         bench.append("  \"wall_clock_seconds\": ").append(String.format(java.util.Locale.ROOT, "%.2f", wallSeconds)).append(",\n");
         bench.append("  \"latency_ms\": {\"min\": ").append(latencies.get(0))
                 .append(", \"avg\": ").append(String.format(java.util.Locale.ROOT, "%.1f", avg))

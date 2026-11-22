@@ -1,5 +1,7 @@
 package com.smartelectronicsupermarket.ai.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +27,7 @@ import com.smartelectronicsupermarket.ai.adapter.LlmAdapter;
 import com.smartelectronicsupermarket.ai.adapter.OpenAiAdapter;
 import com.smartelectronicsupermarket.ai.data.AiCrossSellDataAccess;
 import com.smartelectronicsupermarket.ai.data.AiCrossSellDataAccess.VerifiedProduct;
+import com.smartelectronicsupermarket.ai.data.AiRecommendationRecorder;
 import com.smartelectronicsupermarket.ai.dto.CartItemInput;
 import com.smartelectronicsupermarket.ai.dto.AiEventRequest;
 import com.smartelectronicsupermarket.ai.dto.CrossSellCandidate;
@@ -56,11 +59,21 @@ public class AiCrossSellService {
 
     private final AiCircuitBreaker circuitBreaker;
     private final AtomicInteger threadCounter = new AtomicInteger();
+    private final AiSingleFlight<LlmOutcome> singleFlight = new AiSingleFlight<>();
     /** Bulkhead for LLM calls; saturation is treated as an LLM failure, never as a POS error. */
     private final ThreadPoolExecutor llmExecutor = new ThreadPoolExecutor(
             0, LLM_MAX_CONCURRENT_CALLS, 30L, TimeUnit.SECONDS, new SynchronousQueue<>(),
             runnable -> {
                 Thread thread = new Thread(runnable, "ai-llm-" + threadCounter.incrementAndGet());
+                thread.setDaemon(true);
+                return thread;
+            });
+    private static final int MAX_RECORDED_ROWS = 100;
+    private volatile AiRecommendationRecorder recorder = AiRecommendationRecorder.NOOP;
+    /** Single writer, bounded queue: audit rows are best effort and must never back-pressure the POS. */
+    private final ThreadPoolExecutor recordExecutor = new ThreadPoolExecutor(
+            1, 1, 0L, TimeUnit.MILLISECONDS, new java.util.concurrent.ArrayBlockingQueue<>(256), runnable -> {
+                Thread thread = new Thread(runnable, "ai-recommendation-writer");
                 thread.setDaemon(true);
                 return thread;
             });
@@ -146,17 +159,13 @@ public class AiCrossSellService {
         if (cached != null && !cached.isEmpty()) {
             candidates = cached;
             source = "CACHE";
-        } else if (!circuitBreaker.allowRequest()) {
-            log.warn("[AiCrossSellService] Circuit breaker {} -> Fast fallback to Rule Engine", circuitBreaker.state());
-            candidates = ruleFallbackEngine.generateFallbackCandidates(cartSkus);
-            source = "RULE_FALLBACK";
-            fallbackReason = "CIRCUIT_OPEN";
         } else {
-            LlmOutcome outcome = callLlm(adapter, cartSkus, storeId);
+            // Concurrent misses for the same key share one model call (single-flight), then fall back together.
+            LlmOutcome outcome = singleFlight.run(cacheKey, () -> lead(adapter, cacheKey, cartSkus, storeId),
+                    new LlmOutcome(null, "LLM_TIMEOUT_EXCEEDED_2500MS"), TIMEOUT_LIMIT_MS + 500);
             if (outcome.candidates() != null && !outcome.candidates().isEmpty()) {
-                cacheManager.put(cacheKey, outcome.candidates());
                 candidates = outcome.candidates();
-                source = "AI";
+                source = outcome.fromCache() ? "CACHE" : "AI";
             } else {
                 candidates = ruleFallbackEngine.generateFallbackCandidates(cartSkus);
                 source = "RULE_FALLBACK";
@@ -175,6 +184,8 @@ public class AiCrossSellService {
             }
         }
 
+        recordAsync(cartProducts, verified, source, adapter);
+
         long tookMs = System.currentTimeMillis() - startTime;
         // Audit line for D55 section 8 / S2-08 evidence: source, latency, fallback reason; no PII or secrets.
         log.info("[AI-AUDIT] source={} latency_ms={} suggestions={} fallback_reason={} provider={} breaker={}",
@@ -182,7 +193,73 @@ public class AiCrossSellService {
         return new CrossSellResult(verified, source, tookMs);
     }
 
-    private record LlmOutcome(List<CrossSellCandidate> candidates, String reason) {
+    /** Wired by Spring; tests that do not care about persistence keep the no-op recorder. */
+    @Autowired(required = false)
+    public void setRecommendationRecorder(AiRecommendationRecorder recorder) {
+        this.recorder = recorder == null ? AiRecommendationRecorder.NOOP : recorder;
+    }
+
+    /**
+     * D55 section 8.1: store (cart product -> suggested product) rows off the request thread. The queue is bounded
+     * and failures are only logged, so the POS answer never waits for, or fails because of, this write.
+     */
+    private void recordAsync(
+            Map<String, UUID> cartProducts, List<CrossSellItem> verified, String source, LlmAdapter adapter) {
+        if (verified.isEmpty() || recorder == AiRecommendationRecorder.NOOP) {
+            return;
+        }
+        String tableSource = switch (source) {
+            case "AI" -> "LLM";
+            case "CACHE" -> "CACHE";
+            default -> "RULE";
+        };
+        String model = "RULE_FALLBACK".equals(source) ? "rules-" + RULES_VERSION : adapter.getLastCallLog().modelVersion();
+        List<AiRecommendationRecorder.Row> rows = new ArrayList<>();
+        for (UUID cartProduct : cartProducts.values()) {
+            for (int rank = 0; rank < verified.size() && rows.size() < MAX_RECORDED_ROWS; rank++) {
+                CrossSellItem item = verified.get(rank);
+                if (!cartProduct.equals(item.productId())) {
+                    // Rank score in (0,1]; it orders suggestions, it is not a model confidence.
+                    rows.add(new AiRecommendationRecorder.Row(cartProduct, item.productId(), tableSource,
+                            BigDecimal.valueOf(Math.max(0.1, 1.0 - 0.1 * rank)).setScale(4, RoundingMode.HALF_UP),
+                            model));
+                }
+            }
+        }
+        try {
+            recordExecutor.execute(() -> {
+                try {
+                    recorder.record(rows);
+                } catch (RuntimeException e) {
+                    log.warn("[AiCrossSellService] ai_recommendations write skipped: {}", e.getClass().getSimpleName());
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            log.warn("[AiCrossSellService] ai_recommendations queue full, row batch dropped");
+        }
+    }
+
+    private record LlmOutcome(List<CrossSellCandidate> candidates, String reason, boolean fromCache) {
+        LlmOutcome(List<CrossSellCandidate> candidates, String reason) {
+            this(candidates, reason, false);
+        }
+    }
+
+    /** Runs once per key at a time: re-check the cache, ask the breaker, call the model, cache a usable answer. */
+    private LlmOutcome lead(LlmAdapter adapter, String cacheKey, List<String> cartSkus, UUID storeId) {
+        List<CrossSellCandidate> again = cacheManager.get(cacheKey);
+        if (again != null && !again.isEmpty()) {
+            return new LlmOutcome(again, "NONE", true);
+        }
+        if (!circuitBreaker.allowRequest()) {
+            log.warn("[AiCrossSellService] Circuit breaker {} -> Fast fallback to Rule Engine", circuitBreaker.state());
+            return new LlmOutcome(null, "CIRCUIT_OPEN");
+        }
+        LlmOutcome outcome = callLlm(adapter, cartSkus, storeId);
+        if (outcome.candidates() != null && !outcome.candidates().isEmpty()) {
+            cacheManager.put(cacheKey, outcome.candidates());
+        }
+        return outcome;
     }
 
     private LlmAdapter currentAdapter() {

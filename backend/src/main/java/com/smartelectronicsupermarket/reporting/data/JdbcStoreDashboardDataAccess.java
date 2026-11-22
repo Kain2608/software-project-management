@@ -37,6 +37,28 @@ public class JdbcStoreDashboardDataAccess implements StoreDashboardDataAccess {
             WHERE o.store_id=CAST(? AS uuid) AND o.status='PAID' AND o.paid_at>=? AND o.paid_at<?
             GROUP BY p.id,p.sku,p.name ORDER BY quantity DESC,p.sku ASC LIMIT ?
             """;
+    /**
+     * One row per PAID order line whose product was recommended (for another line of the same order) while the
+     * order was open. The LATERAL keeps only the earliest matching recommendation, so a line is counted once
+     * and attributed to exactly one source. Store scope comes from the order, never from the client.
+     */
+    static final String AI_SQL="""
+            SELECT count(DISTINCT o.id) orders,count(*) items,COALESCE(sum(i.line_total),0) revenue,
+                   count(*) FILTER (WHERE rec.source='LLM') llm,
+                   count(*) FILTER (WHERE rec.source='CACHE') cache,
+                   count(*) FILTER (WHERE rec.source='RULE') rule
+            FROM sasms.sales_orders o
+            JOIN sasms.sales_order_items i ON i.order_id=o.id
+            CROSS JOIN LATERAL (
+              SELECT r.source FROM sasms.ai_recommendations r
+              WHERE r.recommended_product_id=i.product_id
+                AND r.created_at>=o.created_at AND r.created_at<=o.paid_at
+                AND EXISTS (SELECT 1 FROM sasms.sales_order_items s
+                            WHERE s.order_id=o.id AND s.product_id=r.source_product_id AND s.id<>i.id)
+              ORDER BY r.created_at ASC LIMIT 1
+            ) rec
+            WHERE o.store_id=CAST(? AS uuid) AND o.status='PAID' AND o.paid_at>=? AND o.paid_at<?
+            """;
     private final JdbcTemplate jdbc;
     public JdbcStoreDashboardDataAccess(JdbcTemplate jdbc){this.jdbc=jdbc;}
     @Override public StoreSummaryRecord summary(UUID storeId,Instant from,Instant to){
@@ -44,6 +66,11 @@ public class JdbcStoreDashboardDataAccess implements StoreDashboardDataAccess {
         return jdbc.queryForObject(SUMMARY_SQL,(rs,n)->new StoreSummaryRecord(rs.getBigDecimal("gross"),
                 rs.getLong("paid_orders"),rs.getLong("available_devices"),rs.getLong("received"),
                 rs.getLong("sold"),rs.getLong("returned")),storeId,f,t,storeId,storeId,f,t);
+    }
+    @Override public AiEffectivenessRecord aiEffectiveness(UUID storeId,Instant from,Instant to){
+        return jdbc.queryForObject(AI_SQL,(rs,n)->new AiEffectivenessRecord(rs.getLong("orders"),rs.getLong("items"),
+                rs.getBigDecimal("revenue"),rs.getLong("llm"),rs.getLong("cache"),rs.getLong("rule")),
+                storeId,Timestamp.from(from),Timestamp.from(to));
     }
     @Override public List<ProductSalesRecord> topProducts(UUID storeId,Instant from,Instant to,int limit){
         return jdbc.query(PRODUCTS_SQL,(rs,n)->new ProductSalesRecord(rs.getObject("id",UUID.class),

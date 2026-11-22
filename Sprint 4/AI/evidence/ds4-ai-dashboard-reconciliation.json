@@ -1,0 +1,353 @@
+{
+  "task": "S4-03 TSK-04-02 (also validates S2-08 and S3-03 SQL)",
+  "generated_at": "2026-11-21T12:35:53.138452+00:00",
+  "database": {
+    "name": "sasms_s4_ai_tmp",
+    "server_version": "18.7",
+    "sasms_tables": 41
+  },
+  "method": "SQL extracted from Java sources and run in one transaction that is rolled back; expected values hand-computed from the fixture",
+  "fixture": {
+    "orders": 7,
+    "recommendations": 8,
+    "stores": 2,
+    "range": [
+      "2026-11-01T00:00:00Z",
+      "2026-12-01T00:00:00Z"
+    ]
+  },
+  "passed": 35,
+  "total": 35,
+  "checks": [
+    {
+      "check": "has_permission ai.use: cash_a @ store_a",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "has_permission ai.use: cash_a @ store_b",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "has_permission ai.use global (NULL store): cash_a",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "note": "store-scoped roles never satisfy a global check"
+    },
+    {
+      "check": "has_permission ai.use: cash_b @ store_a",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "has_permission ai.use: cash_b @ store_b",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "has_permission ai.use global (NULL store): cash_b",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "note": "store-scoped roles never satisfy a global check"
+    },
+    {
+      "check": "has_permission ai.use: global @ store_a",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "has_permission ai.use: global @ store_b",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "has_permission ai.use global (NULL store): global",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "note": "store-scoped roles never satisfy a global check"
+    },
+    {
+      "check": "cashier has no reports.read",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "ADMIN role alone has no ai.use (V005/D34: duties need explicit business roles)",
+      "expected": "false",
+      "actual": "false",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "warehouse A belongs to store A",
+      "expected": true,
+      "actual": true,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "warehouse B does not belong to store A",
+      "expected": false,
+      "actual": false,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "product ids by SKU (unknown SKU absent)",
+      "expected": [
+        "DSAI-PHONE"
+      ],
+      "actual": [
+        "DSAI-PHONE"
+      ],
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "sellable in warehouse A: only active in-stock SKUs",
+      "expected": [
+        "DSAI-CASE",
+        "DSAI-CHARGER",
+        "DSAI-PHONE"
+      ],
+      "actual": [
+        "DSAI-CASE",
+        "DSAI-CHARGER",
+        "DSAI-PHONE"
+      ],
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "stock is per warehouse (A=3, not 12)",
+      "expected": 3,
+      "actual": 3,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "price comes from products.list_price",
+      "expected": 450000.0,
+      "actual": 450000.0,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "category name returned for is_serialized",
+      "expected": "SMARTPHONE",
+      "actual": "SMARTPHONE",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "warehouse B sees its own stock only",
+      "expected": {
+        "DSAI-CASE": 9
+      },
+      "actual": {
+        "DSAI-CASE": 9
+      },
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "SKU injection attempt returns nothing and does not error",
+      "expected": [],
+      "actual": [],
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "spec summary retrieval returns brand/category/specs",
+      "expected": [
+        "SMARTPHONE",
+        true
+      ],
+      "actual": [
+        "SMARTPHONE",
+        true
+      ],
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "specifications JSON round-trips (UTF-8, quotes)",
+      "expected": {
+        "screen_inches": 6.1,
+        "display": "OLED",
+        "note": "Màn hình đẹp \"tuyệt\""
+      },
+      "actual": {
+        "note": "Màn hình đẹp \"tuyệt\"",
+        "display": "OLED",
+        "screen_inches": 6.1
+      },
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "unknown product id returns no row",
+      "expected": [],
+      "actual": [],
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "sasms_app can INSERT ai_recommendations",
+      "expected": "ok",
+      "actual": "ok",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "sasms_app cannot UPDATE ai_recommendations",
+      "expected": "true",
+      "actual": "true",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "AI attribution store A: orders",
+      "expected": 2,
+      "actual": 2,
+      "result": "PASS",
+      "note": "O1,O2 only; O3 (rec before order), O4 (no source line), O5 DRAFT, O6 out of range excluded"
+    },
+    {
+      "check": "AI attribution store A: lines",
+      "expected": 3,
+      "actual": 3,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "AI attribution store A: revenue",
+      "expected": 1490000.0,
+      "actual": 1490000.0,
+      "result": "PASS",
+      "note": "450000 (O1 case) + 450000 (O2 case) + 590000 (O2 charger)"
+    },
+    {
+      "check": "AI attribution store A: source LLM/CACHE/RULE",
+      "expected": [
+        1,
+        1,
+        1
+      ],
+      "actual": [
+        1,
+        1,
+        1
+      ],
+      "result": "PASS",
+      "note": "O2 case has CACHE then LLM recs: earliest wins, line counted once"
+    },
+    {
+      "check": "AI attribution store B is isolated",
+      "expected": [
+        1,
+        1,
+        450000.0
+      ],
+      "actual": [
+        1,
+        1,
+        450000.0
+      ],
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "gross PAID revenue store A in range",
+      "expected": 62390000.0,
+      "actual": 62390000.0,
+      "result": "PASS",
+      "note": "O1+O2+O3+O4; DRAFT/other month/other store excluded"
+    },
+    {
+      "check": "PAID order count store A in range",
+      "expected": 4,
+      "actual": 4,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "available devices store A (IN_STOCK, warehouse A)",
+      "expected": 7,
+      "actual": 7,
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "check": "inventory movement counters (fixture inserts no movements)",
+      "expected": [
+        0,
+        0,
+        0
+      ],
+      "actual": [
+        0,
+        0,
+        0
+      ],
+      "result": "PASS",
+      "note": "direct device inserts do not create movement rows"
+    },
+    {
+      "check": "top products by quantity (store A, range)",
+      "expected": [
+        [
+          "DSAI-CASE",
+          4
+        ],
+        [
+          "DSAI-PHONE",
+          3
+        ],
+        [
+          "DSAI-CHARGER",
+          1
+        ]
+      ],
+      "actual": [
+        [
+          "DSAI-CASE",
+          4
+        ],
+        [
+          "DSAI-PHONE",
+          3
+        ],
+        [
+          "DSAI-CHARGER",
+          1
+        ]
+      ],
+      "result": "PASS",
+      "note": ""
+    }
+  ],
+  "not_covered": [
+    "PostgreSQL 16 (server used may differ; CI uses 16)",
+    "HTTP/JWT layer",
+    "Production data volume"
+  ]
+}
