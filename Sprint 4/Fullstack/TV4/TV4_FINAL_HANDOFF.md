@@ -55,7 +55,7 @@ Trong dự án SASMS (Smart Electronic Supermarket Management System), Vũ Duy T
 | 15 | **S3-05** | Sprint 3 | Luồng đặt hàng online và giữ chỗ 30 phút | **PARTIAL / BLOCKED** | Đã triển khai UI giỏ hàng; luồng Checkout online chủ động khóa an toàn (Fail-closed) do thiếu hợp đồng Customer Identity và Payment Callback. |
 | 16 | **S3-06** | Sprint 3 | API phân công kỹ thuật viên & cập nhật kết quả giao lắp (Logistics) | **IMPLEMENTED_NOT_VERIFIED** | Đã hoàn thành 3 tầng Controller/Service/JDBC kết nối DB V006 (`schedule_delivery`, `record_delivery_result`), giữ cờ tắt mặc định. 10 unit tests PASS. |
 | 17 | **S3-14** | Sprint 3 | Báo cáo Refinement và bằng chứng kỹ thuật Sprint 3 | **DONE_VERIFIED** | Hoàn thành `SPRINT3_IMPLEMENTATION_REPORT.md`, ghi nhận đầy đủ ranh giới hợp đồng, tính năng fail-closed và ma trận trách nhiệm. PR #38. |
-| 18 | **S4-06** | Sprint 4 | Sửa toàn bộ lỗi P1/P2 phát hiện trong kiểm thử | **PARTIAL / BLOCKED_PENDING_QA_EVIDENCE** | Hoàn tất sửa code và kiểm thử tự động cho BUG-D71-01 (Luhn IMEI), BUG-D73-01 (AI Telemetry), BUG-D74-03 (QR Warranty dates); lập ma trận S4-06; chờ QA Phát re-test ký đóng lỗi. |
+| 18 | **S4-06** | Sprint 4 | Sửa toàn bộ lỗi P1/P2 phát hiện trong kiểm thử | **PARTIAL / REOPENED_AFTER_QA_RETEST_24NOV** | Cập nhật đối chiếu D80 ngày 24/11/2026: `BUG-D71-01` đã **VERIFIED PASS**; `BUG-D73-01` và `BUG-D74-03` QA retest FAIL $\rightarrow$ **REOPENED**; phát sinh thêm `BUG-D72-R1-01/02/03`, `BUG-D71-R2-01..03`, `BUG-D74-R1-01..03` chuyển vào đợt đóng lỗi trước Go-Live theo D94/D120. |
 | 19 | **S4-16** | Sprint 4 | Tài liệu quy trình Hypercare 3 ngày sau Go-Live và SLA (D100) | **DONE_VERIFIED** | Biên soạn toàn diện 17 mục trong `D100_HYPERCARE_SLA_TV4.md`, phân định RACI, kịch bản diễn tập, quy trình Rollback liên kết D91/D101 của Kiên DBA. |
 | 20 | **S4-18** | Sprint 4 | Hỗ trợ lập biên bản bàn giao hệ thống | **PARTIAL** | Hoàn thiện toàn bộ hồ sơ kỹ thuật, nhật ký thi công và bảng phụ thuộc bên ngoài của TV4; chờ phiên ký bàn giao chung giữa các thành viên. |
 
@@ -198,8 +198,8 @@ Dưới đây là 10 câu hỏi hóc búa nhất mà hội đồng giám khảo 
 ### Câu 7: Bằng cách nào hệ thống bảo đảm bảo mật token khi người dùng bấm F5 hoặc chia sẻ đường link?
 - **Trả lời:** Chúng tôi áp dụng triệt để chính sách **Zero-Trust Client Token**. Token xác thực (JWT) được lưu hoàn toàn trong bộ nhớ RAM (`in-memory`) của ứng dụng React, tuyệt đối không lưu trong `localStorage` (tránh tấn công XSS) và không truyền qua tham số URL `?token=...` (tránh lộ qua lịch sử trình duyệt hoặc Referer header). Khi chuyển đổi tài khoản hoặc đăng xuất, toàn bộ context của giỏ hàng và dữ liệu bán hàng lập tức bị hủy bỏ (invalidation).
 
-### Câu 8: Sự cố Deadlock P0002 phát sinh do đâu và giải pháp căn cơ là gì?
-- **Trả lời:** Lỗi deadlock xảy ra khi hai phiên làm việc đồng thời cùng giữ chỗ các thiết bị trong giỏ hàng theo thứ tự ngược nhau (ví dụ: Phiên A khóa Máy 1 rồi chờ Máy 2; Phiên B khóa Máy 2 rồi chờ Máy 1). Giải pháp kỹ thuật chuẩn mực là áp dụng quy tắc **Sắp xếp thứ tự khóa tài nguyên (Resource Lock Ordering)**: trong câu lệnh `SELECT FOR UPDATE` của hàm giữ chỗ, danh sách ID thiết bị bắt buộc phải được sắp xếp theo thứ tự tăng dần (`ORDER BY device_id ASC`). Điều này triệt tiêu hoàn toàn khả năng hình thành chu trình chờ khóa (Deadlock Cycle).
+### Câu 8: Sự cố Deadlock `40P01`, tranh chấp khóa `55P03` và mã lỗi `P0002` khác nhau thế nào, và giải pháp căn cơ trong SASMS là gì?
+- **Trả lời:** Trong PostgreSQL, cần phân biệt chính xác 3 mã SQLSTATE: **`40P01` (`deadlock_detected`)** xảy ra khi hai phiên làm việc đồng thời khóa tài nguyên theo thứ tự ngược nhau tạo thành chu trình chờ khóa; **`55P03` (`lock_not_available`)** xảy ra khi một phiên yêu cầu khóa dòng đang bị phiên khác giữ ở chế độ `NOWAIT`/timeout; còn **`P0002` (`no_data_found`)** xảy ra khi câu lệnh `SELECT ... INTO STRICT` trong PL/pgSQL không tìm thấy bản ghi thỏa mãn. Giải pháp căn cơ đã được DBA Kiên và Fullstack TV4 áp dụng: (1) Trong hàm `sasms.reserve_order`, danh sách thiết bị luôn được khóa theo thứ tự tăng dần (`ORDER BY d.id FOR UPDATE OF d`), triệt tiêu hoàn toàn chu trình deadlock `40P01`; (2) Ở tầng Backend `ApiExceptionHandler`, lỗi tranh chấp khóa `55P03` được chuyển hóa an toàn thành HTTP `409 Conflict` (`DEVICE_LOCKED`, `retryable: true`), còn `P0002` được chuyển thành HTTP `404 Not Found` (`retryable: false`).
 
 ### Câu 9: Cơ chế Outbox Pattern trong gửi SMS và Kích hoạt bảo hành có tác dụng gì?
 - **Trả lời:** Theo yêu cầu kiến trúc D34 (FR-12), giao dịch thanh toán và kích hoạt bảo hành không được phép bị phụ thuộc vào dịch vụ bên thứ ba (nhà mạng SMS). Nếu gọi SMS trực tiếp trong cùng transaction thanh toán, khi nhà mạng bị nghẽn, giao dịch bán hàng tại quầy sẽ bị treo. Với Outbox Pattern (V007 do Kiên DBA thiết kế), khi đơn hàng chuyển sang `PAID`, hệ thống chỉ ghi một bản ghi sự kiện vào bảng `outbox_events` trong cùng transaction DB. Một tiến trình nền (worker) độc lập sẽ quét bảng này để gửi tin nhắn; nếu gửi lỗi, nó sẽ retry theo thuật toán Exponential Backoff mà không làm ảnh hưởng đến việc in hóa đơn tại quầy.
@@ -209,12 +209,17 @@ Dưới đây là 10 câu hỏi hóc búa nhất mà hội đồng giám khảo 
 
 ---
 
-## 11. Danh mục Hạng mục Tồn đọng và Kiến nghị Chuyển giao (Handover Recommendations)
+## 11. Danh mục Hạng mục Tồn đọng, Kết quả Phê duyệt của PM/DBA và Kiến nghị Chuyển giao (Handover Recommendations)
 
-1. **Kiến nghị với QA Lead (Phát):** Tiến hành re-test trên môi trường Staging các bản sửa lỗi BUG-D71-01, BUG-D73-01, BUG-D74-03 và chính thức ký đóng sổ lỗi D80.
-2. **Kiến nghị với PM / System Architect (An):** Ban hành tài liệu quyết định kiến trúc về Customer Identity để gỡ cờ tính năng cho phân hệ Đặt hàng trực tuyến (S3-05); ký phê duyệt D100 Hypercare SLA.
-3. **Kiến nghị với DBA Lead (Kiên):** Bổ sung mệnh đề sắp xếp `ORDER BY device_id ASC` trong migration hàm giữ chỗ để phòng ngừa triệt để lỗi deadlock P0002 khi tải cao.
-4. **Kiến nghị với DevOps Lead (Vũ):** Cung cấp thông tin kết nối SMS Gateway thật để kích hoạt tính năng gửi tin nhắn thương hiệu cho khách hàng.
+1. **Đã hoàn tất phê duyệt từ PM / System Architect (An — TV1) và DBA Lead (Kiên — TV2) ngày 23/11/2026:**
+   - Xem văn bản chính thức tại `Sprint 4/PM/QUYET_DINH_KIEN_TRUC_FEATURE_FLAG_D100_VA_NGHIEM_THU_TV4.md` và `Sprint 4/DB/TV4-S4-REVIEW-APPROVAL-KIEN.md`.
+   - Đã chốt quyết định kiến trúc Customer Identity (`ARCH-DEC-S03-01`: tách `customers.id` khỏi `users.auth_subject`, chấp thuận giữ `online-order.enabled=false` trong Release Candidate hiện tại), chính sách JWT/OIDC (`ARCH-DEC-S03-02`), và phân quyền 9 vai trò canonical kèm Store-Scope (`ARCH-DEC-S03-03`).
+   - Đã ban hành chính sách `FF-STAGING-POLICY-S4` cho phép bật riêng 6 cờ tính năng (`pos-serial-api`, `pos-order-api`, `pos-cash-payment-api`, `logistics-api`, `device-history-api`, `store-dashboard-api`) qua biến môi trường trên môi trường Staging cô lập (cổng `15435`, user `tv4_staging_app_user`).
+   - Đã phê duyệt kế hoạch sẵn sàng cho **`D100_HYPERCARE_SLA_TV4.md` (`APPROVED FOR HYPERCARE READINESS`)** và kết luận chấp thuận hồ sơ bàn giao kỹ thuật của TV4 (`TECHNICAL HANDOFF ACCEPTED`).
+2. **Kiến nghị hành động tiếp theo với QA Lead (Phát — TV3) và BA/PO Lead (Huy — TV5):**
+   - **QA Phát:** Tiến hành re-test trên môi trường Staging cổng `15435` đối với các bản sửa lỗi `BUG-D71-01`, `BUG-D73-01`, `BUG-D74-03`, `BUG-D74-05`, chạy bộ test D72/D73 và cập nhật trạng thái trong `D80` / `D78`.
+   - **BA/PO Huy:** Chủ trì chạy và ký nghiệm thu UAT (`D83`) trên Staging với các cờ tính năng đã được phép bật, đồng thời ghi nhận rõ các mục giới hạn phạm vi fail-closed (Online Checkout, UI Kỹ thuật viên giao lắp, SMS thật) vào biên bản bàn giao `D95`.
+   - **Lưu ý quan trọng:** Việc hoàn tất hồ sơ bàn giao TV4 và duyệt D100 **không đồng nghĩa tự động phê duyệt Go-Live Production** cho tới khi D78 và D83 hoàn tất.
 
 ---
 

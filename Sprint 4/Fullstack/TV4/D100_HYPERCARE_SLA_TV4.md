@@ -3,9 +3,10 @@
 **Dự án:** Hệ thống Quản trị Siêu thị Điện máy Thông minh SASMS (INT1450)  
 **Mã tài liệu:** D100_HYPERCARE_SLA_TV4  
 **Phân hệ phụ trách:** Vũ Duy Thái (TV4 — Fullstack Lead) phối hợp cùng TV1 (An), TV2 (Kiên), TV3 (Phát), TV5 (Huy), TV6 (Vũ)  
-**Ngày ban hành dự thảo:** 21/11/2026 (Asia/Ho_Chi_Minh)  
-**Trạng thái phê duyệt:** **DỰ THẢO / CHỜ DUYỆT (PROPOSED — Chờ PM Trịnh Quốc An ký duyệt)**  
-**Đính chính nhân sự (22/11/2026):** Nhóm có 6 người: TV1 An (PM), TV2 Trần Trung Kiên (Architect/DBA, Staging/CI theo S2-12), TV3 Phạm Đại Phát (QA), TV4 Vũ Duy Thái (Fullstack), TV5 Nguyễn Quang Huy (BA/PO), TV6 Nguyễn Tiến Vũ (Data/AI). Lịch trực bên dưới là **đề xuất chờ PM xác nhận**, không phải cam kết đã phê duyệt.
+**Ngày ban hành dự thảo:** 21/11/2026 (Asia/Ho_Chi_Minh)
+**Ngày cập nhật & phê duyệt kế hoạch:** 23/11/2026 (Asia/Ho_Chi_Minh)
+**Trạng thái phê duyệt:** **ĐÃ PHÊ DUYỆT KẾ HOẠCH SẴN SÀNG (`APPROVED FOR HYPERCARE READINESS` — PM Trịnh Quốc An & DBA Trần Trung Kiên đã duyệt ngày 23/11/2026; chỉ kích hoạt thực thi sau khi vượt cổng E2E D78 & UAT D83, không đồng nghĩa tự động phê duyệt Go-Live)**
+**Đính chính nhân sự & kỹ thuật (22–23/11/2026):** Nhóm có 6 người: TV1 An (PM/Architect), TV2 Trần Trung Kiên (Architect/DBA, Staging/CI theo S2-12), TV3 Phạm Đại Phát (QA), TV4 Vũ Duy Thái (Fullstack), TV5 Nguyễn Quang Huy (BA/PO), TV6 Nguyễn Tiến Vũ (Data/AI). Đã cập nhật chính xác mã lỗi PostgreSQL SQLSTATE (`40P01` deadlock, `55P03` lock contention, `P0002` no data found) và phân định rõ ranh giới RACI Rollback ứng dụng (TV4) vs CSDL (TV2) theo biên bản review `Sprint 4/DB/TV4-S4-REVIEW-APPROVAL-KIEN.md` và quyết định `Sprint 4/PM/QUYET_DINH_KIEN_TRUC_FEATURE_FLAG_D100_VA_NGHIEM_THU_TV4.md`.
 **Tài liệu tham chiếu:**  
 - `Sprint 4/DB/D90_Ke_hoach_phat_hanh_Release_Plan_SASMS.docx` (Release Plan v1.0.0, mốc M6)  
 - `Sprint 4/DB/D91_Ke_hoach_chuyen_doi_Cutover_va_quay_lui_Rollback_SASMS.docx` (Kế hoạch Cutover & Rollback)  
@@ -71,17 +72,17 @@ Khung giờ vận hành siêu thị SASMS áp dụng từ 07:30 đến 22:30 hà
 
 | Mức độ | Định danh | Định nghĩa tác động nghiệp vụ (Business Impact) | Ví dụ sự cố trong hệ thống SASMS |
 |---|---|---|---|
-| **P1** | **Critical (Thảm họa / Tê liệt)** | Toàn bộ hoặc phân hệ cốt lõi ngừng hoạt động; giao dịch bán hàng POS tại quầy bị gián đoạn hoàn toàn; dữ liệu tài chính/tồn kho bị sai lệch nguyên tử; nguy cơ lộ lọt bảo mật diện rộng. | - API Checkout POS trả lỗi 500 toàn hệ thống.<br>- Database PostgreSQL bị treo hoặc ngắt kết nối liên tục.<br>- Xung đột deadlock P0002 khiến không thể giữ chỗ tồn kho (reserve).<br>- Thu ngân không thể in hóa đơn hoặc hóa đơn ra giấy trắng. |
+| **P1** | **Critical (Thảm họa / Tê liệt)** | Toàn bộ hoặc phân hệ cốt lõi ngừng hoạt động; giao dịch bán hàng POS tại quầy bị gián đoạn hoàn toàn; dữ liệu tài chính/tồn kho bị sai lệch nguyên tử; nguy cơ lộ lọt bảo mật diện rộng. | - API Checkout POS trả lỗi 500 toàn hệ thống.<br>- Database PostgreSQL bị treo hoặc ngắt kết nối liên tục.<br>- Xung đột deadlock `40P01` (`deadlock_detected`) hoặc nghẽn khóa kéo dài `55P03` (`lock_not_available`) khiến không thể giữ chỗ tồn kho (`reserve_order`). *(Lưu ý: mã `P0002` là `no_data_found` khi tra cứu/lập lịch thiếu bản ghi).*<br>- Thu ngân không thể in hóa đơn hoặc hóa đơn ra giấy trắng. |
 | **P2** | **Major (Nghiêm trọng / Hạn chế)** | Phân hệ chính bị suy giảm hiệu năng nghiêm trọng nhưng có phương án giải tỏa tạm thời (workaround); một phần cửa hàng hoặc nhóm chức năng quan trọng gặp lỗi. | - Tính năng gợi ý AI bán chéo bị sập hoặc phản hồi > 5 giây.<br>- Tra cứu mã QR bảo hành bị chậm hoặc trả lỗi định dạng thời hạn.<br>- Máy in nhiệt 80mm mất kết nối cục bộ tại một máy trạm nhưng vẫn xuất được file PDF/HTML dự phòng. |
 | **P3** | **Minor (Vừa / Cục bộ)** | Sự cố nhỏ không ảnh hưởng trực tiếp đến giao dịch thanh toán tiền mặt; chức năng phụ trợ gặp lỗi hiển thị hoặc lỗi giao diện trên một số dòng thiết bị cá biệt. | - Dashboard BI báo cáo sai tỷ lệ phần trăm hiển thị N/A.<br>- Giao diện responsive trên một loại màn hình phụ bị tràn lề 5px.<br>- Lỗi font chữ nhỏ trên màn hình quản trị lịch sử thiết bị. |
 | **P4** | **Cosmetic (Nhẹ / Góp ý)** | Yêu cầu cải tiến trải nghiệm, chỉnh sửa câu chữ (typo), nhãn hiển thị hoặc thay đổi màu sắc nút bấm. | - Sai chính tả thông báo trạng thái.<br>- Thay đổi tông màu của badge trạng thái bảo hành. |
 
 ---
 
-## 5. Bảng Cam kết SLA — `PROPOSED (Chờ PM An duyệt)`
+## 5. Bảng Cam kết SLA — `APPROVED FOR HYPERCARE READINESS (PM An duyệt 23/11/2026)`
 
 > [!NOTE]
-> Bảng chỉ số cam kết chất lượng dịch vụ dưới đây là bản đề xuất kỹ thuật chính thức từ TV4 (Fullstack Lead), có hiệu lực áp dụng trong 03 ngày Hypercare sau khi được PM Trịnh Quốc An ký phê duyệt.
+> Bảng chỉ số cam kết chất lượng dịch vụ dưới đây đã được PM Trịnh Quốc An và DBA Trần Trung Kiên phê duyệt về mặt quy trình ngày 23/11/2026, có hiệu lực áp dụng ngay trong 03 ngày Hypercare khi hệ thống chính thức được phép Go-Live.
 
 | Mức độ | Thời gian phản hồi tiếp nhận (Response Time) | Tần suất cập nhật tiến độ (Status Update) | Thời gian cung cấp giải pháp tạm thời (Workaround SLA) | Thời gian giải quyết triệt để (Target Resolution SLA) |
 |---|---|---|---|---|
@@ -187,7 +188,8 @@ Trong 3 ngày Hypercare, mọi thay đổi mã nguồn phải tuân thủ kỷ l
 | Xử lý sự cố phần mềm POS / In hóa đơn / QR (L2) | **R** | C | C | A | I | I |
 | Xử lý sự cố nghẽn khóa DB / Deadlock / Chậm truy vấn | C | **R** | I | A | I | C |
 | Đưa ra quyết định Rollback hệ thống | C | C | I | **A** | C | I |
-| Thực thi kịch bản Rollback Database / Hạ tầng | C | **R** | I | A | I | I |
+| Thực thi Rollback ứng dụng Backend/Frontend & Feature Flags (Cấp độ 1 & 2) | **R** | C | I | A | I | I |
+| Thực thi kịch bản Rollback Database / Hạ tầng CSDL (Cấp độ 3 theo D91) | C | **R** | I | A | I | I |
 | Phê duyệt bản vá khẩn cấp (Hotfix PR) | **R** | C | C | **A** | I | I |
 | Giám sát AI gợi ý và đối soát Dashboard BI | C | C | C | **A** | I | **R** |
 | Đo lường số liệu SLA và báo cáo ban điều hành | C | C | **R** | **A** | I | I |
@@ -298,8 +300,8 @@ Sau khi đạt các tiêu chí kết thúc Hypercare tại Mục 14:
 
 | Vai trò | Đại diện | Ý kiến đánh giá | Trạng thái ký duyệt | Ngày ký |
 |---|---|---|:---:|:---:|
-| **Người lập quy trình (Fullstack Lead)** | **Vũ Duy Thái (TV4)** | Đã hoàn tất xây dựng quy trình chi tiết, ma trận SLA và kịch bản diễn tập ứng cứu. Sẵn sàng kích hoạt. | **ĐÃ XÁC NHẬN KỸ THUẬT** | 21/11/2026 |
-| **DBA / Architect Lead** | **Trần Trung Kiên (TV2)** | Đã đối soát và đồng bộ hoàn toàn với Runbook D101 và Cutover/Rollback Plan D91. | *Chờ xác nhận* | `[Chưa ký]` |
-| **QA Lead** | **Phạm Đại Phát (TV3)** | Đã ghi nhận các điều kiện tiên quyết kiểm thử E2E D78 trước khi cho phép kích hoạt Hypercare. | *Chờ xác nhận* | `[Chưa ký]` |
-| **Product Owner / BA Lead** | **Nguyễn Quang Huy (TV5)** | Thống nhất kịch bản nghiệp vụ hỗ trợ thu ngân tại quầy và quy trình bàn giao BAU. | *Chờ xác nhận* | `[Chưa ký]` |
-| **Project Manager / Chấp thuận SLA** | **Trịnh Quốc An (TV1)** | Quyết định phê duyệt áp dụng khung SLA và ban hành tài liệu chính thức. | **DỰ THẢO — CHỜ DUYỆT** | `[Chưa ký]` |
+| **Người lập quy trình (Fullstack Lead)** | **Vũ Duy Thái (TV4)** | Đã hoàn tất xây dựng quy trình chi tiết, ma trận SLA, đính chính mã SQLSTATE (`40P01`/`55P03`/`P0002`) và kịch bản diễn tập ứng cứu. Sẵn sàng kích hoạt. | **ĐÃ XÁC NHẬN KỸ THUẬT** | 21/11/2026 (Cập nhật 23/11/2026) |
+| **DBA / Architect Lead** | **Trần Trung Kiên (TV2)** | Đã đối soát và đồng bộ hoàn toàn với Runbook D101 và Cutover/Rollback Plan D91 (xem `Sprint 4/DB/TV4-S4-REVIEW-APPROVAL-KIEN.md`). | **APPROVED WITH TECHNICAL NOTES** | 23/11/2026 |
+| **QA Lead** | **Phạm Đại Phát (TV3)** | Đã ghi nhận các điều kiện tiên quyết kiểm thử E2E D78 và re-test D80 trên Staging trước khi cho phép kích hoạt Hypercare thực tế. | *Chờ xác nhận sau E2E Staging* | `[Chờ ký sau re-test D78/D80]` |
+| **Product Owner / BA Lead** | **Nguyễn Quang Huy (TV5)** | Thống nhất kịch bản nghiệp vụ hỗ trợ thu ngân tại quầy và quy trình bàn giao BAU; chờ hoàn tất UAT D83. | *Chờ xác nhận sau UAT D83* | `[Chờ ký sau UAT D83]` |
+| **Project Manager / Chấp thuận SLA** | **Trịnh Quốc An (TV1)** | Phê duyệt khung SLA, lịch trực 6 thành viên, ma trận RACI và điều kiện Rollback (xem `Sprint 4/PM/QUYET_DINH_KIEN_TRUC_FEATURE_FLAG_D100_VA_NGHIEM_THU_TV4.md`). Không đồng nghĩa tự động phê duyệt Go-Live. | **APPROVED FOR HYPERCARE READINESS** | 23/11/2026 |
